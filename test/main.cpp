@@ -9,6 +9,7 @@ using namespace media_handling::ffmpeg;
 constexpr auto filename = "../RegressionTests/ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
 
 
+/*
 static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
                       char *filename)
 {
@@ -21,7 +22,7 @@ static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
          fwrite(buf + i * wrap,1,xsize,f);
      fclose(f);
 }
-
+*/
 int main()
 {
     IMediaSource* src = new FFMpegSource(std::string(filename));
@@ -40,8 +41,8 @@ int main()
     auto codec = v_s->property<std::string>(MediaProperty::CODEC, is_valid);
     auto frames = dur*timescale;
 
-    pgm_save(frame->data_[0], frame->line_size_,
-    frame->line_size_, frame->line_count_, "output.ppm");
+//    pgm_save(frame->data_[0], frame->line_size_,
+//    frame->line_size_, frame->line_count_, "output.ppm");
 
     std::cout << "duration:" << dur << "\nformat:" << fmt << "\nstreams:"<< strm << "\nvideo_streams:" << v_streams
               << "\naudio_streams:" << a_streams << "\ntimescale:" << timescale << "\ncodec:" << codec << "\nframes:" << frames << std::endl;

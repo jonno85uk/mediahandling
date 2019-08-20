@@ -43,3 +43,10 @@ TEST (FFMpegSourceTest, StreamsInvalidFile)
   ASSERT_TRUE(thing.audioStream(0) == nullptr);
   ASSERT_TRUE(thing.visualStream(0) == nullptr);
 }
+
+
+TEST (FFMpegSourceTest, Openh264FHDFileNoThrow)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  EXPECT_NO_THROW(FFMpegSource src(fname));
+}
