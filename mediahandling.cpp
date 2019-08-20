@@ -27,7 +27,6 @@
 
 #include "mediahandling.h"
 
-using media_handling::MediaHandling;
 
 void initialise()
 {
