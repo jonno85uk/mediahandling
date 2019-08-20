@@ -41,16 +41,9 @@ enum class BackendType
 
 namespace media_handling
 {
-  static void assignLoggerCallback();
-  bool init(const BackendType backend);
+  // static void assignLoggerCallback();
+  bool initialise(const BackendType backend);
 
-class MediaHandling
-{
-
-public:
-    MediaHandling();
-
-};
 }
 
 #endif // MEDIAHANDLING_H

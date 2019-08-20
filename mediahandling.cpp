@@ -29,7 +29,7 @@
 
 using media_handling::MediaHandling;
 
-MediaHandling::MediaHandling()
+void initialise()
 {
-
+  
 }
