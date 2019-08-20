@@ -61,9 +61,11 @@ bool FFMpegSource::initialise()
     return false;
   }
 
+#ifdef OLD_FFMPEG // lavf 58.9.100
   avcodec_register_all();
   av_register_all();
   avfilter_register_all();
+#endif
 
 
   // Open the file
