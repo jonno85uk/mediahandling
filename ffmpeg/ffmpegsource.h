@@ -65,12 +65,12 @@ namespace media_handling::ffmpeg
         return IMediaSource::property<T>(prop, is_valid);
       }
 
-      IMediaStreamPtr audioStream(const int index) final;
+      MediaStreamPtr audioStream(const int index) final;
 
-      IMediaStreamPtr visualStream(const int index) final;
+      MediaStreamPtr visualStream(const int index) final;
 
     protected:
-      virtual IMediaStreamPtr newMediaStream(const int index);
+      virtual MediaStreamPtr newMediaStream(const int index);
 
     private:
       friend class FFMpegSourceTestable;
@@ -80,8 +80,8 @@ namespace media_handling::ffmpeg
 
       AVFormatContext* format_ctx_ {nullptr};
 
-      std::map<int, IMediaStreamPtr> audio_streams_;
-      std::map<int, IMediaStreamPtr> visual_streams_;
+      std::map<int, MediaStreamPtr> audio_streams_;
+      std::map<int, MediaStreamPtr> visual_streams_;
 
       bool configureStream(const int value);
       void extractProperties(const AVFormatContext& ctx);

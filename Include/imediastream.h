@@ -126,7 +126,7 @@ namespace media_handling
 
   };
 
-  using IMediaStreamPtr = std::shared_ptr<IMediaStream>;
+  using MediaStreamPtr = std::shared_ptr<IMediaStream>;
 }
 
 #endif // IMEDIASTREAM_H

@@ -159,6 +159,8 @@ std::any FFMpegStream::property(const MediaProperty prop, bool& is_valid) const
   return {};
 }
 
+
+//TODO: extract relevant properties e.g. audio or video properties
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {
   assert(context.codec);

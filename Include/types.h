@@ -64,7 +64,7 @@ namespace media_handling
     TIMESCALE,      // double
     FILENAME,       // std::string
     FILE_FORMAT,    // std::string
-    STREAMS,        // uint32_t
+    STREAMS,        // int32_t
     PIXEL_FORMAT,   // enum PixelFormat
     DIMENSIONS,     // struct Dimensions
     PIXEL_ASPECT_RATIO    // double

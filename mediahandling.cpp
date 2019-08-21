@@ -27,8 +27,21 @@
 
 #include "mediahandling.h"
 
+#ifdef OLD_FFMPEG
+extern "C" {
+#include <libavformat/avformat.h>
+#include <libavfilter/avfilter.h>
+}
+#endif
+
 
 void initialise()
 {
-  
+
+#ifdef OLD_FFMPEG // lavf 58.9.100
+  avcodec_register_all();
+  av_register_all();
+  avfilter_register_all();
+#endif
+
 }

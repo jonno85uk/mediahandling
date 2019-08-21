@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <map>
 #include <any>
+#include <memory>
 
 #include "types.h"
 #include "imediastream.h"
@@ -65,14 +66,14 @@ namespace media_handling
        * @param index   Index from the available audio-streams (not index of all streams)
        * @return        Stream on success or nullptr
        */
-      virtual IMediaStreamPtr audioStream(const int index) = 0;
+      virtual MediaStreamPtr audioStream(const int index) = 0;
 
       /**
        * @brief         Obtain a visual (video/image) stream
        * @param index   Index from the available visual-streams (not index of all streams)
        * @return        Stream on success or nullptr
        */
-      virtual IMediaStreamPtr visualStream(const int index) = 0;
+      virtual MediaStreamPtr visualStream(const int index) = 0;
 
       /* IMediaPropertyObject */
       virtual void setProperties(const std::map<MediaProperty, std::any>& props) override = 0;
@@ -84,6 +85,8 @@ namespace media_handling
         return IMediaPropertyObject::property<T>(prop, is_valid);
       }
   };
+
+  using MediaSourcePtr = std::shared_ptr<IMediaSource>;
 }
 
 #endif // IMEDIASOURCE_H
