@@ -30,9 +30,38 @@
 
 #include <stdint.h>
 #include <memory>
+#include <cmath>
+#include <boost/rational.hpp>
 
+
+/**
+ * Place for all bespoke or aliased types used within the library
+ */
 namespace media_handling
 {
+
+  enum class MediaProperty
+  {
+    CODEC,                // std::string
+    AUDIO_FORMAT,
+    AUDIO_LAYOUT,
+    AUDIO_SAMPLING_RATE,  // int32_t
+    AUDIO_SAMPLES,        // per channel
+    AUDIO_CHANNELS,       // int32_t
+    AUDIO_STREAMS,        // int32_t
+    VIDEO_STREAMS,        // int32_t
+    VIDEO_FORMAT,         // int32_t
+    BITRATE,              // int64_t
+    DURATION,             // int64_t
+    TIMESCALE,            // Rational
+    FILENAME,             // std::string
+    FILE_FORMAT,          // std::string
+    STREAMS,              // int32_t
+    PIXEL_FORMAT,         // enum PixelFormat
+    DIMENSIONS,           // struct Dimensions
+    PIXEL_ASPECT_RATIO    // Rational
+  };
+
   struct Dimensions
   {
       int width {};
@@ -48,29 +77,6 @@ namespace media_handling
     UNKNOWN
   };
 
-  enum class MediaProperty
-  {
-    CODEC,  // std::string
-    AUDIO_FORMAT,
-    AUDIO_LAYOUT,
-    AUDIO_SAMPLING_RATE,  // int32_t
-    AUDIO_SAMPLES, // per channel
-    AUDIO_CHANNELS, // int32_t
-    AUDIO_STREAMS,  // int32_t
-    VIDEO_STREAMS,  // int32_t
-    VIDEO_FORMAT,   // int32_t
-    BITRATE,        // int64_t
-    DURATION,       // int64_t
-    TIMESCALE,      // double
-    FILENAME,       // std::string
-    FILE_FORMAT,    // std::string
-    STREAMS,        // int32_t
-    PIXEL_FORMAT,   // enum PixelFormat
-    DIMENSIONS,     // struct Dimensions
-    PIXEL_ASPECT_RATIO    // double
-  };
-
-
   struct MediaFrame
   {
       std::shared_ptr<void> data_{nullptr};
@@ -78,7 +84,9 @@ namespace media_handling
       uint32_t line_count_{0};
       int32_t format_{0};
   };
+
   using MediaFramePtr = std::shared_ptr<MediaFrame>;
+  using Rational = boost::rational<int64_t>;
 }
 
 #endif // PROPERTIES_H

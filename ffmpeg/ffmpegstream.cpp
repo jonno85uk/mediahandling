@@ -168,15 +168,16 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   // TODO: if we use this things could go wrong on container != essence
   auto base = stream.time_base;
   if (base.den > 0) {
-    const double timescale = static_cast<double>(base.num) / base.den;
+    Rational timescale(base.num, base.den);
     this->setProperty(MediaProperty::TIMESCALE, timescale);
   }
+
   PixelFormat format = convert(context.pix_fmt);
   this->setProperty(MediaProperty::PIXEL_FORMAT, format);
   Dimensions dims {context.width, context.height};
   this->setProperty(MediaProperty::DIMENSIONS, dims);
   if (stream.sample_aspect_ratio.den > 0) {
-    auto par = static_cast<double>(stream.sample_aspect_ratio.num) / stream.sample_aspect_ratio.den;
+    Rational par(stream.sample_aspect_ratio.num, stream.sample_aspect_ratio.den);
     this->setProperty(MediaProperty::PIXEL_ASPECT_RATIO, par);
   }
 
