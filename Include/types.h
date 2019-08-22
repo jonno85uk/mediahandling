@@ -42,8 +42,9 @@ namespace media_handling
 
   enum class MediaProperty
   {
+    PROFILE,              //TODO: for mpeg2/4, aac, dnxhd, etc encoded profile
     CODEC,                // std::string
-    AUDIO_FORMAT,
+    AUDIO_FORMAT,         // SampleFormat
     AUDIO_LAYOUT,
     AUDIO_SAMPLING_RATE,  // int32_t
     AUDIO_SAMPLES,        // per channel
@@ -59,7 +60,31 @@ namespace media_handling
     STREAMS,              // int32_t
     PIXEL_FORMAT,         // enum PixelFormat
     DIMENSIONS,           // struct Dimensions
-    PIXEL_ASPECT_RATIO    // Rational
+    PIXEL_ASPECT_RATIO,   // Rational
+    DISPLAY_ASPECT_RATIO, // Rational
+    FRAME_COUNT           // int64_t
+  };
+
+  /**
+   * @brief The SampleFormat enum
+   * @note numbers indicate bits
+   */
+  enum class SampleFormat
+  {
+    NONE,
+    UNSIGNED_8,
+    SIGNED_16,
+    SIGNED_32,
+    SIGNED_64,
+    FLOAT,
+    DOUBLE,
+    // planars
+    UNSIGNED_8P,
+    SIGNED_16P,
+    SIGNED_32P,
+    FLOAT_P,
+    DOUBLE_P,
+    SIGNED_64P
   };
 
   struct Dimensions

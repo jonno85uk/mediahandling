@@ -84,6 +84,27 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamPAR)
   ASSERT_TRUE(par == 1);
 }
 
+TEST (FFMpegStreamTest, Openh264FHDVisualStreamDAR)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->visualStream(0);
+  bool is_valid;
+  auto dar = stream->property<media_handling::Rational>(media_handling::MediaProperty::DISPLAY_ASPECT_RATIO, is_valid);
+  ASSERT_FALSE(is_valid);
+}
+
+TEST (FFMpegStreamTest, Openh264FHDVisualStreamFrameCount)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->visualStream(0);
+  bool is_valid;
+  auto frames = stream->property<int64_t>(media_handling::MediaProperty::FRAME_COUNT, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_TRUE(frames == 748);
+}
+
 TEST (FFMpegStreamTest, Openh264FHDAudioStreamChannels)
 {
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
@@ -104,6 +125,17 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamSamplingRate)
   auto sample_rate = stream->property<int32_t>(media_handling::MediaProperty::AUDIO_SAMPLING_RATE, is_valid);
   ASSERT_TRUE(is_valid);
   ASSERT_EQ(sample_rate, 48000);
+}
+
+TEST (FFMpegStreamTest, Openh264FHDAudioStreamSamplingFormat)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->audioStream(0);
+  bool is_valid;
+  auto sample_format = stream->property<media_handling::SampleFormat>(media_handling::MediaProperty::AUDIO_FORMAT, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(sample_format, media_handling::SampleFormat::FLOAT_P);
 }
 
 

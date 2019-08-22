@@ -172,17 +172,27 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
     this->setProperty(MediaProperty::TIMESCALE, timescale);
   }
 
-  PixelFormat format = convert(context.pix_fmt);
-  this->setProperty(MediaProperty::PIXEL_FORMAT, format);
+  this->setProperty(MediaProperty::FRAME_COUNT, static_cast<int64_t>(stream.nb_frames));
+  const PixelFormat p_format = convertPixelFormat(context.pix_fmt);
+  this->setProperty(MediaProperty::PIXEL_FORMAT, p_format);
   Dimensions dims {context.width, context.height};
   this->setProperty(MediaProperty::DIMENSIONS, dims);
+
   if (stream.sample_aspect_ratio.den > 0) {
     Rational par(stream.sample_aspect_ratio.num, stream.sample_aspect_ratio.den);
     this->setProperty(MediaProperty::PIXEL_ASPECT_RATIO, par);
   }
 
+  if (stream.display_aspect_ratio.den > 0) {
+    Rational dar(stream.display_aspect_ratio.num, stream.display_aspect_ratio.den);
+    this->setProperty(MediaProperty::DISPLAY_ASPECT_RATIO, dar);
+  }
+
   this->setProperty(MediaProperty::AUDIO_CHANNELS, static_cast<int32_t>(context.channels));
   this->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, static_cast<int32_t>(context.sample_rate));
+  const SampleFormat s_format = convertSampleFormat(context.sample_fmt);
+  this->setProperty(MediaProperty::AUDIO_FORMAT, s_format);
+  //TODO: channel layout
 }
 
 bool FFMpegStream::seek(const int64_t timestamp)
@@ -425,9 +435,9 @@ bool FFMpegStream::write()
 }
 
 
-media_handling::PixelFormat FFMpegStream::convert(const AVPixelFormat format) const
+constexpr media_handling::PixelFormat FFMpegStream::convertPixelFormat(const AVPixelFormat format) const
 {
-  PixelFormat converted;
+  PixelFormat converted {PixelFormat::UNKNOWN};
   switch (format) {
     case AV_PIX_FMT_RGB24:
       converted = PixelFormat::RGB24;
@@ -440,8 +450,62 @@ media_handling::PixelFormat FFMpegStream::convert(const AVPixelFormat format) co
       break;
     case AV_PIX_FMT_YUV444P:
       converted = PixelFormat::YUV444;
+      break;
     default:
       converted = PixelFormat::UNKNOWN;
+      break;
   }
+  return converted;
+}
+
+
+constexpr media_handling::SampleFormat FFMpegStream::convertSampleFormat(const AVSampleFormat format) const
+{
+  SampleFormat converted {SampleFormat::NONE};
+
+  switch (format) {
+    case AV_SAMPLE_FMT_NONE:
+      [[fallthrough]];
+    case AV_SAMPLE_FMT_NB:
+      converted = SampleFormat::NONE;
+      break;
+    case AV_SAMPLE_FMT_U8:
+      converted = SampleFormat::UNSIGNED_8;
+      break;
+    case AV_SAMPLE_FMT_S16:
+      converted = SampleFormat::SIGNED_16;
+      break;
+    case AV_SAMPLE_FMT_S32:
+      converted = SampleFormat::SIGNED_32;
+      break;
+    case AV_SAMPLE_FMT_S64:
+      converted = SampleFormat::SIGNED_64;
+      break;
+    case AV_SAMPLE_FMT_FLT:
+      converted = SampleFormat::FLOAT;
+      break;
+    case AV_SAMPLE_FMT_DBL:
+      converted = SampleFormat::DOUBLE;
+      break;
+    case AV_SAMPLE_FMT_U8P:
+      converted = SampleFormat::UNSIGNED_8P;
+      break;
+    case AV_SAMPLE_FMT_S16P:
+      converted = SampleFormat::SIGNED_16P;
+      break;
+    case AV_SAMPLE_FMT_S32P:
+      converted = SampleFormat::SIGNED_32P;
+      break;
+    case AV_SAMPLE_FMT_S64P:
+      converted = SampleFormat::SIGNED_64P;
+      break;
+    case AV_SAMPLE_FMT_FLTP:
+      converted = SampleFormat::FLOAT_P;
+      break;
+    case AV_SAMPLE_FMT_DBLP:
+      converted = SampleFormat::DOUBLE_P;
+      break;
+  }
+
   return converted;
 }

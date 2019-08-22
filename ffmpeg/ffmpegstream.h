@@ -93,7 +93,8 @@ namespace media_handling::ffmpeg
       void setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, AVCodecContext& codec_context) const;
       void setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const;
 
-      PixelFormat convert(const AVPixelFormat format) const;
+      constexpr PixelFormat convertPixelFormat(const AVPixelFormat format) const;
+      constexpr SampleFormat convertSampleFormat(const AVSampleFormat format) const;
   };
 
 }
