@@ -40,8 +40,8 @@
 namespace media_handling
 {
 
-  enum class MediaProperty
-  {
+enum class MediaProperty
+{
     PROFILE,              //TODO: for mpeg2/4, aac, dnxhd, etc encoded profile
     CODEC,                // std::string
     AUDIO_FORMAT,         // SampleFormat
@@ -62,15 +62,23 @@ namespace media_handling
     DIMENSIONS,           // struct Dimensions
     PIXEL_ASPECT_RATIO,   // Rational
     DISPLAY_ASPECT_RATIO, // Rational
-    FRAME_COUNT           // int64_t
-  };
+    FRAME_COUNT,          // int64_t
+    FIELD_ORDER           // FieldOrder
+};
 
-  /**
+enum class FieldOrder
+{
+    PROGRESSIVE,
+    TOP_FIRST,
+    BOTTOM_FIRST
+};
+
+/**
    * @brief The SampleFormat enum
    * @note numbers indicate bits
    */
-  enum class SampleFormat
-  {
+enum class SampleFormat
+{
     NONE,
     UNSIGNED_8,
     SIGNED_16,
@@ -85,33 +93,34 @@ namespace media_handling
     FLOAT_P,
     DOUBLE_P,
     SIGNED_64P
-  };
+};
 
-  struct Dimensions
-  {
-      int width {};
-      int height {};
-  };
+struct Dimensions
+{
+    int width {};
+    int height {};
+};
 
-  enum class PixelFormat
-  {
+enum class PixelFormat
+{
     RGB24,
     YUV420,
     YUV422,
     YUV444,
     UNKNOWN
-  };
+};
 
-  struct MediaFrame
-  {
-      std::shared_ptr<void> data_{nullptr};
-      uint32_t line_size_{0};
-      uint32_t line_count_{0};
-      int32_t format_{0};
-  };
+struct MediaFrame
+{
+    std::shared_ptr<void> data_{nullptr};
+    uint32_t line_size_{0};
+    uint32_t line_count_{0};
+    int32_t format_{0};
+    std::optional<FieldOrder> field_order_;
+};
 
-  using MediaFramePtr = std::shared_ptr<MediaFrame>;
-  using Rational = boost::rational<int64_t>;
+using MediaFramePtr = std::shared_ptr<MediaFrame>;
+using Rational = boost::rational<int64_t>;
 }
 
 #endif // PROPERTIES_H

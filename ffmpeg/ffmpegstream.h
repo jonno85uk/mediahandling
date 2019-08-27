@@ -84,8 +84,6 @@ namespace media_handling::ffmpeg
 
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
       bool seek(const int64_t timestamp);
-      bool read(AVFormatContext* ctxt, AVPacket* pkt);
-      bool decode(AVCodecContext* dec_ctx, AVFrame* frame, AVPacket* pkt);
       bool encode();
       bool write();
 
@@ -95,6 +93,10 @@ namespace media_handling::ffmpeg
 
       constexpr PixelFormat convertPixelFormat(const AVPixelFormat format) const;
       constexpr SampleFormat convertSampleFormat(const AVSampleFormat format) const;
+
+      std::optional<FieldOrder> getFieldOrder();
+
+      MediaFramePtr frame(AVFormatContext& format_ctx, AVCodecContext& codec_ctx, AVPacket& pkt, const int stream_idx) const;
   };
 
 }

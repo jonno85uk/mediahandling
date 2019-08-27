@@ -105,6 +105,17 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamFrameCount)
   ASSERT_TRUE(frames == 748);
 }
 
+TEST (FFMpegStreamTest, Openh264FHDVisualStreamFieldOrder)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->visualStream(0);
+  bool is_valid;
+  auto order = stream->property<media_handling::FieldOrder>(media_handling::MediaProperty::FIELD_ORDER, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_TRUE(order == media_handling::FieldOrder::PROGRESSIVE);
+}
+
 TEST (FFMpegStreamTest, Openh264FHDAudioStreamChannels)
 {
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";

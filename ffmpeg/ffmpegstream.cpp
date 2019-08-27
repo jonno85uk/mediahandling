@@ -41,6 +41,7 @@ extern "C" {
 
 constexpr AVSampleFormat SAMPLE_FORMAT = AV_SAMPLE_FMT_S16;
 constexpr auto ERR_LEN = 256;
+constexpr auto SEEK_DIRECTION = AVSEEK_FLAG_BACKWARD;
 
 using media_handling::ffmpeg::FFMpegStream;
 using media_handling::MediaFramePtr;
@@ -61,7 +62,6 @@ FFMpegStream::FFMpegStream(AVFormatContext* parent, AVStream* const stream)
   codec_ctx_ = avcodec_alloc_context3(codec_);
   assert(codec_ctx_);
   avcodec_parameters_to_context(codec_ctx_, stream_->codecpar);
-  extractProperties(*stream, *codec_ctx_);
   setupDecoder(stream_->codecpar->codec_id, opts_);
   // Open codec
   int err_code = avcodec_open2(codec_ctx_, codec_, &opts_);
@@ -92,6 +92,8 @@ FFMpegStream::FFMpegStream(AVFormatContext* parent, AVStream* const stream)
   frame_ = av_frame_alloc();
   assert(frame_);
   av_frame_make_writable(frame_);
+  // For properties that require samples, this has to happen last otherwise ffmpeg resources will be unavailable
+  extractProperties(*stream, *codec_ctx_);
 }
 
 FFMpegStream::~FFMpegStream()
@@ -111,18 +113,16 @@ MediaFramePtr FFMpegStream::frame(const int64_t timestamp)
     std::cerr << "Invalid timestamp: " << timestamp << std::endl;
     return nullptr;
   }
-//  MediaFramePtr frame;
+
   if (last_timestamp_ != timestamp) {
     // TODO: more checks to prevent unneeded seek
-    seek(timestamp);
+    if (!seek(timestamp)) {
+      std::cerr << "Failed to seek: " << timestamp << std::endl;
+      return nullptr;
+    }
   }
-  if (!read(parent_, pkt_)) {
-    std::cerr << "Failed to read frame, timestamp=" << timestamp << std::endl;
-    return nullptr;
-  }
-  AVFrame* frame = av_frame_alloc();
-  decode(codec_ctx_, frame, pkt_);
-  return MediaFramePtr();
+
+  return frame(*parent_, *codec_ctx_, *pkt_, stream_->index);
 }
 
 
@@ -160,7 +160,6 @@ std::any FFMpegStream::property(const MediaProperty prop, bool& is_valid) const
 }
 
 
-//TODO: extract relevant properties e.g. audio or video properties
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {
   assert(context.codec);
@@ -172,6 +171,7 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
     this->setProperty(MediaProperty::TIMESCALE, timescale);
   }
 
+  // TODO: stream durations
   this->setProperty(MediaProperty::FRAME_COUNT, static_cast<int64_t>(stream.nb_frames));
   const PixelFormat p_format = convertPixelFormat(context.pix_fmt);
   this->setProperty(MediaProperty::PIXEL_FORMAT, p_format);
@@ -188,6 +188,10 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
     this->setProperty(MediaProperty::DISPLAY_ASPECT_RATIO, dar);
   }
 
+  if (const auto field_order = getFieldOrder()) {
+    this->setProperty(MediaProperty::FIELD_ORDER, field_order.value());
+  }
+
   this->setProperty(MediaProperty::AUDIO_CHANNELS, static_cast<int32_t>(context.channels));
   this->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, static_cast<int32_t>(context.sample_rate));
   const SampleFormat s_format = convertSampleFormat(context.sample_fmt);
@@ -195,13 +199,14 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   //TODO: channel layout
 }
 
+
 bool FFMpegStream::seek(const int64_t timestamp)
 {
   assert(parent_);
   assert(stream_);
   assert(codec_ctx_);
   avcodec_flush_buffers(codec_ctx_);
-  int ret = av_seek_frame(parent_, stream_->index, timestamp, AVSEEK_FLAG_BACKWARD);
+  int ret = av_seek_frame(parent_, stream_->index, timestamp, SEEK_DIRECTION);
   if (ret < 0) {
     av_strerror(ret, err, ERR_LEN);
     std::cerr << "Could not seek frame: " << err << std::endl;
@@ -210,17 +215,6 @@ bool FFMpegStream::seek(const int64_t timestamp)
   return true;
 }
 
-
-bool FFMpegStream::read(AVFormatContext* ctxt, AVPacket* pkt)
-{
-  int ret = av_read_frame(ctxt, pkt);
-  if (ret < 0) {
-    av_strerror(ret, err, ERR_LEN);
-    std::cerr << "Failed to read frame: " << err << std::endl;
-    return false;
-  }
-  return true;
-}
 
 void FFMpegStream::setupForVideo(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, int& pix_fmt) const
 {
@@ -394,33 +388,6 @@ void FFMpegStream::setupDecoder(const AVCodecID codec_id, AVDictionary* dict) co
 }
 
 
-bool FFMpegStream::decode(AVCodecContext* dec_ctx, AVFrame* frame, AVPacket* pkt)
-{
-  int ret;
-
-  do {
-    ret = avcodec_send_packet(dec_ctx, pkt);
-    if (ret < 0) {
-      av_strerror(ret, err, ERR_LEN);
-      std::cerr << "Error sending a packet for decoding: " << err << std::endl;
-      return false;
-    }
-    ret = avcodec_receive_frame(dec_ctx, frame);
-  } while (ret == AVERROR(EAGAIN)); // not enough packets fed to decoder
-
-  if (ret == AVERROR_EOF) {
-    return false;
-  }
-
-  if (ret < 0) {
-    av_strerror(ret, err, ERR_LEN);
-    std::cerr << "Error during decoding " << err << std::endl;
-    return false;
-  }
-  return true;
-}
-
-
 bool FFMpegStream::encode()
 {
   // TODO:
@@ -508,4 +475,71 @@ constexpr media_handling::SampleFormat FFMpegStream::convertSampleFormat(const A
   }
 
   return converted;
+}
+
+
+std::optional<media_handling::FieldOrder> FFMpegStream::getFieldOrder()
+{
+    std::optional<media_handling::FieldOrder> order;
+
+    if (auto tmp_frame = this->frame(0)) {
+        order = tmp_frame->field_order_;
+    }
+
+    return order;
+}
+
+
+MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx, AVCodecContext& codec_ctx, AVPacket& pkt, const int stream_idx) const
+{
+  int err_code = 0;
+  AVFrame* frame = av_frame_alloc();
+  while (err_code >= 0)
+  {
+    err_code = av_read_frame(&format_ctx, &pkt);
+    if (err_code < 0) {
+      av_strerror(err_code, err, ERR_LEN);
+      std::cerr << "Failed to read frame: " << err << std::endl;
+      break;
+    }
+
+    if (pkt.stream_index != stream_idx) {
+      continue;
+    }
+
+    err_code = avcodec_send_packet(&codec_ctx, &pkt);
+    if (err_code < 0) {
+        av_strerror(err_code, err, ERR_LEN);
+        std::cerr << "Failed sending a packet for decoding: " << err << std::endl;
+        break;
+    }
+
+    int dec_err_code = 0;
+    while (dec_err_code >= 0) {
+        dec_err_code = avcodec_receive_frame(&codec_ctx, frame);
+        if (dec_err_code == 0) {
+          // successful read
+          auto m_frame = std::make_shared<MediaFrame>();
+          // TODO: populate other fields
+          if (frame->interlaced_frame) {
+            m_frame->field_order_ = frame->top_field_first ? media_handling::FieldOrder::TOP_FIRST
+                                                           : media_handling::FieldOrder::BOTTOM_FIRST;
+          } else {
+            m_frame->field_order_ = media_handling::FieldOrder::PROGRESSIVE;
+          }
+          // TODO: resource cleanup
+          return m_frame;
+        }
+        else if ( (dec_err_code == AVERROR(EAGAIN)) || (dec_err_code == AVERROR_EOF) ) {
+            break;
+        } else {
+            av_strerror(dec_err_code, err, ERR_LEN);
+            std::cerr << "Failed to decode: " << err << std::endl;
+            break;
+        }
+    }
+
+  }
+  av_frame_free(&frame);
+  return nullptr;
 }
