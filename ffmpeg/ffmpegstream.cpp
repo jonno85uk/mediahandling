@@ -73,6 +73,13 @@ FFMpegStream::FFMpegStream(AVFormatContext* parent, AVStream* const stream)
     throw std::exception();
   }
 
+  if (stream_->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+    type_ = StreamType::AUDIO;
+  } else if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+    type_ = StreamType::VISUAL;
+  } else {
+    throw std::exception(); // TODO: custom type
+  }
 
   // Filters
   // allocate filtergraph
@@ -105,6 +112,7 @@ FFMpegStream::~FFMpegStream()
   av_frame_free(&frame_);
 }
 
+
 MediaFramePtr FFMpegStream::frame(const int64_t timestamp)
 {
   assert(parent_);
@@ -132,6 +140,12 @@ bool FFMpegStream::setFrame(const int64_t timestamp, MediaFramePtr sample)
 {
   // TODO:
   return false;
+}
+
+
+media_handling::StreamType FFMpegStream::type() const
+{
+  return type_;
 }
 
 
@@ -364,20 +378,6 @@ void FFMpegStream::setupDecoder(const AVCodecID codec_id, AVDictionary* dict) co
 }
 
 
-bool FFMpegStream::encode()
-{
-  // TODO:
-  return false;
-}
-
-
-bool FFMpegStream::write()
-{
-  // TODO:
-  return false;
-}
-
-
 constexpr media_handling::PixelFormat FFMpegStream::convertPixelFormat(const AVPixelFormat format) const
 {
   PixelFormat converted {PixelFormat::UNKNOWN};
@@ -471,7 +471,10 @@ std::optional<media_handling::FieldOrder> FFMpegStream::getFieldOrder()
 }
 
 
-MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx, AVCodecContext& codec_ctx, AVPacket& pkt, const int stream_idx) const
+MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
+                                  AVCodecContext& codec_ctx,
+                                  AVPacket& pkt,
+                                  const int stream_idx) const
 {
   int err_code = 0;
   AVFrame* frame = av_frame_alloc();
@@ -500,7 +503,8 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx, AVCodecContext& c
       dec_err_code = avcodec_receive_frame(&codec_ctx, frame);
       if (dec_err_code == 0) {
         // successful read
-        return std::make_shared<media_handling::FFMpegMediaFrame>(frame);
+        assert(type_ != media_handling::StreamType::UNKNOWN);
+        return std::make_shared<media_handling::FFMpegMediaFrame>(frame, type_ == StreamType::VISUAL);
       }
       else if ( (dec_err_code == AVERROR(EAGAIN)) || (dec_err_code == AVERROR_EOF) ) {
         break;

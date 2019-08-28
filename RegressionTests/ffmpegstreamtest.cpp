@@ -48,6 +48,8 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStream)
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   ASSERT_TRUE(src->visualStream(0));
+  ASSERT_TRUE(src->visualStream(0)->type() == media_handling::StreamType::VISUAL);
+  ASSERT_FALSE(src->visualStream(1));
 }
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamPixelFormat)
@@ -116,6 +118,26 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamFieldOrder)
   ASSERT_TRUE(order == media_handling::FieldOrder::PROGRESSIVE);
 }
 
+TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadFrame)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->visualStream(0);
+  auto frame = stream->frame(0);
+  ASSERT_TRUE(frame != nullptr);
+  ASSERT_TRUE(frame->size() > 0);
+  ASSERT_EQ(frame->timestamp(), 0);
+}
+
+TEST (FFMpegStreamTest, Openh264FHDAudioStream)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  ASSERT_TRUE(src->audioStream(0));
+  ASSERT_TRUE(src->audioStream(0)->type() == media_handling::StreamType::AUDIO);
+  ASSERT_FALSE(src->audioStream(1));
+}
+
 TEST (FFMpegStreamTest, Openh264FHDAudioStreamChannels)
 {
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
@@ -147,6 +169,29 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamSamplingFormat)
   auto sample_format = stream->property<media_handling::SampleFormat>(media_handling::MediaProperty::AUDIO_FORMAT, is_valid);
   ASSERT_TRUE(is_valid);
   ASSERT_EQ(sample_format, media_handling::SampleFormat::FLOAT_P);
+}
+
+TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrame)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->audioStream(0);
+  auto frame = stream->frame(0);
+  ASSERT_TRUE(frame != nullptr);
+  ASSERT_TRUE(frame->size() > 0);
+}
+
+TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrameProperties)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->audioStream(0);
+  auto frame = stream->frame(0);
+  frame->extractProperties();
+  bool is_valid;
+  auto format = frame->property<media_handling::SampleFormat>(media_handling::MediaProperty::AUDIO_FORMAT, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(format, media_handling::SampleFormat::FLOAT_P);
 }
 
 

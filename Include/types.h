@@ -42,35 +42,44 @@ namespace media_handling
 
 enum class MediaProperty
 {
-    PROFILE,              //TODO: for mpeg2/4, aac, dnxhd, etc encoded profile
-    CODEC,                // std::string
-    AUDIO_FORMAT,         // SampleFormat
-    AUDIO_LAYOUT,
-    AUDIO_SAMPLING_RATE,  // int32_t
-    AUDIO_SAMPLES,        // per channel
-    AUDIO_CHANNELS,       // int32_t
-    AUDIO_STREAMS,        // int32_t
-    VIDEO_STREAMS,        // int32_t
-    VIDEO_FORMAT,         // int32_t
-    BITRATE,              // int64_t
-    DURATION,             // int64_t
-    TIMESCALE,            // Rational
-    FILENAME,             // std::string
-    FILE_FORMAT,          // std::string
-    STREAMS,              // int32_t
-    PIXEL_FORMAT,         // enum PixelFormat
-    DIMENSIONS,           // struct Dimensions
-    PIXEL_ASPECT_RATIO,   // Rational
-    DISPLAY_ASPECT_RATIO, // Rational
-    FRAME_COUNT,          // int64_t
-    FIELD_ORDER           // FieldOrder
+  PROFILE,              //TODO: for mpeg2/4, aac, dnxhd, etc encoded profile
+  CODEC,                // std::string
+  AUDIO_FORMAT,         // SampleFormat
+  AUDIO_LAYOUT,
+  AUDIO_SAMPLING_RATE,  // int32_t
+  AUDIO_SAMPLES,        // int32_t per channel
+  AUDIO_CHANNELS,       // int32_t
+  AUDIO_STREAMS,        // int32_t
+  VIDEO_STREAMS,        // int32_t
+  VIDEO_FORMAT,         // int32_t
+  BITRATE,              // int64_t
+  DURATION,             // int64_t
+  TIMESCALE,            // Rational
+  FILENAME,             // std::string
+  FILE_FORMAT,          // std::string
+  STREAMS,              // int32_t
+  PIXEL_FORMAT,         // enum PixelFormat
+  DIMENSIONS,           // struct Dimensions
+  PIXEL_ASPECT_RATIO,   // Rational
+  DISPLAY_ASPECT_RATIO, // Rational
+  FRAME_COUNT,          // int64_t
+  FIELD_ORDER,          // FieldOrder
+  TIMESTAMP             // int64_t
+};
+
+
+enum class StreamType
+{
+  AUDIO,
+  VISUAL,
+  UNKNOWN
 };
 
 enum class FieldOrder
 {
-    PROGRESSIVE,
-    TOP_FIRST,
-    BOTTOM_FIRST
+  PROGRESSIVE,
+  TOP_FIRST,
+  BOTTOM_FIRST
 };
 
 /**
@@ -79,35 +88,35 @@ enum class FieldOrder
    */
 enum class SampleFormat
 {
-    NONE,
-    UNSIGNED_8,
-    SIGNED_16,
-    SIGNED_32,
-    SIGNED_64,
-    FLOAT,
-    DOUBLE,
-    // planars
-    UNSIGNED_8P,
-    SIGNED_16P,
-    SIGNED_32P,
-    FLOAT_P,
-    DOUBLE_P,
-    SIGNED_64P
+  NONE,
+  UNSIGNED_8,
+  SIGNED_16,
+  SIGNED_32,
+  SIGNED_64,
+  FLOAT,
+  DOUBLE,
+  // planars
+  UNSIGNED_8P,
+  SIGNED_16P,
+  SIGNED_32P,
+  FLOAT_P,
+  DOUBLE_P,
+  SIGNED_64P
 };
 
 struct Dimensions
 {
-    int width {};
-    int height {};
+  int width {};
+  int height {};
 };
 
 enum class PixelFormat
 {
-    RGB24,
-    YUV420,
-    YUV422,
-    YUV444,
-    UNKNOWN
+  RGB24,
+  YUV420,
+  YUV422,
+  YUV444,
+  UNKNOWN
 };
 
 

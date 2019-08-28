@@ -47,6 +47,8 @@ namespace media_handling
        *        so call this at least once before reading any properties
        */
       virtual void extractProperties() = 0;
+
+      virtual int64_t timestamp() const = 0;
   };
 
   using MediaFramePtr = std::shared_ptr<IMediaFrame>;

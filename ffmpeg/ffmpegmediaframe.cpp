@@ -32,10 +32,24 @@
 using media_handling::FFMpegMediaFrame;
 using media_handling::MediaProperty;
 
-FFMpegMediaFrame::FFMpegMediaFrame(AVFrame* const frame) : ff_frame_(frame)
+FFMpegMediaFrame::FFMpegMediaFrame(AVFrame* const frame, const bool visual)
+  : ff_frame_(frame),
+    visual_(visual),
+    timestamp_(frame->pts)
 {
   assert(frame);
+  assert(frame->pts >= 0);
   data_ = std::make_shared<uint8_t**>(frame->data);
+
+  if (visual) {
+    auto y = frame->linesize[0] * frame->height;
+    auto u = frame->linesize[1] * frame->height;
+    auto v = frame->linesize[2] * frame->height;
+    data_size_ = y + u + v;
+  } else {
+    data_size_ = frame->linesize[0]; // FIXME: correct
+  }
+
 }
 
 FFMpegMediaFrame::~FFMpegMediaFrame()
@@ -72,6 +86,22 @@ void FFMpegMediaFrame::setData(std::shared_ptr<uint8_t**> frame_data, const int6
 void FFMpegMediaFrame::extractProperties()
 {
   assert(ff_frame_);
+  if (visual_) {
+    extractVisualProperties();
+  } else {
+    extractAudioProperties();
+  }
+}
+
+int64_t FFMpegMediaFrame::timestamp() const
+{
+  return timestamp_;
+}
+
+
+void FFMpegMediaFrame::extractVisualProperties()
+{
+  assert(ff_frame);
   if (ff_frame_->interlaced_frame) {
     if (ff_frame_->top_field_first) {
       this->setProperty(MediaProperty::FIELD_ORDER, FieldOrder::TOP_FIRST);
@@ -81,6 +111,62 @@ void FFMpegMediaFrame::extractProperties()
   } else {
     this->setProperty(MediaProperty::FIELD_ORDER, FieldOrder::PROGRESSIVE);
   }
+}
+
+
+void FFMpegMediaFrame::extractAudioProperties()
+{
+  assert(ff_frame);
+  this->setProperty(MediaProperty::AUDIO_SAMPLES, static_cast<int32_t>(ff_frame_->nb_samples));
+
+  SampleFormat format;
+  switch (ff_frame_->format) {
+    case AV_SAMPLE_FMT_NONE:
+      [[fallthrough]];
+    case AV_SAMPLE_FMT_NB:
+      [[fallthrough]];
+    default:
+      format = SampleFormat::NONE;
+      break;
+    case AV_SAMPLE_FMT_U8:
+      format = SampleFormat::UNSIGNED_8;
+      break;
+    case AV_SAMPLE_FMT_S16:
+      format = SampleFormat::SIGNED_16;
+      break;
+    case AV_SAMPLE_FMT_S32:
+      format = SampleFormat::SIGNED_32;
+      break;
+    case AV_SAMPLE_FMT_FLT:
+      format = SampleFormat::FLOAT;
+      break;
+    case AV_SAMPLE_FMT_DBL:
+      format = SampleFormat::DOUBLE;
+      break;
+    case AV_SAMPLE_FMT_U8P:
+      format = SampleFormat::UNSIGNED_8P;
+      break;
+    case AV_SAMPLE_FMT_S16P:
+      format = SampleFormat::SIGNED_16P;
+      break;
+    case AV_SAMPLE_FMT_S32P:
+      format = SampleFormat::SIGNED_32P;
+      break;
+    case AV_SAMPLE_FMT_FLTP:
+      format = SampleFormat::FLOAT_P;
+      break;
+    case AV_SAMPLE_FMT_DBLP:
+      format = SampleFormat::DOUBLE_P;
+      break;
+    case AV_SAMPLE_FMT_S64:
+      format = SampleFormat::SIGNED_64;
+      break;
+    case AV_SAMPLE_FMT_S64P:
+      format = SampleFormat::SIGNED_64P;
+      break;
+  }
+  this->setProperty(MediaProperty::AUDIO_FORMAT, format);
+
 }
 
 

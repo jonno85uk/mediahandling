@@ -53,6 +53,7 @@ namespace media_handling::ffmpeg
       /* IMediaStream */
       virtual MediaFramePtr frame(const int64_t timestamp) final;
       virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
+      StreamType type() const final;
 
     private:
       AVFormatContext* parent_;
@@ -71,11 +72,10 @@ namespace media_handling::ffmpeg
 
       bool deinterlacer_setup_ {false};
       int64_t last_timestamp_ {-1};
+      StreamType type_{StreamType::UNKNOWN};
 
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
       bool seek(const int64_t timestamp);
-      bool encode();
-      bool write();
 
       void setupForVideo(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, int& pix_fmt) const;
       void setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, AVCodecContext& codec_context) const;

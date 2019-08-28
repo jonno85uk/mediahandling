@@ -39,7 +39,7 @@ namespace media_handling
   class FFMpegMediaFrame : public IMediaFrame
   {
   public:
-    explicit FFMpegMediaFrame(AVFrame* const frame);
+    explicit FFMpegMediaFrame(AVFrame* const frame, const bool visual);
 
     ~FFMpegMediaFrame() override;
 
@@ -55,12 +55,20 @@ namespace media_handling
 
     void extractProperties() override;
 
+    int64_t timestamp() const override;
+
   private:
     AVFrame* ff_frame_ {nullptr};
+    bool visual_;
     std::optional<bool> is_audio_;
     std::optional<bool> is_visual_;
     int64_t data_size_ {0};
     std::shared_ptr<uint8_t**> data_ {nullptr};
+    int64_t timestamp_ {-1};
+
+    void extractVisualProperties();
+
+    void extractAudioProperties();
   };
 }
 

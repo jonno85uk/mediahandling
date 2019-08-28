@@ -44,25 +44,29 @@ namespace media_handling
    */
   class IMediaStream : public MediaPropertyObject
   {
-    public:
-      ~IMediaStream() override{}
+  public:
+    ~IMediaStream() override{}
 
-      /**
-       * @brief frame       Retrieve a frame-sample from the stream
-       * @param timestamp   The position in the stream for retrieval
-       * @return            Frame sample on success or null
-       */
-      virtual MediaFramePtr frame(const int64_t timestamp) = 0;
+    /**
+     * @brief frame       Retrieve a frame-sample from the stream
+     * @param timestamp   The position in the stream for retrieval
+     * @return            Frame sample on success or null
+     */
+    virtual MediaFramePtr frame(const int64_t timestamp) = 0;
 
-      /**
-       * @brief setFrame    Set the frame-sample for the stream
-       * @param timestamp   Position in the stream
-       * @param sample      Frame sample
-       * @return            true==success
-       */
-      virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) = 0;
+    /**
+     * @brief setFrame    Set the frame-sample for the stream
+     * @param timestamp   Position in the stream
+     * @param sample      Frame sample
+     * @return            true==success
+     */
+    virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) = 0;
 
-
+    /**
+     * @brief   Obtain the type of this stream
+     * @return  type if known, otherwise UNKNOWN
+     */
+    virtual StreamType type() const = 0;
   };
 
   using MediaStreamPtr = std::shared_ptr<IMediaStream>;

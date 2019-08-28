@@ -105,7 +105,7 @@ MediaStreamPtr FFMpegSource::audioStream(const int index)
   }
   bool is_valid;
   const auto streams = this->property<int32_t>(MediaProperty::AUDIO_STREAMS, is_valid);
-  if (!is_valid || streams < index) {
+  if (!is_valid || ( (streams - 1) < index) ) {
     return nullptr;
   }
   audio_streams_[index] = this->newMediaStream(index);
@@ -120,7 +120,7 @@ MediaStreamPtr FFMpegSource::visualStream(const int index)
   }
   bool is_valid;
   const auto streams = this->property<int32_t>(MediaProperty::VIDEO_STREAMS, is_valid);
-  if (!is_valid || streams < index) {
+  if (!is_valid || ( (streams - 1) < index) ) {
     return nullptr;
   }
   visual_streams_[index] = this->newMediaStream(index);
