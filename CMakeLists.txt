@@ -6,7 +6,7 @@ add_definitions(-Wall -Werror -pedantic -O0 -g3 -std=c++17)
 
 include_directories(ffmpeg Include)
 
-file(GLOB SOURCES "ffmpeg/*.cpp" "*.cpp")
+file(GLOB SOURCES "ffmpeg/*.cpp" "Src/*.cpp" "*.cpp")
 
 add_library(mediaHandling SHARED ${SOURCES})
 

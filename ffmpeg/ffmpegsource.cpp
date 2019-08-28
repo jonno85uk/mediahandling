@@ -96,33 +96,6 @@ void FFMpegSource::setFilePath(const std::string& file_path)
   this->setProperty(MediaProperty::FILENAME, file_path_);
 }
 
-std::string FFMpegSource::repr()
-{
-  std::stringstream ss;
-  // TODO:
-  return ss.str();
-}
-
-void FFMpegSource::setProperties(const std::map<media_handling::MediaProperty, std::any>& props)
-{
-  properties_ = props;
-}
-
-void FFMpegSource::setProperty(const MediaProperty prop, std::any value)
-{
-  properties_[prop] = value;
-}
-
-std::any FFMpegSource::property(const MediaProperty prop, bool& is_valid) const
-{
-  if (properties_.count(prop) > 0) {
-    is_valid = true;
-    return properties_.at(prop);
-  }
-  is_valid = false;
-  return {};
-}
-
 
 MediaStreamPtr FFMpegSource::audioStream(const int index)
 {

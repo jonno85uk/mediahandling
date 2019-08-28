@@ -42,10 +42,10 @@ namespace media_handling
   /**
    * @brief The "Container"
    */
-  class IMediaSource : public IMediaPropertyObject
+  class IMediaSource : public MediaPropertyObject
   {
     public:
-      virtual ~IMediaSource() override {}
+      ~IMediaSource() override {}
 
       /**
        * @brief     Initialise the Media source
@@ -74,16 +74,6 @@ namespace media_handling
        * @return        Stream on success or nullptr
        */
       virtual MediaStreamPtr visualStream(const int index) = 0;
-
-      /* IMediaPropertyObject */
-      virtual void setProperties(const std::map<MediaProperty, std::any>& props) override = 0;
-      virtual void setProperty(const MediaProperty prop, std::any value) override = 0;
-      virtual std::any property(const MediaProperty prop, bool& is_valid) const override = 0;
-      template <typename T>
-      T property(const MediaProperty prop, bool& is_valid) const
-      {
-        return IMediaPropertyObject::property<T>(prop, is_valid);
-      }
   };
 
   using MediaSourcePtr = std::shared_ptr<IMediaSource>;

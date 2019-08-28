@@ -110,16 +110,7 @@ enum class PixelFormat
     UNKNOWN
 };
 
-struct MediaFrame
-{
-    std::shared_ptr<void> data_{nullptr};
-    uint32_t line_size_{0};
-    uint32_t line_count_{0};
-    int32_t format_{0};
-    std::optional<FieldOrder> field_order_;
-};
 
-using MediaFramePtr = std::shared_ptr<MediaFrame>;
 using Rational = boost::rational<int64_t>;
 }
 

@@ -53,18 +53,8 @@ namespace media_handling::ffmpeg
       /* IMediaStream */
       virtual MediaFramePtr frame(const int64_t timestamp) final;
       virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
-      virtual std::string repr() final;
-      virtual void setProperties(const std::map<MediaProperty, std::any>& props) final;
-      virtual void setProperty(const MediaProperty prop, std::any value) final;
-      virtual std::any property(const MediaProperty prop, bool& is_valid) const final;
-      template<typename T>
-      T property(const MediaProperty prop, bool& is_valid) const
-      {
-        return IMediaStream::property<T>(prop, is_valid);
-      }
 
     private:
-      std::map<MediaProperty, std::any> properties_;
       AVFormatContext* parent_;
       AVStream* stream_ {nullptr};
       AVCodec* codec_ {nullptr};

@@ -30,6 +30,7 @@
 
 #include "imediasource.h"
 #include "ffmpegstream.h"
+#include "types.h"
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -55,15 +56,6 @@ namespace media_handling::ffmpeg
 
       bool initialise() override;
       void setFilePath(const std::string& file_path) override;
-      std::string repr() override;
-      void setProperties(const std::map<MediaProperty, std::any>& props) final;
-      void setProperty(const MediaProperty prop, std::any value) final;
-      std::any property(const MediaProperty prop, bool& is_valid) const final;
-      template<typename T>
-      T property(MediaProperty prop, bool& is_valid)
-      {
-        return IMediaSource::property<T>(prop, is_valid);
-      }
 
       MediaStreamPtr audioStream(const int index) final;
 
@@ -75,7 +67,6 @@ namespace media_handling::ffmpeg
     private:
       friend class FFMpegSourceTestable;
       std::string file_path_;
-      std::map<MediaProperty, std::any> properties_;
       uint64_t calculated_length_ {0};
 
       AVFormatContext* format_ctx_ {nullptr};

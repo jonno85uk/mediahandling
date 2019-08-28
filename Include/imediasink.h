@@ -36,21 +36,17 @@
 
 namespace media_handling
 {
-    class IMediaSink : public IMediaPropertyObject
+    class IMediaSink : public MediaPropertyObject
     {
     public:
-        virtual ~IMediaSink() override {}
+        ~IMediaSink() override {}
 
         /**
          * @brief         Encode a frame-sample with the sink's configured codec
          * @param sample  Frame-sample to encode
          * @return        true==success
          */
-        virtual bool encode(std::shared_ptr<MediaFrame> sample) = 0;
-
-        virtual void setProperties(const std::map<MediaProperty, std::any>& props) override = 0;
-        virtual void setProperty(const MediaProperty property, std::any value) override = 0;
-        virtual std::any property(const MediaProperty property, bool& is_valid) const override = 0;
+        virtual bool encode(std::shared_ptr<MediaFramePtr> sample) = 0;
     };
 }
 

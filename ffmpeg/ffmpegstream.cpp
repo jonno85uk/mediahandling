@@ -29,6 +29,8 @@
 #include <cassert>
 #include <sstream>
 
+#include "ffmpegmediaframe.h"
+
 extern "C" {
 //#include <libavformat/avformat.h>
 //#include <libavfilter/avfilter.h>
@@ -74,18 +76,18 @@ FFMpegStream::FFMpegStream(AVFormatContext* parent, AVStream* const stream)
 
   // Filters
   // allocate filtergraph
-//  filter_graph_ = avfilter_graph_alloc();
-//  assert(filter_graph_);
-//  if (stream_->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-//    setupForVideo(*stream_, buffer_ctx_, *filter_graph_, pixel_format_);
-//  } else if (stream_->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-//    setupForAudio(*stream_, buffer_ctx_, *filter_graph_, *codec_ctx_);
-//  } else {
-//    // TODO:
-//    auto media_type = av_get_media_type_string(stream_->codecpar->codec_type);
-//    std::cerr << "Unsupported media type:" << media_type << std::endl;
-//    throw std::exception();
-//  }
+  //  filter_graph_ = avfilter_graph_alloc();
+  //  assert(filter_graph_);
+  //  if (stream_->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+  //    setupForVideo(*stream_, buffer_ctx_, *filter_graph_, pixel_format_);
+  //  } else if (stream_->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+  //    setupForAudio(*stream_, buffer_ctx_, *filter_graph_, *codec_ctx_);
+  //  } else {
+  //    // TODO:
+  //    auto media_type = av_get_media_type_string(stream_->codecpar->codec_type);
+  //    std::cerr << "Unsupported media type:" << media_type << std::endl;
+  //    throw std::exception();
+  //  }
 
   pkt_ = av_packet_alloc();
   assert(pkt_);
@@ -132,32 +134,6 @@ bool FFMpegStream::setFrame(const int64_t timestamp, MediaFramePtr sample)
   return false;
 }
 
-std::string FFMpegStream::repr()
-{
-  std::stringstream ss;
-  // TODO:
-  return ss.str();
-}
-
-void FFMpegStream::setProperties(const std::map<MediaProperty, std::any>& props)
-{
-  properties_ = props;
-}
-
-void FFMpegStream::setProperty(const MediaProperty prop, std::any value)
-{
-  properties_[prop] = value;
-}
-
-std::any FFMpegStream::property(const MediaProperty prop, bool& is_valid) const
-{
-  if (properties_.count(prop) > 0) {
-    is_valid = true;
-    return properties_.at(prop);
-  }
-  is_valid = false;
-  return {};
-}
 
 
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
@@ -248,15 +224,15 @@ void FFMpegStream::setupForVideo(const AVStream& strm, Buffers& bufs, AVFilterGr
   AVFilterContext* last_filter = bufs.source_;
 
   // FIXME: we should know if it's interlaced or not when reading a frame, then setup deinterlace filter, once.
-//  if (ms->video_interlacing != ScanMethod::PROGRESSIVE) {
-//    AVFilterContext* yadif_filter;
-//    char yadif_args[100];
-//    snprintf(yadif_args, sizeof(yadif_args), "mode=3:parity=%d", ((ms->video_interlacing == ScanMethod::TOP_FIRST) ? 0 : 1));
-//    avfilter_graph_create_filter(&yadif_filter, avfilter_get_by_name("yadif"), "yadif", yadif_args, nullptr, filter_graph);
+  //  if (ms->video_interlacing != ScanMethod::PROGRESSIVE) {
+  //    AVFilterContext* yadif_filter;
+  //    char yadif_args[100];
+  //    snprintf(yadif_args, sizeof(yadif_args), "mode=3:parity=%d", ((ms->video_interlacing == ScanMethod::TOP_FIRST) ? 0 : 1));
+  //    avfilter_graph_create_filter(&yadif_filter, avfilter_get_by_name("yadif"), "yadif", yadif_args, nullptr, filter_graph);
 
-//    avfilter_link(last_filter, 0, yadif_filter, 0);
-//    last_filter = yadif_filter;
-//  }
+  //    avfilter_link(last_filter, 0, yadif_filter, 0);
+  //    last_filter = yadif_filter;
+  //  }
 
   enum AVPixelFormat valid_pix_fmts[] = {
     AV_PIX_FMT_RGB24,
@@ -286,19 +262,19 @@ void FFMpegStream::setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGr
     codec_context.channel_layout = av_get_default_channel_layout(strm.codecpar->channels);
   }
 
-//  // set up cache
-//  queue.append(av_frame_alloc());
-//  if (timeline_info.reverse) {
-//    AVFrame* reverse_frame = av_frame_alloc();
+  //  // set up cache
+  //  queue.append(av_frame_alloc());
+  //  if (timeline_info.reverse) {
+  //    AVFrame* reverse_frame = av_frame_alloc();
 
-//    reverse_frame->format = SAMPLE_FORMAT;
-//    reverse_frame->nb_samples = current_audio_freq()*2;
-//    reverse_frame->channel_layout = sequence->audioLayout();
-//    reverse_frame->channels = av_get_channel_layout_nb_channels(sequence->audioLayout());
-//    av_frame_get_buffer(reverse_frame, 0);
+  //    reverse_frame->format = SAMPLE_FORMAT;
+  //    reverse_frame->nb_samples = current_audio_freq()*2;
+  //    reverse_frame->channel_layout = sequence->audioLayout();
+  //    reverse_frame->channels = av_get_channel_layout_nb_channels(sequence->audioLayout());
+  //    av_frame_get_buffer(reverse_frame, 0);
 
-//    queue.append(reverse_frame);
-//  }
+  //    queue.append(reverse_frame);
+  //  }
 
   //TODO: un-c
   char filter_args[512];
@@ -329,54 +305,54 @@ void FFMpegStream::setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGr
     std::cerr << "Could not set output channel layout: " << err << std::endl;
   }
 
-//  int target_sample_rate = current_audio_freq();
+  //  int target_sample_rate = current_audio_freq();
 
-//  double playback_speed = timeline_info.speed * ftg->speed;
+  //  double playback_speed = timeline_info.speed * ftg->speed;
 
-//  if (qFuzzyCompare(playback_speed, 1.0)) {
-//    avfilter_link(buffersrc_ctx, 0, buffersink_ctx, 0);
-//  } else if (timeline_info.maintain_audio_pitch) {
-//    AVFilterContext* previous_filter = buffersrc_ctx;
-//    AVFilterContext* last_filter = buffersrc_ctx;
+  //  if (qFuzzyCompare(playback_speed, 1.0)) {
+  //    avfilter_link(buffersrc_ctx, 0, buffersink_ctx, 0);
+  //  } else if (timeline_info.maintain_audio_pitch) {
+  //    AVFilterContext* previous_filter = buffersrc_ctx;
+  //    AVFilterContext* last_filter = buffersrc_ctx;
 
-//    char speed_param[10];
+  //    char speed_param[10];
 
-//    double base = (playback_speed > 1.0) ? 2.0 : 0.5;
+  //    double base = (playback_speed > 1.0) ? 2.0 : 0.5;
 
-//    double speedlog = log(playback_speed) / log(base);
-//    int whole2 = qFloor(speedlog);
-//    speedlog -= whole2;
+  //    double speedlog = log(playback_speed) / log(base);
+  //    int whole2 = qFloor(speedlog);
+  //    speedlog -= whole2;
 
-//    if (whole2 > 0) {
-//      snprintf(speed_param, sizeof(speed_param), "%f", base);
-//      for (int i=0;i<whole2;i++) {
-//        AVFilterContext* tempo_filter = nullptr;
-//        avfilter_graph_create_filter(&tempo_filter, avfilter_get_by_name("atempo"), "atempo", speed_param, nullptr, filter_graph);
-//        avfilter_link(previous_filter, 0, tempo_filter, 0);
-//        previous_filter = tempo_filter;
-//      }
-//    }
+  //    if (whole2 > 0) {
+  //      snprintf(speed_param, sizeof(speed_param), "%f", base);
+  //      for (int i=0;i<whole2;i++) {
+  //        AVFilterContext* tempo_filter = nullptr;
+  //        avfilter_graph_create_filter(&tempo_filter, avfilter_get_by_name("atempo"), "atempo", speed_param, nullptr, filter_graph);
+  //        avfilter_link(previous_filter, 0, tempo_filter, 0);
+  //        previous_filter = tempo_filter;
+  //      }
+  //    }
 
-//    snprintf(speed_param, sizeof(speed_param), "%f", qPow(base, speedlog));
-//    last_filter = nullptr;
-//    avfilter_graph_create_filter(&last_filter, avfilter_get_by_name("atempo"), "atempo", speed_param, nullptr, filter_graph);
-//    avfilter_link(previous_filter, 0, last_filter, 0);
-//    //				}
+  //    snprintf(speed_param, sizeof(speed_param), "%f", qPow(base, speedlog));
+  //    last_filter = nullptr;
+  //    avfilter_graph_create_filter(&last_filter, avfilter_get_by_name("atempo"), "atempo", speed_param, nullptr, filter_graph);
+  //    avfilter_link(previous_filter, 0, last_filter, 0);
+  //    //				}
 
-//    avfilter_link(last_filter, 0, buffersink_ctx, 0);
-//  } else {
-//    target_sample_rate = qRound64(target_sample_rate / playback_speed);
-//    avfilter_link(buffersrc_ctx, 0, buffersink_ctx, 0);
-//  }
+  //    avfilter_link(last_filter, 0, buffersink_ctx, 0);
+  //  } else {
+  //    target_sample_rate = qRound64(target_sample_rate / playback_speed);
+  //    avfilter_link(buffersrc_ctx, 0, buffersink_ctx, 0);
+  //  }
 
-//  int sample_rates[] = { target_sample_rate, 0 };
-//  if (av_opt_set_int_list(buffersink_ctx, "sample_rates", sample_rates, 0, AV_OPT_SEARCH_CHILDREN) < 0) {
-//    qCritical() << "Could not set output sample rates";
-//  }
+  //  int sample_rates[] = { target_sample_rate, 0 };
+  //  if (av_opt_set_int_list(buffersink_ctx, "sample_rates", sample_rates, 0, AV_OPT_SEARCH_CHILDREN) < 0) {
+  //    qCritical() << "Could not set output sample rates";
+  //  }
 
   avfilter_graph_config(&graph, nullptr);
 
-//  audio_playback.reset = true;
+  //  audio_playback.reset = true;
 }
 
 void FFMpegStream::setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const
@@ -480,13 +456,18 @@ constexpr media_handling::SampleFormat FFMpegStream::convertSampleFormat(const A
 
 std::optional<media_handling::FieldOrder> FFMpegStream::getFieldOrder()
 {
-    std::optional<media_handling::FieldOrder> order;
+  std::optional<media_handling::FieldOrder> order;
 
-    if (auto tmp_frame = this->frame(0)) {
-        order = tmp_frame->field_order_;
+  if (auto tmp_frame = this->frame(0)) {
+    tmp_frame->extractProperties();
+    bool is_valid;
+    auto val = tmp_frame->property<media_handling::FieldOrder>(MediaProperty::FIELD_ORDER, is_valid);
+    if (is_valid) {
+      order = val;
     }
+  }
 
-    return order;
+  return order;
 }
 
 
@@ -509,34 +490,25 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx, AVCodecContext& c
 
     err_code = avcodec_send_packet(&codec_ctx, &pkt);
     if (err_code < 0) {
-        av_strerror(err_code, err, ERR_LEN);
-        std::cerr << "Failed sending a packet for decoding: " << err << std::endl;
-        break;
+      av_strerror(err_code, err, ERR_LEN);
+      std::cerr << "Failed sending a packet for decoding: " << err << std::endl;
+      break;
     }
 
     int dec_err_code = 0;
     while (dec_err_code >= 0) {
-        dec_err_code = avcodec_receive_frame(&codec_ctx, frame);
-        if (dec_err_code == 0) {
-          // successful read
-          auto m_frame = std::make_shared<MediaFrame>();
-          // TODO: populate other fields
-          if (frame->interlaced_frame) {
-            m_frame->field_order_ = frame->top_field_first ? media_handling::FieldOrder::TOP_FIRST
-                                                           : media_handling::FieldOrder::BOTTOM_FIRST;
-          } else {
-            m_frame->field_order_ = media_handling::FieldOrder::PROGRESSIVE;
-          }
-          // TODO: resource cleanup
-          return m_frame;
-        }
-        else if ( (dec_err_code == AVERROR(EAGAIN)) || (dec_err_code == AVERROR_EOF) ) {
-            break;
-        } else {
-            av_strerror(dec_err_code, err, ERR_LEN);
-            std::cerr << "Failed to decode: " << err << std::endl;
-            break;
-        }
+      dec_err_code = avcodec_receive_frame(&codec_ctx, frame);
+      if (dec_err_code == 0) {
+        // successful read
+        return std::make_shared<media_handling::FFMpegMediaFrame>(frame);
+      }
+      else if ( (dec_err_code == AVERROR(EAGAIN)) || (dec_err_code == AVERROR_EOF) ) {
+        break;
+      } else {
+        av_strerror(dec_err_code, err, ERR_LEN);
+        std::cerr << "Failed to decode: " << err << std::endl;
+        break;
+      }
     }
 
   }

@@ -25,47 +25,62 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef IMEDIASTREAM_H
-#define IMEDIASTREAM_H
+#include "ffmpegmediaframe.h"
 
-#include <memory>
-#include <any>
-#include <map>
-#include <iostream>
+#include <cassert>
 
-#include "types.h"
-#include "imediaframe.h"
-#include "mediapropertyobject.h"
+using media_handling::FFMpegMediaFrame;
+using media_handling::MediaProperty;
 
-namespace media_handling
+FFMpegMediaFrame::FFMpegMediaFrame(AVFrame* const frame) : ff_frame_(frame)
 {
-  /**
-   * @brief The "Essence"
-   */
-  class IMediaStream : public MediaPropertyObject
-  {
-    public:
-      ~IMediaStream() override{}
-
-      /**
-       * @brief frame       Retrieve a frame-sample from the stream
-       * @param timestamp   The position in the stream for retrieval
-       * @return            Frame sample on success or null
-       */
-      virtual MediaFramePtr frame(const int64_t timestamp) = 0;
-
-      /**
-       * @brief setFrame    Set the frame-sample for the stream
-       * @param timestamp   Position in the stream
-       * @param sample      Frame sample
-       * @return            true==success
-       */
-      virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) = 0;
-
-
-  };
-
-  using MediaStreamPtr = std::shared_ptr<IMediaStream>;
+  assert(frame);
+  data_ = std::make_shared<uint8_t**>(frame->data);
 }
 
-#endif // IMEDIASTREAM_H
+FFMpegMediaFrame::~FFMpegMediaFrame()
+{
+  av_frame_free(&ff_frame_);
+}
+
+std::optional<bool> FFMpegMediaFrame::isAudio() const
+{
+  return is_audio_;
+}
+
+std::optional<bool> FFMpegMediaFrame::isVisual() const
+{
+  return is_visual_;
+}
+
+int64_t FFMpegMediaFrame::size() const
+{
+  return data_size_;
+}
+
+std::shared_ptr<uint8_t**> FFMpegMediaFrame::data() const
+{
+  return data_;
+}
+
+void FFMpegMediaFrame::setData(std::shared_ptr<uint8_t**> frame_data, const int64_t size)
+{
+  data_ = frame_data;
+  data_size_ = size;
+}
+
+void FFMpegMediaFrame::extractProperties()
+{
+  assert(ff_frame_);
+  if (ff_frame_->interlaced_frame) {
+    if (ff_frame_->top_field_first) {
+      this->setProperty(MediaProperty::FIELD_ORDER, FieldOrder::TOP_FIRST);
+    } else {
+      this->setProperty(MediaProperty::FIELD_ORDER, FieldOrder::BOTTOM_FIRST);
+    }
+  } else {
+    this->setProperty(MediaProperty::FIELD_ORDER, FieldOrder::PROGRESSIVE);
+  }
+}
+
+

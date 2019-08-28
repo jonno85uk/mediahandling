@@ -25,47 +25,43 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef IMEDIASTREAM_H
-#define IMEDIASTREAM_H
+#ifndef FFMPEGMEDIAFRAME_H
+#define FFMPEGMEDIAFRAME_H
 
-#include <memory>
-#include <any>
-#include <map>
-#include <iostream>
-
-#include "types.h"
 #include "imediaframe.h"
-#include "mediapropertyobject.h"
+
+extern "C" {
+#include <libavformat/avformat.h>
+}
 
 namespace media_handling
 {
-  /**
-   * @brief The "Essence"
-   */
-  class IMediaStream : public MediaPropertyObject
+  class FFMpegMediaFrame : public IMediaFrame
   {
-    public:
-      ~IMediaStream() override{}
+  public:
+    explicit FFMpegMediaFrame(AVFrame* const frame);
 
-      /**
-       * @brief frame       Retrieve a frame-sample from the stream
-       * @param timestamp   The position in the stream for retrieval
-       * @return            Frame sample on success or null
-       */
-      virtual MediaFramePtr frame(const int64_t timestamp) = 0;
+    ~FFMpegMediaFrame() override;
 
-      /**
-       * @brief setFrame    Set the frame-sample for the stream
-       * @param timestamp   Position in the stream
-       * @param sample      Frame sample
-       * @return            true==success
-       */
-      virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) = 0;
+    std::optional<bool> isAudio() const override;
 
+    std::optional<bool> isVisual() const override;
 
+    int64_t size() const override;
+
+    std::shared_ptr<uint8_t**> data() const override;
+
+    void setData(std::shared_ptr<uint8_t**> frame_data, const int64_t size) override;
+
+    void extractProperties() override;
+
+  private:
+    AVFrame* ff_frame_ {nullptr};
+    std::optional<bool> is_audio_;
+    std::optional<bool> is_visual_;
+    int64_t data_size_ {0};
+    std::shared_ptr<uint8_t**> data_ {nullptr};
   };
-
-  using MediaStreamPtr = std::shared_ptr<IMediaStream>;
 }
 
-#endif // IMEDIASTREAM_H
+#endif // FFMPEGMEDIAFRAME_H
