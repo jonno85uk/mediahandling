@@ -29,8 +29,8 @@
 
 #include "ffmpegsource.h"
 
-using media_handling::ffmpeg::FFMpegSource;
-using media_handling::MediaProperty;
+using namespace media_handling;
+using namespace media_handling::ffmpeg;
 
 class FFMpegSourceTestable : public FFMpegSource
 {

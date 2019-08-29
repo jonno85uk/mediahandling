@@ -30,8 +30,8 @@
 #include "ffmpegstream.h"
 #include "ffmpegsource.h"
 
-using media_handling::ffmpeg::FFMpegStream;
-using media_handling::ffmpeg::FFMpegSource;
+using namespace media_handling;
+using namespace media_handling::ffmpeg;
 
 
 TEST (FFMpegStreamTest, NullInst)
@@ -107,6 +107,17 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamFrameCount)
   ASSERT_TRUE(frames == 748);
 }
 
+TEST (FFMpegStreamTest, Openh264FHDVisualStreamTimescale)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->visualStream(0);
+  bool is_valid;
+  auto tscale = stream->property<Rational>(media_handling::MediaProperty::TIMESCALE, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_TRUE(tscale == Rational(1,12800));
+}
+
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamFieldOrder)
 {
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
@@ -128,6 +139,20 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadFrame)
   ASSERT_TRUE(frame->size() > 0);
   ASSERT_EQ(frame->timestamp(), 0);
 }
+
+TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadTenthFrame)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->visualStream(0);
+  bool is_valid;
+  auto t_base = stream->property<Rational>(MediaProperty::TIMESCALE, is_valid);
+  auto pos = int64_t(std::round(10 / boost::rational_cast<double>(t_base)));
+  auto frame = stream->frame(pos);
+  ASSERT_TRUE(frame != nullptr);
+  ASSERT_EQ(frame->timestamp(), pos);
+}
+
 
 TEST (FFMpegStreamTest, Openh264FHDAudioStream)
 {
@@ -194,4 +219,14 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrameProperties)
   ASSERT_EQ(format, media_handling::SampleFormat::FLOAT_P);
 }
 
+TEST (FFMpegStreamTest, Openh264FHDAudioStreamChannelLayout)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->audioStream(0);
+  bool is_valid;
+  auto format = stream->property<media_handling::ChannelLayout>(media_handling::MediaProperty::AUDIO_LAYOUT, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(format, ChannelLayout::STEREO);
+}
 
