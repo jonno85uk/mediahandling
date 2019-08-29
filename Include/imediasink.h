@@ -39,7 +39,7 @@ namespace media_handling
     class IMediaSink : public MediaPropertyObject
     {
     public:
-        ~IMediaSink() override {}
+        ~IMediaSink() override = default;
 
         /**
          * @brief         Encode a frame-sample with the sink's configured codec

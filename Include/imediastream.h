@@ -45,7 +45,7 @@ namespace media_handling
   class IMediaStream : public MediaPropertyObject
   {
   public:
-    ~IMediaStream() override{}
+    ~IMediaStream() override = default;
 
     /**
      * @brief frame       Retrieve a frame-sample from the stream

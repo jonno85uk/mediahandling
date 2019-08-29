@@ -51,12 +51,12 @@ namespace media_handling::ffmpeg
       ~FFMpegStream() override;
 
       /* IMediaStream */
-      virtual MediaFramePtr frame(const int64_t timestamp) final;
-      virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
+      MediaFramePtr frame(const int64_t timestamp) final;
+      bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
       StreamType type() const final;
 
     private:
-      AVFormatContext* parent_;
+      AVFormatContext* parent_ {nullptr};
       AVStream* stream_ {nullptr};
       AVCodec* codec_ {nullptr};
       AVCodecContext* codec_ctx_ {nullptr};

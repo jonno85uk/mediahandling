@@ -13,7 +13,7 @@ void MediaPropertyObject::setProperties(const std::map<MediaProperty, std::any>&
   properties_ = props;
 }
 
-void MediaPropertyObject::setProperty(const MediaProperty prop, std::any value)
+void MediaPropertyObject::setProperty(const MediaProperty prop, const std::any& value)
 {
   properties_[prop] = value;
 }

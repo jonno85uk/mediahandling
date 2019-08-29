@@ -38,6 +38,13 @@ using media_handling::ffmpeg::FFMpegStream;
 using media_handling::MediaFramePtr;
 using media_handling::MediaStreamPtr;
 
+constexpr auto ERR_LEN = 1024;
+
+namespace
+{
+  std::array<char, ERR_LEN> err;
+}
+
 
 FFMpegSource::FFMpegSource(std::string file_path) : file_path_(std::move(file_path))
 {
@@ -65,18 +72,16 @@ bool FFMpegSource::initialise()
   // Open the file
   int err_code = avformat_open_input(&format_ctx_, file_path_.c_str(), nullptr, nullptr);
   if (err_code != 0) {
-    char err[1024];
-    av_strerror(err_code, err, 1024);
-    std::cerr << err << std::endl;
+    av_strerror(err_code, err.data(), ERR_LEN);
+    std::cerr << err.data() << std::endl;
     return false;
   }
 
   // Read info about the file
   err_code = avformat_find_stream_info(format_ctx_, nullptr);
   if (err_code != 0) {
-    char err[1024];
-    av_strerror(err_code, err, 1024);
-    std::cerr << err << std::endl;
+    av_strerror(err_code, err.data(), ERR_LEN);
+    std::cerr << err.data() << std::endl;
     return false;
   }
 

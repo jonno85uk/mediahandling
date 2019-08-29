@@ -28,7 +28,7 @@
 #ifndef PROPERTIES_H
 #define PROPERTIES_H
 
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <cmath>
 #include <boost/rational.hpp>

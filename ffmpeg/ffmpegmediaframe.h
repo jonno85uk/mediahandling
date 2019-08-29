@@ -38,37 +38,39 @@ namespace media_handling
 {
   class FFMpegMediaFrame : public IMediaFrame
   {
-  public:
-    explicit FFMpegMediaFrame(AVFrame* const frame, const bool visual);
+    public:
+      explicit FFMpegMediaFrame(AVFrame* const frame, const bool visual);
 
-    ~FFMpegMediaFrame() override;
+      ~FFMpegMediaFrame() override;
 
-    std::optional<bool> isAudio() const override;
+      // FIXME: rule of five
 
-    std::optional<bool> isVisual() const override;
+      std::optional<bool> isAudio() const override;
 
-    int64_t size() const override;
+      std::optional<bool> isVisual() const override;
 
-    std::shared_ptr<uint8_t**> data() const override;
+      int64_t size() const override;
 
-    void setData(std::shared_ptr<uint8_t**> frame_data, const int64_t size) override;
+      std::shared_ptr<uint8_t**> data() const override;
 
-    void extractProperties() override;
+      void setData(std::shared_ptr<uint8_t**> frame_data, const int64_t size) override;
 
-    int64_t timestamp() const override;
+      void extractProperties() override;
 
-  private:
-    AVFrame* ff_frame_ {nullptr};
-    bool visual_;
-    std::optional<bool> is_audio_;
-    std::optional<bool> is_visual_;
-    int64_t data_size_ {0};
-    std::shared_ptr<uint8_t**> data_ {nullptr};
-    int64_t timestamp_ {-1};
+      int64_t timestamp() const override;
 
-    void extractVisualProperties();
+    private:
+      AVFrame* ff_frame_ {nullptr};
+      bool visual_;
+      std::optional<bool> is_audio_;
+      std::optional<bool> is_visual_;
+      int64_t data_size_ {0};
+      std::shared_ptr<uint8_t**> data_ {nullptr};
+      int64_t timestamp_ {-1};
 
-    void extractAudioProperties();
+      void extractVisualProperties();
+
+      void extractAudioProperties();
   };
 }
 

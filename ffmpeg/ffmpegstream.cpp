@@ -50,7 +50,7 @@ using media_handling::ffmpeg::FFMpegStream;
 using media_handling::MediaFramePtr;
 
 namespace  {
-  char err[ERR_LEN];
+  std::array<char, ERR_LEN> err;
 }
 
 
@@ -69,8 +69,8 @@ FFMpegStream::FFMpegStream(AVFormatContext* parent, AVStream* const stream)
   // Open codec
   int err_code = avcodec_open2(codec_ctx_, codec_, &opts_);
   if (err_code < 0) {
-    av_strerror(err_code, err, ERR_LEN);
-    std::cerr << "Could not open codec: " << err << std::endl;
+    av_strerror(err_code, err.data(), ERR_LEN);
+    std::cerr << "Could not open codec: " << err.data() << std::endl;
     throw std::exception();
   }
 
@@ -209,8 +209,8 @@ bool FFMpegStream::seek(const int64_t timestamp)
   avcodec_flush_buffers(codec_ctx_);
   int ret = av_seek_frame(parent_, stream_->index, timestamp, SEEK_DIRECTION);
   if (ret < 0) {
-    av_strerror(ret, err, ERR_LEN);
-    std::cerr << "Could not seek frame: " << err << std::endl;
+    av_strerror(ret, err.data(), ERR_LEN);
+    std::cerr << "Could not seek frame: " << err.data() << std::endl;
     return false;
   }
   return true;
@@ -221,7 +221,6 @@ void FFMpegStream::setupForVideo(const AVStream& strm, Buffers& bufs, AVFilterGr
 {
   return;
   //TODO: this should be done after decode
-  char err[1024];
   //TODO: un-c
   char filter_args[512];
   snprintf(filter_args, sizeof(filter_args), "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
@@ -235,14 +234,14 @@ void FFMpegStream::setupForVideo(const AVStream& strm, Buffers& bufs, AVFilterGr
            );
   int ret = avfilter_graph_create_filter(&bufs.source_, avfilter_get_by_name("buffer"), "in", filter_args, nullptr, &graph);
   if (ret < 0) {
-    av_strerror(ret, err, 1024);
-    std::cerr << "Could not create filter(source): " << err << std::endl;
+    av_strerror(ret, err.data(), 1024);
+    std::cerr << "Could not create filter(source): " << err.data() << std::endl;
     return;
   }
   ret = avfilter_graph_create_filter(&bufs.sink_, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, &graph);
   if (ret < 0) {
-    av_strerror(ret, err, 1024);
-    std::cerr << "Could not create filter(sink): " << err << std::endl;
+    av_strerror(ret, err.data(), 1024);
+    std::cerr << "Could not create filter(sink): " << err.data() << std::endl;
     return;
   }
 
@@ -317,17 +316,15 @@ void FFMpegStream::setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGr
   enum AVSampleFormat sample_fmts[] = { SAMPLE_FORMAT,  static_cast<AVSampleFormat>(-1) };
   int err_code = av_opt_set_int_list(bufs.sink_, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN);
   if (err_code < 0) {
-    char err[1024];
-    av_strerror(err_code, err, 1024);
-    std::cerr << "Could not set output sample format: " << err << std::endl;
+    av_strerror(err_code, err.data(), ERR_LEN);
+    std::cerr << "Could not set output sample format: " << err.data() << std::endl;
   }
 
   int64_t channel_layouts[] = { AV_CH_LAYOUT_STEREO, static_cast<AVSampleFormat>(-1) };
   err_code = av_opt_set_int_list(bufs.sink_, "channel_layouts", channel_layouts, -1, AV_OPT_SEARCH_CHILDREN);
   if (err_code < 0) {
-    char err[1024];
-    av_strerror(err_code, err, 1024);
-    std::cerr << "Could not set output channel layout: " << err << std::endl;
+    av_strerror(err_code, err.data(), ERR_LEN);
+    std::cerr << "Could not set output channel layout: " << err.data() << std::endl;
   }
 
   //  int target_sample_rate = current_audio_freq();
@@ -549,8 +546,8 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
   {
     err_code = av_read_frame(&format_ctx, &pkt);
     if (err_code < 0) {
-      av_strerror(err_code, err, ERR_LEN);
-      std::cerr << "Failed to read frame: " << err << std::endl;
+      av_strerror(err_code, err.data(), ERR_LEN);
+      std::cerr << "Failed to read frame: " << err.data() << std::endl;
       break;
     }
 
@@ -560,8 +557,8 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
 
     err_code = avcodec_send_packet(&codec_ctx, &pkt);
     if (err_code < 0) {
-      av_strerror(err_code, err, ERR_LEN);
-      std::cerr << "Failed sending a packet for decoding: " << err << std::endl;
+      av_strerror(err_code, err.data(), ERR_LEN);
+      std::cerr << "Failed sending a packet for decoding: " << err.data() << std::endl;
       break;
     }
 
@@ -573,11 +570,12 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
         assert(type_ != media_handling::StreamType::UNKNOWN);
         return std::make_shared<media_handling::FFMpegMediaFrame>(frame, type_ == StreamType::VISUAL);
       }
-      else if ( (dec_err_code == AVERROR(EAGAIN)) || (dec_err_code == AVERROR_EOF) ) {
+
+      if ( (dec_err_code == AVERROR(EAGAIN)) || (dec_err_code == AVERROR_EOF) ) {
         break;
       } else {
-        av_strerror(dec_err_code, err, ERR_LEN);
-        std::cerr << "Failed to decode: " << err << std::endl;
+        av_strerror(dec_err_code, err.data(), ERR_LEN);
+        std::cerr << "Failed to decode: " << err.data() << std::endl;
         break;
       }
     }

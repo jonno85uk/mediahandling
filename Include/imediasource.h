@@ -28,7 +28,7 @@
 #ifndef IMEDIASOURCE_H
 #define IMEDIASOURCE_H
 
-#include <stdint.h>
+#include <cstdint>
 #include <map>
 #include <any>
 #include <memory>
@@ -45,7 +45,7 @@ namespace media_handling
   class IMediaSource : public MediaPropertyObject
   {
     public:
-      ~IMediaSource() override {}
+      ~IMediaSource() override = default;
 
       /**
        * @brief     Initialise the Media source

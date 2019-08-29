@@ -32,7 +32,7 @@ class MediaPropertyObject
      * @param prop    The property to set
      * @param value   The value of the property
      */
-    virtual void setProperty(const MediaProperty prop, std::any value);
+    virtual void setProperty(const MediaProperty prop, const std::any& value);
 
     /**
      * @brief           Retrieve a single property of this object

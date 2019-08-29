@@ -4,7 +4,6 @@
 #include <optional>
 #include <memory>
 
-#include "gsl-lite.hpp"
 #include "mediapropertyobject.h"
 
 namespace media_handling
@@ -13,9 +12,9 @@ namespace media_handling
   class IMediaFrame : public MediaPropertyObject
   {
     public:
-      IMediaFrame() {}
+      IMediaFrame() = default;
 
-      ~IMediaFrame() override {}
+      ~IMediaFrame() override = default;
 
       virtual std::optional<bool> isAudio() const = 0;
 
