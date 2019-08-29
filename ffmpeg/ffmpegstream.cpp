@@ -38,6 +38,7 @@ extern "C" {
 //#include <libavfilter/buffersrc.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
+#include <libavutil/channel_layout.h>
 }
 
 
@@ -98,9 +99,6 @@ FFMpegStream::FFMpegStream(AVFormatContext* parent, AVStream* const stream)
 
   pkt_ = av_packet_alloc();
   assert(pkt_);
-  frame_ = av_frame_alloc();
-  assert(frame_);
-  av_frame_make_writable(frame_);
   // For properties that require samples, this has to happen last otherwise ffmpeg resources will be unavailable
   extractProperties(*stream, *codec_ctx_);
 }
@@ -109,7 +107,6 @@ FFMpegStream::~FFMpegStream()
 {
   stream_ = nullptr; //TODO: check this
   av_packet_free(&pkt_);
-  av_frame_free(&frame_);
 }
 
 
@@ -162,6 +159,17 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   }
 
   // TODO: stream durations
+  if (type_ == StreamType::VISUAL) {
+    extractVisualProperties(stream, context);
+  } else if (type_ == StreamType::AUDIO) {
+    extractAudioProperties(stream, context);
+  } else {
+    assert("Cannot get properties of unknown stream");
+  }
+}
+
+void FFMpegStream::extractVisualProperties(const AVStream& stream, const AVCodecContext& context)
+{
   this->setProperty(MediaProperty::FRAME_COUNT, static_cast<int64_t>(stream.nb_frames));
   const PixelFormat p_format = convertPixelFormat(context.pix_fmt);
   this->setProperty(MediaProperty::PIXEL_FORMAT, p_format);
@@ -181,14 +189,17 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   if (const auto field_order = getFieldOrder()) {
     this->setProperty(MediaProperty::FIELD_ORDER, field_order.value());
   }
+}
 
+void FFMpegStream::extractAudioProperties(const AVStream& stream, const AVCodecContext& context)
+{
   this->setProperty(MediaProperty::AUDIO_CHANNELS, static_cast<int32_t>(context.channels));
   this->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, static_cast<int32_t>(context.sample_rate));
   const SampleFormat s_format = convertSampleFormat(context.sample_fmt);
   this->setProperty(MediaProperty::AUDIO_FORMAT, s_format);
-  //TODO: channel layout
+  const ChannelLayout layout = convertChannelLayout(context.channel_layout);
+  this->setProperty(MediaProperty::AUDIO_LAYOUT, layout);
 }
-
 
 bool FFMpegStream::seek(const int64_t timestamp)
 {
@@ -453,6 +464,62 @@ constexpr media_handling::SampleFormat FFMpegStream::convertSampleFormat(const A
   return converted;
 }
 
+
+constexpr media_handling::ChannelLayout FFMpegStream::convertChannelLayout(const uint64_t layout) const
+{
+  media_handling::ChannelLayout conv_layout = ChannelLayout::UNKNOWN;
+
+  switch (layout)
+  {
+    case AV_CH_LAYOUT_MONO:
+      conv_layout = ChannelLayout::MONO;
+      break;
+    case AV_CH_LAYOUT_STEREO:
+      conv_layout = ChannelLayout::STEREO;
+      break;
+    case AV_CH_LAYOUT_2POINT1:
+      conv_layout = ChannelLayout::STEREO_LFE;
+      break;
+    case AV_CH_LAYOUT_2_1:
+      conv_layout = ChannelLayout::THREE_SURROUND;
+      break;
+    case AV_CH_LAYOUT_SURROUND:
+      conv_layout = ChannelLayout::THREE_STEREO;
+      break;
+    case AV_CH_LAYOUT_3POINT1:
+      conv_layout = ChannelLayout::THREE_SURROUND_LFE;
+      break;
+    case AV_CH_LAYOUT_4POINT0:
+      conv_layout = ChannelLayout::FOUR_SURROUND;
+      break;
+    case AV_CH_LAYOUT_QUAD:
+      conv_layout = ChannelLayout::FOUR_STEREO;
+      break;
+    case AV_CH_LAYOUT_4POINT1:
+      conv_layout = ChannelLayout::FOUR_SURROUND_LFE;
+      break;
+    case AV_CH_LAYOUT_5POINT0:
+      conv_layout = ChannelLayout::FIVE;
+      break;
+    case AV_CH_LAYOUT_5POINT1:
+      conv_layout = ChannelLayout::FIVE_LFE;
+      break;
+    case AV_CH_LAYOUT_6POINT0:
+      conv_layout = ChannelLayout::SIX;
+      break;
+    case AV_CH_LAYOUT_6POINT1:
+      conv_layout = ChannelLayout::SIX_LFE;
+      break;
+    case AV_CH_LAYOUT_7POINT0:
+      conv_layout = ChannelLayout::SEVEN;
+      break;
+    case AV_CH_LAYOUT_7POINT1:
+      conv_layout = ChannelLayout::SEVEN_LFE;
+      break;
+  }
+
+  return conv_layout;
+}
 
 std::optional<media_handling::FieldOrder> FFMpegStream::getFieldOrder()
 {

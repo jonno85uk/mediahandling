@@ -119,6 +119,27 @@ enum class PixelFormat
   UNKNOWN
 };
 
+enum class ChannelLayout
+{
+  MONO,
+  STEREO,               // 2.0
+  STEREO_LFE,           // 2.0 + LFE
+  THREE_STEREO,         // 2.0 + front-center
+  THREE_SURROUND,       // 2.0 + back-center
+  THREE_STEREO_LFE,     // 3.1
+  THREE_SURROUND_LFE,
+  FOUR_STEREO,          // 2.0 + rear-left + rear-back       i.e. quadraphonic
+  FOUR_SURROUND,        // 2.0 + front-center + back-center  i.e. 4.0
+  FOUR_SURROUND_LFE,      // 4.1
+  FIVE,                 // 5.0
+  FIVE_LFE,             // 5.1
+  SIX,                  // 6.0
+  SIX_LFE,              // 6.1
+  SEVEN,                // 7.0
+  SEVEN_LFE,            // 7.1
+  UNKNOWN
+};
+
 
 using Rational = boost::rational<int64_t>;
 }

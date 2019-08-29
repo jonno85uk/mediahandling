@@ -75,6 +75,8 @@ namespace media_handling::ffmpeg
       StreamType type_{StreamType::UNKNOWN};
 
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
+      void extractVisualProperties(const AVStream& stream, const AVCodecContext& context);
+      void extractAudioProperties(const AVStream& stream, const AVCodecContext& context);
       bool seek(const int64_t timestamp);
 
       void setupForVideo(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, int& pix_fmt) const;
@@ -83,6 +85,7 @@ namespace media_handling::ffmpeg
 
       constexpr PixelFormat convertPixelFormat(const AVPixelFormat format) const;
       constexpr SampleFormat convertSampleFormat(const AVSampleFormat format) const;
+      constexpr ChannelLayout convertChannelLayout(const uint64_t layout) const;
 
       std::optional<FieldOrder> getFieldOrder();
 
