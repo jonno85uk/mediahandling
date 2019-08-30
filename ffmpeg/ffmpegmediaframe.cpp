@@ -32,29 +32,33 @@
 using media_handling::FFMpegMediaFrame;
 using media_handling::MediaProperty;
 
-FFMpegMediaFrame::FFMpegMediaFrame(AVFrame* const frame, const bool visual)
-  : ff_frame_(frame),
-    visual_(visual),
-    timestamp_(frame->pts)
+void media_handling::avframe_deleter(AVFrame* frame)
 {
-  assert(frame);
-  assert(frame->pts >= 0);
-  data_ = std::make_shared<uint8_t**>(frame->data);
+  av_frame_free(&frame);
+}
+
+FFMpegMediaFrame::FFMpegMediaFrame(media_handling::AVFrameUPtr frame, const bool visual)
+  : ff_frame_(std::move(frame)),
+    visual_(visual)
+{
+  assert(ff_frame_);
+  assert(ff_frame_->pts >= 0);
+  timestamp_ = ff_frame_->pts;
+  data_ = std::make_shared<uint8_t**>(ff_frame_->data);
 
   if (visual) {
-    auto y = frame->linesize[0] * frame->height;
-    auto u = frame->linesize[1] * frame->height;
-    auto v = frame->linesize[2] * frame->height;
+    auto y = ff_frame_->linesize[0] * ff_frame_->height;
+    auto u = ff_frame_->linesize[1] * ff_frame_->height;
+    auto v = ff_frame_->linesize[2] * ff_frame_->height;
     data_size_ = y + u + v;
   } else {
-    data_size_ = frame->linesize[0]; // FIXME: correct
+    data_size_ = ff_frame_->linesize[0]; // FIXME: correct
   }
 
 }
 
 FFMpegMediaFrame::~FFMpegMediaFrame()
 {
-  av_frame_free(&ff_frame_);
 }
 
 std::optional<bool> FFMpegMediaFrame::isAudio() const

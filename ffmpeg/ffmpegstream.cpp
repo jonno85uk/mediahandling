@@ -107,6 +107,8 @@ FFMpegStream::~FFMpegStream()
 {
   stream_ = nullptr; //TODO: check this
   av_packet_free(&pkt_);
+  avcodec_free_context(&codec_ctx_);
+  av_dict_free(&opts_);
 }
 
 
@@ -535,13 +537,15 @@ std::optional<media_handling::FieldOrder> FFMpegStream::getFieldOrder()
 }
 
 
+
 MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
                                   AVCodecContext& codec_ctx,
                                   AVPacket& pkt,
                                   const int stream_idx) const
 {
   int err_code = 0;
-  AVFrame* frame = av_frame_alloc();
+
+  AVFrameUPtr frame(av_frame_alloc());
   while (err_code >= 0)
   {
     err_code = av_read_frame(&format_ctx, &pkt);
@@ -564,11 +568,11 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
 
     int dec_err_code = 0;
     while (dec_err_code >= 0) {
-      dec_err_code = avcodec_receive_frame(&codec_ctx, frame);
+      dec_err_code = avcodec_receive_frame(&codec_ctx, frame.get());
       if (dec_err_code == 0) {
         // successful read
         assert(type_ != media_handling::StreamType::UNKNOWN);
-        return std::make_shared<media_handling::FFMpegMediaFrame>(frame, type_ == StreamType::VISUAL);
+        return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame), type_ == StreamType::VISUAL);
       }
 
       if ( (dec_err_code == AVERROR(EAGAIN)) || (dec_err_code == AVERROR_EOF) ) {
@@ -578,9 +582,7 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
         std::cerr << "Failed to decode: " << err.data() << std::endl;
         break;
       }
-    }
-
-  }
-  av_frame_free(&frame);
+    }//while
+  }//while
   return nullptr;
 }

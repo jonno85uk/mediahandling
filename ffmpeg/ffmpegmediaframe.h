@@ -36,10 +36,16 @@ extern "C" {
 
 namespace media_handling
 {
+
+  void avframe_deleter(AVFrame* frame);
+  template <auto fn>
+  using deleter_from_fn = std::integral_constant<decltype(fn), fn>;
+  using AVFrameUPtr = std::unique_ptr<AVFrame, deleter_from_fn<avframe_deleter>>;
+
   class FFMpegMediaFrame : public IMediaFrame
   {
     public:
-      explicit FFMpegMediaFrame(AVFrame* const frame, const bool visual);
+      explicit FFMpegMediaFrame(AVFrameUPtr frame, const bool visual);
 
       ~FFMpegMediaFrame() override;
 
@@ -60,7 +66,7 @@ namespace media_handling
       int64_t timestamp() const override;
 
     private:
-      AVFrame* ff_frame_ {nullptr};
+      AVFrameUPtr ff_frame_ {nullptr};
       bool visual_;
       std::optional<bool> is_audio_;
       std::optional<bool> is_visual_;
