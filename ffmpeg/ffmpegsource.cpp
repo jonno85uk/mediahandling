@@ -40,6 +40,10 @@ using media_handling::MediaStreamPtr;
 
 constexpr auto ERR_LEN = 1024;
 
+extern "C" {
+#include <libavformat/avformat.h>
+}
+
 namespace
 {
   std::array<char, ERR_LEN> err;
@@ -89,6 +93,8 @@ bool FFMpegSource::initialise()
   // Extract properties
   extractProperties(*format_ctx_);
 
+  findFrameRate();
+
 #ifdef VERBOSE_FFMPEG
   av_dump_format(format_ctx_, 0, file_path_.c_str(), 0);
 #endif
@@ -102,72 +108,61 @@ void FFMpegSource::setFilePath(const std::string& file_path)
 }
 
 
-MediaStreamPtr FFMpegSource::audioStream(const int index)
+MediaStreamPtr FFMpegSource::audioStream(const int index) const
 {
   if (audio_streams_.count(index) > 0)
   {
     return audio_streams_.at(index);
   }
-  bool is_valid;
-  const auto streams = this->property<int32_t>(MediaProperty::AUDIO_STREAMS, is_valid);
-  if (!is_valid || ( (streams - 1) < index) ) {
-    return nullptr;
-  }
-  audio_streams_[index] = this->newMediaStream(index);
-  return audio_streams_.at(index);
+  return nullptr;
 }
 
-MediaStreamPtr FFMpegSource::visualStream(const int index)
+MediaStreamPtr FFMpegSource::visualStream(const int index) const
 {
   if (visual_streams_.count(index) > 0)
   {
     return visual_streams_.at(index);
   }
-  bool is_valid;
-  const auto streams = this->property<int32_t>(MediaProperty::VIDEO_STREAMS, is_valid);
-  if (!is_valid || ( (streams - 1) < index) ) {
-    return nullptr;
-  }
-  visual_streams_[index] = this->newMediaStream(index);
-  return visual_streams_.at(index);
+  return nullptr;
 }
 
 
-MediaStreamPtr FFMpegSource::newMediaStream(const int index)
+MediaStreamPtr FFMpegSource::newMediaStream(AVStream& stream)
 {
   assert(format_ctx_);
   assert(format_ctx_->streams);
   assert(format_ctx_->streams[index]);
-  return std::make_shared<FFMpegStream>(format_ctx_, format_ctx_->streams[index]);
+  return std::make_shared<FFMpegStream>(format_ctx_, &stream);
 }
 
 void FFMpegSource::extractProperties(const AVFormatContext& ctx)
 {
   assert(ctx.iformat);
-  this->setProperty(MediaProperty::FILENAME, file_path_);
-  this->setProperty(MediaProperty::FILE_FORMAT, std::string(ctx.iformat->long_name));
-  this->setProperty(MediaProperty::DURATION, ctx.duration);
-  this->setProperty(MediaProperty::STREAMS, static_cast<int32_t>(ctx.nb_streams));
-  this->setProperty(MediaProperty::BITRATE, ctx.bit_rate);
-  extractStreamProperties(ctx.streams, ctx.nb_streams);
+  MediaPropertyObject::setProperty(MediaProperty::FILENAME, file_path_);
+  MediaPropertyObject::setProperty(MediaProperty::FILE_FORMAT, std::string(ctx.iformat->long_name));
+  MediaPropertyObject::setProperty(MediaProperty::DURATION, ctx.duration);
+  MediaPropertyObject::setProperty(MediaProperty::STREAMS, static_cast<int32_t>(ctx.nb_streams));
+  MediaPropertyObject::setProperty(MediaProperty::BITRATE, ctx.bit_rate);
+
+  extractStreamProperties(format_ctx_->streams, format_ctx_->nb_streams);
 }
 
 
 void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t stream_count)
 {
-  assert(streams);
   int32_t visual_count = 0;
   int32_t audio_count = 0;
-  for (auto ix = 0; ix < static_cast<int32_t>(stream_count); ++ix) {
-    const AVStream* stream = streams[ix];
+
+  gsl::span<AVStream*> span_streams(streams, stream_count);
+  for (auto& stream: span_streams) {
     assert(stream);
     switch (stream->codecpar->codec_type) {
       case AVMEDIA_TYPE_VIDEO:
-        visual_streams_[visual_count] = newMediaStream(ix);
+        visual_streams_[visual_count] = newMediaStream(*stream);
         visual_count++;
         break;
       case AVMEDIA_TYPE_AUDIO:
-        audio_streams_[audio_count] = newMediaStream(ix);
+        audio_streams_[audio_count] = newMediaStream(*stream);
         audio_count++;
         break;
       default:
@@ -176,6 +171,28 @@ void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t st
     }
   }
 
-  this->setProperty(MediaProperty::VIDEO_STREAMS, visual_count);
-  this->setProperty(MediaProperty::AUDIO_STREAMS, audio_count);
+  MediaPropertyObject::setProperty(MediaProperty::VIDEO_STREAMS, visual_count);
+  MediaPropertyObject::setProperty(MediaProperty::AUDIO_STREAMS, audio_count);
+}
+
+
+void FFMpegSource::findFrameRate()
+{
+  gsl::span<AVStream*> streams{format_ctx_->streams, format_ctx_->nb_streams};
+  AVStream* ref_stream = nullptr;
+  for (auto& stream : streams)  {
+    assert(stream);
+    if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+      ref_stream = stream;
+      break;
+    }
+  }
+
+  if (ref_stream == nullptr) {
+    return;
+  }
+
+  const auto avrate = av_guess_frame_rate(format_ctx_, ref_stream, nullptr);
+  const Rational frate {avrate.num, avrate.den};
+  this->setProperty(MediaProperty::FRAME_RATE, frate);
 }

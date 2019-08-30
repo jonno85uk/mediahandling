@@ -31,6 +31,8 @@
 #include "imediasource.h"
 #include "ffmpegstream.h"
 #include "types.h"
+#include "gsl-lite.hpp"
+
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -57,12 +59,12 @@ namespace media_handling::ffmpeg
       bool initialise() override;
       void setFilePath(const std::string& file_path) override;
 
-      MediaStreamPtr audioStream(const int index) final;
+      MediaStreamPtr audioStream(const int index) const final;
 
-      MediaStreamPtr visualStream(const int index) final;
+      MediaStreamPtr visualStream(const int index) const final;
 
     protected:
-      virtual MediaStreamPtr newMediaStream(const int index);
+      virtual MediaStreamPtr newMediaStream(AVStream& stream);
 
     private:
       friend class FFMpegSourceTestable;
@@ -77,6 +79,7 @@ namespace media_handling::ffmpeg
       bool configureStream(const int value);
       void extractProperties(const AVFormatContext& ctx);
       void extractStreamProperties(AVStream** streams, const uint32_t stream_count);
+      void findFrameRate();
   };
 }
 

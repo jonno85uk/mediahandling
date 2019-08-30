@@ -173,3 +173,14 @@ TEST (FFMpegSourceTest, h264FHDBitrate)
   ASSERT_TRUE(is_valid);
   ASSERT_TRUE(bitrate == 98630292);
 }
+
+TEST (FFMpegSourceTest, h264FHDFrameRate)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  FFMpegSource src(fname);
+
+  bool is_valid;
+  auto frate = src.property<Rational>(MediaProperty::FRAME_RATE, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(frate, Rational(50,1));
+}

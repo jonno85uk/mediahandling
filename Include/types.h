@@ -64,7 +64,8 @@ enum class MediaProperty
   DISPLAY_ASPECT_RATIO, // Rational
   FRAME_COUNT,          // int64_t
   FIELD_ORDER,          // FieldOrder
-  TIMESTAMP             // int64_t
+  TIMESTAMP,             // int64_t
+  FRAME_RATE            // Rational
 };
 
 
