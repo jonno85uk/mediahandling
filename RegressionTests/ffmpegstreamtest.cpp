@@ -153,6 +153,36 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadTenthFrame)
   ASSERT_EQ(frame->timestamp(), pos);
 }
 
+TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadNextFrame)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->visualStream(0);
+  MediaFramePtr frame = stream->frame(0);
+  frame = stream->frame();
+  ASSERT_EQ(frame->timestamp(), 256); // timebase/fps
+}
+
+TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadToEOS)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->visualStream(0);
+  MediaFramePtr frame = stream->frame(0);
+  int64_t timestamp = -1;
+  int frames = 0;
+  while (frame) {
+    frame = stream->frame();
+    if (frame) {
+      frames++;
+      timestamp = frame->timestamp();
+    }
+  }
+
+  ASSERT_TRUE(frames > 0);
+  ASSERT_TRUE(timestamp > 0);
+}
+
 
 TEST (FFMpegStreamTest, Openh264FHDAudioStream)
 {
@@ -228,5 +258,25 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamChannelLayout)
   auto format = stream->property<media_handling::ChannelLayout>(media_handling::MediaProperty::AUDIO_LAYOUT, is_valid);
   ASSERT_TRUE(is_valid);
   ASSERT_EQ(format, ChannelLayout::STEREO);
+}
+
+TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrameToEOS)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->audioStream(0);
+  MediaFramePtr frame = stream->frame(0);
+  int64_t timestamp = -1;
+  int frames = 0;
+  while (frame) {
+    frame = stream->frame();
+    if (frame) {
+      frames++;
+      timestamp = frame->timestamp();
+    }
+  }
+
+  ASSERT_TRUE(frames > 0);
+  ASSERT_TRUE(timestamp > 0);
 }
 

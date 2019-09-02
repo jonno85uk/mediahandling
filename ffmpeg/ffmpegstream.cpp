@@ -28,8 +28,10 @@
 #include "ffmpegstream.h"
 #include <cassert>
 #include <sstream>
+#include <thread>
 
 #include "ffmpegmediaframe.h"
+
 
 extern "C" {
 //#include <libavformat/avformat.h>
@@ -64,10 +66,17 @@ FFMpegStream::FFMpegStream(AVFormatContext* parent, AVStream* const stream)
   codec_ = avcodec_find_decoder(stream_->codecpar->codec_id);
   codec_ctx_ = avcodec_alloc_context3(codec_);
   assert(codec_ctx_);
-  avcodec_parameters_to_context(codec_ctx_, stream_->codecpar);
+  int err_code = avcodec_parameters_to_context(codec_ctx_, stream_->codecpar);
+  if (err_code < 0) {
+    av_strerror(err_code, err.data(), ERR_LEN);
+    std::cerr << "Failed to populate codec context: " << err.data() << std::endl;
+    throw std::exception();
+  }
+
+  codec_ctx_->thread_count = static_cast<int32_t>(std::thread::hardware_concurrency());
   setupDecoder(stream_->codecpar->codec_id, opts_);
   // Open codec
-  int err_code = avcodec_open2(codec_ctx_, codec_, &opts_);
+  err_code = avcodec_open2(codec_ctx_, codec_, &opts_);
   if (err_code < 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
     std::cerr << "Could not open codec: " << err.data() << std::endl;
@@ -118,18 +127,13 @@ MediaFramePtr FFMpegStream::frame(const int64_t timestamp)
   assert(codec_ctx_);
   assert(pkt_);
 
-  if (timestamp < 0) {
-    std::cerr << "Invalid timestamp: " << timestamp << std::endl;
-    return nullptr;
-  }
-
-  if (last_timestamp_ != timestamp) {
+  if ((timestamp >= 0) && (last_timestamp_ != timestamp)) {
     // TODO: more checks to prevent unneeded seek
     if (!seek(timestamp)) {
       std::cerr << "Failed to seek: " << timestamp << std::endl;
       return nullptr;
     }
-  }
+  } // else read next frame
 
   return frame(*parent_, *codec_ctx_, *pkt_, stream_->index);
 }
@@ -146,7 +150,6 @@ media_handling::StreamType FFMpegStream::type() const
 {
   return type_;
 }
-
 
 
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
@@ -548,6 +551,7 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
   AVFrameUPtr frame(av_frame_alloc());
   while (err_code >= 0)
   {
+    av_packet_unref(&pkt);
     err_code = av_read_frame(&format_ctx, &pkt);
     if (err_code < 0) {
       av_strerror(err_code, err.data(), ERR_LEN);

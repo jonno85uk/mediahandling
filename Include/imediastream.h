@@ -52,7 +52,7 @@ namespace media_handling
      * @param timestamp   The position in the stream for retrieval
      * @return            Frame sample on success or null
      */
-    virtual MediaFramePtr frame(const int64_t timestamp) = 0;
+    virtual MediaFramePtr frame(const int64_t timestamp=-1) = 0;
 
     /**
      * @brief setFrame    Set the frame-sample for the stream
