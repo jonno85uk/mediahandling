@@ -52,16 +52,31 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStream)
   ASSERT_FALSE(src->visualStream(1));
 }
 
-TEST (FFMpegStreamTest, Openh264FHDVisualStreamPixelFormat)
+class VisualStreamPixelFormatParameterTests : public testing::TestWithParam<std::tuple<std::string, media_handling::PixelFormat>>
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
-  auto stream = src->visualStream(0);
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (VisualStreamPixelFormatParameterTests, CheckEqual)
+{
+  auto [path, format] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  auto stream = source_->visualStream(0);
   bool is_valid;
-  auto fmt = stream->property<media_handling::PixelFormat>(media_handling::MediaProperty::PIXEL_FORMAT, is_valid);
+  auto prop_fmt = stream->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_EQ(fmt, media_handling::PixelFormat::YUV420);
+  ASSERT_EQ(prop_fmt, format);
 }
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegStreamTest,
+      VisualStreamPixelFormatParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", PixelFormat::YUV420),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", PixelFormat::YUV420)
+));
+
+
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamDimensions)
 {
@@ -118,16 +133,31 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamTimescale)
   ASSERT_TRUE(tscale == Rational(1,12800));
 }
 
-TEST (FFMpegStreamTest, Openh264FHDVisualStreamFieldOrder)
+class FieldOrderParameterTests : public testing::TestWithParam<std::tuple<std::string, FieldOrder>>
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
-  auto stream = src->visualStream(0);
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (FieldOrderParameterTests, CheckIsEqual)
+{
+  auto [path, order] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  auto stream = source_->visualStream(0);
   bool is_valid;
-  auto order = stream->property<media_handling::FieldOrder>(media_handling::MediaProperty::FIELD_ORDER, is_valid);
+  auto prop_order = stream->property<FieldOrder>(MediaProperty::FIELD_ORDER, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_TRUE(order == media_handling::FieldOrder::PROGRESSIVE);
+  ASSERT_EQ(prop_order, order);
 }
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegStreamTest,
+      FieldOrderParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", FieldOrder::PROGRESSIVE),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", FieldOrder::TOP_FIRST)
+));
+
+
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadFrame)
 {
