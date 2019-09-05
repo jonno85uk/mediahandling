@@ -56,6 +56,9 @@ namespace media_handling::ffmpeg
       explicit FFMpegSource(std::string file_path);
       ~FFMpegSource() override;
 
+      FFMpegSource(const FFMpegSource& cpy) = delete;
+      FFMpegSource& operator=(const FFMpegSource& rhs) = delete;
+
       bool initialise() override;
       void setFilePath(const std::string& file_path) override;
 

@@ -70,23 +70,60 @@ TEST (FFMpegSourceTest, StreamsInvalidFile)
   ASSERT_TRUE(thing.visualStream(0) == nullptr);
 }
 
-
-TEST (FFMpegSourceTest, Openh264FHDFileNoThrow)
+class OpenFileParameterTests : public testing::TestWithParam<std::string>
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  EXPECT_NO_THROW(FFMpegSource src(fname));
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (OpenFileParameterTests, CheckNoThrow)
+{
+  auto path = this->GetParam();
+  EXPECT_NO_THROW(source_ = std::make_unique<FFMpegSource>(path));
 }
 
-TEST (FFMpegSourceTest, h264FHDDuration)
+TEST_P (OpenFileParameterTests, CheckFileName)
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  FFMpegSource src(fname);
+  auto path = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
 
   bool is_valid;
-  auto dur = src.property<int64_t>(MediaProperty::DURATION, is_valid);
+  auto prop_fname = source_->property<std::string>(MediaProperty::FILENAME, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_TRUE(dur == 14976000);
+  ASSERT_EQ(prop_fname, path);
 }
+
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegSourceTest,
+      OpenFileParameterTests,
+      testing::Values("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4",
+                      "./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS"
+));
+
+
+class DurationParameterTests : public testing::TestWithParam<std::tuple<std::string, int64_t>>
+{
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (DurationParameterTests, CheckIsEqual)
+{
+  auto [path, duration] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  bool is_valid;
+  auto result = source_->property<int64_t>(MediaProperty::DURATION, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(result, duration);
+}
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegSourceTest,
+      DurationParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 14976000LL),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 5728000LL)
+));
 
 TEST (FFMpegSourceTest, h264FHDDimensions)
 {
@@ -94,7 +131,7 @@ TEST (FFMpegSourceTest, h264FHDDimensions)
   FFMpegSource src(fname);
 
   bool is_valid;
-  auto dims = src.property<media_handling::Dimensions>(MediaProperty::DIMENSIONS, is_valid);
+  src.property<media_handling::Dimensions>(MediaProperty::DIMENSIONS, is_valid);
   ASSERT_FALSE(is_valid); // Property is of the stream
 }
 
@@ -108,79 +145,148 @@ TEST (FFMpegSourceTest, h264FHDCodec)
   ASSERT_FALSE(is_valid); // Property is of the stream
 }
 
-TEST (FFMpegSourceTest, h264FHDStreamCount)
+class StreamCountParameterTests : public testing::TestWithParam<std::tuple<std::string, int32_t>>
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  FFMpegSource src(fname);
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P(StreamCountParameterTests, CheckTotal)
+{
+  auto [path, count] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
 
   bool is_valid;
-  auto streams = src.property<int32_t>(MediaProperty::STREAMS, is_valid);
-  ASSERT_TRUE(is_valid); 
-  ASSERT_TRUE(streams == 2);
-}
-
-TEST (FFMpegSourceTest, h264FHDAudioStreamCount)
-{
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  FFMpegSource src(fname);
-
-  bool is_valid;
-  auto streams = src.property<int32_t>(MediaProperty::AUDIO_STREAMS, is_valid);
-  ASSERT_TRUE(is_valid); 
-  ASSERT_TRUE(streams == 1);
-}
-
-TEST (FFMpegSourceTest, h264FHDVideoStreamCount)
-{
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  FFMpegSource src(fname);
-
-  bool is_valid;
-  auto streams = src.property<int32_t>(MediaProperty::VIDEO_STREAMS, is_valid);
-  ASSERT_TRUE(is_valid); 
-  ASSERT_TRUE(streams == 1);
-}
-
-TEST (FFMpegSourceTest, h264FHDFilename)
-{
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  FFMpegSource src(fname);
-
-  bool is_valid;
-  auto prop_fname = src.property<std::string>(MediaProperty::FILENAME, is_valid);
+  auto streams = source_->property<int32_t>(MediaProperty::STREAMS, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_TRUE(prop_fname == fname);
+  ASSERT_EQ(streams, count);
 }
 
-TEST (FFMpegSourceTest, h264FHDFileformat)
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegSourceTest,
+      StreamCountParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 2),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 3)
+));
+
+class AudioStreamCountParameterTests : public testing::TestWithParam<std::tuple<std::string, int32_t>>
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  FFMpegSource src(fname);
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P(AudioStreamCountParameterTests, CheckEqual)
+{
+  auto [path, count] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
 
   bool is_valid;
-  auto format = src.property<std::string>(MediaProperty::FILE_FORMAT, is_valid);
+  auto streams = source_->property<int32_t>(MediaProperty::AUDIO_STREAMS, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_TRUE(format == "QuickTime / MOV");
+  ASSERT_EQ(streams, count);
 }
 
-TEST (FFMpegSourceTest, h264FHDBitrate)
+INSTANTIATE_TEST_CASE_P(
+      FFMpegSourceTest,
+      AudioStreamCountParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 1),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 1)
+));
+
+class VideoStreamCountParameterTests : public testing::TestWithParam<std::tuple<std::string, int32_t>>
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  FFMpegSource src(fname);
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P(VideoStreamCountParameterTests, CheckEqual)
+{
+  auto [path, count] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
 
   bool is_valid;
-  auto bitrate = src.property<int64_t>(MediaProperty::BITRATE, is_valid);
+  auto streams = source_->property<int32_t>(MediaProperty::VIDEO_STREAMS, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_TRUE(bitrate == 98630292);
+  ASSERT_EQ(streams, count);
 }
 
-TEST (FFMpegSourceTest, h264FHDFrameRate)
+INSTANTIATE_TEST_CASE_P(
+      FFMpegSourceTest,
+      VideoStreamCountParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 1),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 1)
+));
+
+class FileFormatParameterTests : public testing::TestWithParam<std::tuple<std::string, std::string>>
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  FFMpegSource src(fname);
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (FileFormatParameterTests, CheckEqual)
+{
+  auto [path, format] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  bool is_valid;
+  auto prop_format = source_->property<std::string>(MediaProperty::FILE_FORMAT, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(prop_format, format);
+}
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegSourceTest,
+      FileFormatParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", "QuickTime / MOV"),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", "MPEG-TS (MPEG-2 Transport Stream)")
+));
+
+class BitrateParameterTests : public testing::TestWithParam<std::tuple<std::string, int64_t>>
+{
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (BitrateParameterTests, CheckEqual)
+{
+  auto [path, bitrate] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  bool is_valid;
+  auto prop_rate = source_->property<int64_t>(MediaProperty::BITRATE, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(prop_rate, bitrate);
+}
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegSourceTest,
+      BitrateParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 98630292LL),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 22104670LL)
+));
+
+class FrameRateParameterTests : public testing::TestWithParam<std::tuple<std::string, Rational>>
+{
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (FrameRateParameterTests, CheckEqual)
+{
+
+  auto [path, framerate] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
 
   bool is_valid;
-  auto frate = src.property<Rational>(MediaProperty::FRAME_RATE, is_valid);
+  auto prop_frate = source_->property<Rational>(MediaProperty::FRAME_RATE, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_EQ(frate, Rational(50,1));
+  ASSERT_EQ(prop_frate, framerate);
 }
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegSourceTest,
+      FrameRateParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", Rational(50,1)),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", Rational(25,1))
+));
+
+
