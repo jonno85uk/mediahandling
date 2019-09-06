@@ -73,7 +73,8 @@ INSTANTIATE_TEST_CASE_P(
       FFMpegStreamTest,
       VisualStreamPixelFormatParameterTests,
       testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", PixelFormat::YUV420),
-                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", PixelFormat::YUV420)
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", PixelFormat::YUV420),
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", PixelFormat::YUV422)
 ));
 
 
@@ -154,7 +155,8 @@ INSTANTIATE_TEST_CASE_P(
       FFMpegStreamTest,
       FieldOrderParameterTests,
       testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", FieldOrder::PROGRESSIVE),
-                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", FieldOrder::TOP_FIRST)
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", FieldOrder::TOP_FIRST),
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", FieldOrder::PROGRESSIVE)
 ));
 
 
