@@ -34,10 +34,6 @@
 
 
 extern "C" {
-//#include <libavformat/avformat.h>
-//#include <libavfilter/avfilter.h>
-//#include <libavfilter/buffersink.h>
-//#include <libavfilter/buffersrc.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
 #include <libavutil/channel_layout.h>
@@ -200,6 +196,11 @@ void FFMpegStream::extractAudioProperties(const AVStream& stream, const AVCodecC
   this->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, static_cast<int32_t>(context.sample_rate));
   const SampleFormat s_format = convertSampleFormat(context.sample_fmt);
   this->setProperty(MediaProperty::AUDIO_FORMAT, s_format);
+
+#ifdef DEBUG
+  av_get_channel_layout_string(err.data(), ERR_LEN, context.channels, context.channel_layout);
+  std::cout << err.data() << std::endl;
+#endif
   const ChannelLayout layout = convertChannelLayout(context.channel_layout);
   this->setProperty(MediaProperty::AUDIO_LAYOUT, layout);
 
@@ -471,6 +472,7 @@ constexpr media_handling::ChannelLayout FFMpegStream::convertChannelLayout(const
 {
   media_handling::ChannelLayout conv_layout = ChannelLayout::UNKNOWN;
 
+
   switch (layout)
   {
     case AV_CH_LAYOUT_MONO:
@@ -505,6 +507,9 @@ constexpr media_handling::ChannelLayout FFMpegStream::convertChannelLayout(const
       break;
     case AV_CH_LAYOUT_5POINT1:
       conv_layout = ChannelLayout::FIVE_LFE;
+      break;
+    case AV_CH_LAYOUT_5POINT1_BACK:
+      conv_layout = ChannelLayout::FIVE_STEREO_LFE;
       break;
     case AV_CH_LAYOUT_6POINT0:
       conv_layout = ChannelLayout::SIX;

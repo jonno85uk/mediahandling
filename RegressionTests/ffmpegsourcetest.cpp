@@ -99,7 +99,8 @@ INSTANTIATE_TEST_CASE_P(
       OpenFileParameterTests,
       testing::Values("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4",
                       "./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS",
-                      "./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov"
+                      "./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov",
+                      "./ReferenceMedia/Audio/ogg/5_1.ogg"
 ));
 
 
@@ -124,7 +125,8 @@ INSTANTIATE_TEST_CASE_P(
       DurationParameterTests,
       testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 14976000LL),
                       std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 5728000LL),
-                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 2000000LL)
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 2000000LL),
+                      std::make_tuple("./ReferenceMedia/Audio/ogg/5_1.ogg", 3000000LL)
 ));
 
 TEST (FFMpegSourceTest, h264FHDDimensions)
@@ -170,7 +172,8 @@ INSTANTIATE_TEST_CASE_P(
       StreamCountParameterTests,
       testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 2),
                       std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 3),
-                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 3)
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 3),
+                      std::make_tuple("./ReferenceMedia/Audio/ogg/5_1.ogg", 1)
 ));
 
 class AudioStreamCountParameterTests : public testing::TestWithParam<std::tuple<std::string, int32_t>>
@@ -195,7 +198,9 @@ INSTANTIATE_TEST_CASE_P(
       AudioStreamCountParameterTests,
       testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 1),
                       std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 1),
-                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 1)
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 1),
+                      std::make_tuple("./ReferenceMedia/Audio/ogg/5_1.ogg", 1),
+                      std::make_tuple("./ReferenceMedia/Audio/ac3/5_1.ac3", 1)
 ));
 
 class VideoStreamCountParameterTests : public testing::TestWithParam<std::tuple<std::string, int32_t>>
@@ -220,7 +225,9 @@ INSTANTIATE_TEST_CASE_P(
       VideoStreamCountParameterTests,
       testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 1),
                       std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 1),
-                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 1)
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 1),
+                      std::make_tuple("./ReferenceMedia/Audio/ogg/5_1.ogg", 0),
+                      std::make_tuple("./ReferenceMedia/Audio/ac3/5_1.ac3", 0)
 ));
 
 class FileFormatParameterTests : public testing::TestWithParam<std::tuple<std::string, std::string>>
@@ -244,7 +251,9 @@ INSTANTIATE_TEST_CASE_P(
       FileFormatParameterTests,
       testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", "QuickTime / MOV"),
                       std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", "MPEG-TS (MPEG-2 Transport Stream)"),
-                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", "QuickTime / MOV")
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", "QuickTime / MOV"),
+                      std::make_tuple("./ReferenceMedia/Audio/ogg/5_1.ogg", "Ogg"),
+                      std::make_tuple("./ReferenceMedia/Audio/ac3/5_1.ac3", "raw AC-3")
 ));
 
 class BitrateParameterTests : public testing::TestWithParam<std::tuple<std::string, int64_t>>
@@ -268,7 +277,9 @@ INSTANTIATE_TEST_CASE_P(
       BitrateParameterTests,
       testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", 98630292LL),
                       std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", 22104670LL),
-                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 147038400LL)
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", 147038400LL),
+                      std::make_tuple("./ReferenceMedia/Audio/ogg/5_1.ogg", 123194LL),
+                      std::make_tuple("./ReferenceMedia/Audio/ac3/5_1.ac3", 191999LL)
 ));
 
 class FrameRateParameterTests : public testing::TestWithParam<std::tuple<std::string, Rational>>

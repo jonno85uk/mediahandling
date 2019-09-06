@@ -34,6 +34,8 @@
 #include <boost/rational.hpp>
 
 
+//TODO: use fourccs
+
 /**
  * Place for all bespoke or aliased types used within the library
  */
@@ -65,7 +67,10 @@ enum class MediaProperty
   FRAME_COUNT,          // int64_t
   FIELD_ORDER,          // FieldOrder
   TIMESTAMP,            // int64_t
-  FRAME_RATE           // Rational
+  FRAME_RATE,           // Rational
+  COLOUR_SPACE,         // TODO:
+  COLOUR_PRIMARY,       // TODO:
+  COLOUR_TRANSFER_CHARACTERISTICS // TODO:
 };
 
 
@@ -131,9 +136,11 @@ enum class ChannelLayout
   THREE_SURROUND_LFE,
   FOUR_STEREO,          // 2.0 + rear-left + rear-back       i.e. quadraphonic
   FOUR_SURROUND,        // 2.0 + front-center + back-center  i.e. 4.0
-  FOUR_SURROUND_LFE,      // 4.1
+  FOUR_SURROUND_LFE,    // 4.1
   FIVE,                 // 5.0
+  FIVE_STEREO,          // 5.0 but L+R front+back & center, no surrounds
   FIVE_LFE,             // 5.1
+  FIVE_STEREO_LFE,      // oggs 5.1 https://www.xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-810004.3.9
   SIX,                  // 6.0
   SIX_LFE,              // 6.1
   SEVEN,                // 7.0
