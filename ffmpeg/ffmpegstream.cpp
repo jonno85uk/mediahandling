@@ -155,12 +155,12 @@ media_handling::StreamType FFMpegStream::type() const
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {
   assert(context.codec);
-  this->setProperty(MediaProperty::CODEC, std::string(context.codec->name));
+  MediaPropertyObject::setProperty(MediaProperty::CODEC, std::string(context.codec->name));
   // TODO: if we use this things could go wrong on container != essence
   auto base = stream.time_base;
   if (base.den > 0) {
     Rational timescale(base.num, base.den);
-    this->setProperty(MediaProperty::TIMESCALE, timescale);
+    MediaPropertyObject::setProperty(MediaProperty::TIMESCALE, timescale);
   }
 
   // TODO: stream durations
@@ -191,9 +191,7 @@ void FFMpegStream::extractVisualProperties(const AVStream& stream, const AVCodec
     this->setProperty(MediaProperty::DISPLAY_ASPECT_RATIO, dar);
   }
 
-  if (const auto field_order = getFieldOrder()) {
-    this->setProperty(MediaProperty::FIELD_ORDER, field_order.value());
-  }
+  extractFrameProperties();
 }
 
 void FFMpegStream::extractAudioProperties(const AVStream& stream, const AVCodecContext& context)
@@ -204,6 +202,8 @@ void FFMpegStream::extractAudioProperties(const AVStream& stream, const AVCodecC
   this->setProperty(MediaProperty::AUDIO_FORMAT, s_format);
   const ChannelLayout layout = convertChannelLayout(context.channel_layout);
   this->setProperty(MediaProperty::AUDIO_LAYOUT, layout);
+
+  //stream.codecpar->color_space;
 }
 
 bool FFMpegStream::seek(const int64_t timestamp)
@@ -523,7 +523,7 @@ constexpr media_handling::ChannelLayout FFMpegStream::convertChannelLayout(const
   return conv_layout;
 }
 
-std::optional<media_handling::FieldOrder> FFMpegStream::getFieldOrder()
+void FFMpegStream::extractFrameProperties()
 {
   std::optional<media_handling::FieldOrder> order;
 
@@ -532,11 +532,19 @@ std::optional<media_handling::FieldOrder> FFMpegStream::getFieldOrder()
     bool is_valid;
     auto val = tmp_frame->property<media_handling::FieldOrder>(MediaProperty::FIELD_ORDER, is_valid);
     if (is_valid) {
-      order = val;
+      MediaPropertyObject::setProperty(MediaProperty::FIELD_ORDER, val);
     }
+    auto par = MediaPropertyObject::property<Rational>(MediaProperty::PIXEL_ASPECT_RATIO, is_valid);
+    if (!is_valid || (par == Rational{0,1}) ) {
+      // Couldn't find it or value doesn't make sense
+      par = tmp_frame->property<Rational>(MediaProperty::PIXEL_ASPECT_RATIO, is_valid);
+      if (is_valid) {
+        MediaPropertyObject::setProperty(MediaProperty::PIXEL_ASPECT_RATIO, par);
+      }
+    }
+
   }
 
-  return order;
 }
 
 

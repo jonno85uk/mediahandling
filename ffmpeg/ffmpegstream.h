@@ -88,7 +88,11 @@ namespace media_handling::ffmpeg
       constexpr SampleFormat convertSampleFormat(const AVSampleFormat format) const;
       constexpr ChannelLayout convertChannelLayout(const uint64_t layout) const;
 
-      std::optional<FieldOrder> getFieldOrder();
+      /**
+       * @brief Extract extra properties from a frame
+       * @note  Certain properties are not in AVStream but can be found in AVFrame
+       */
+      void extractFrameProperties();
 
       MediaFramePtr frame(AVFormatContext& format_ctx, AVCodecContext& codec_ctx, AVPacket& pkt, const int stream_idx) const;
   };

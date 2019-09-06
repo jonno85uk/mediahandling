@@ -78,29 +78,59 @@ INSTANTIATE_TEST_CASE_P(
 ));
 
 
-
-TEST (FFMpegStreamTest, Openh264FHDVisualStreamDimensions)
+class DimensionsParameterTests : public testing::TestWithParam<std::tuple<std::string, Dimensions>>
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
-  auto stream = src->visualStream(0);
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+
+TEST_P (DimensionsParameterTests, CheckEqual)
+{
+  auto [path, dims] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  auto stream = source_->visualStream(0);
   bool is_valid;
-  auto dims = stream->property<media_handling::Dimensions>(media_handling::MediaProperty::DIMENSIONS, is_valid);
+  auto prop_dims = stream->property<Dimensions>(MediaProperty::DIMENSIONS, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_EQ(dims.width, 1920);
-  ASSERT_EQ(dims.height, 1080);
+  ASSERT_EQ(prop_dims.width, dims.width);
+  ASSERT_EQ(prop_dims.height, dims.height);
 }
 
-TEST (FFMpegStreamTest, Openh264FHDVisualStreamPAR)
+INSTANTIATE_TEST_CASE_P(
+      FFMpegStreamTest,
+      DimensionsParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", Dimensions{1920,1080}),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", Dimensions{1920,1080}),
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", Dimensions{1920,1080})
+));
+
+class PARParameterTests : public testing::TestWithParam<std::tuple<std::string, Rational>>
 {
-  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
-  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
-  auto stream = src->visualStream(0);
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+
+TEST_P (PARParameterTests, CheckEqual)
+{
+  auto [path, par] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  auto stream = source_->visualStream(0);
   bool is_valid;
-  auto par = stream->property<media_handling::Rational>(media_handling::MediaProperty::PIXEL_ASPECT_RATIO, is_valid);
+  auto prop_par = stream->property<Rational>(MediaProperty::PIXEL_ASPECT_RATIO, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_TRUE(par == 1);
+  ASSERT_EQ(prop_par, par);
 }
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegStreamTest,
+      PARParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", Rational{1,1}),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", Rational{1,1}),
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", Rational{1,1})
+));
+
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamDAR)
 {

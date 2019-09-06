@@ -106,6 +106,8 @@ int64_t FFMpegMediaFrame::timestamp() const
 void FFMpegMediaFrame::extractVisualProperties()
 {
   assert(ff_frame);
+
+  // field-order
   if (ff_frame_->interlaced_frame) {
     if (ff_frame_->top_field_first) {
       this->setProperty(MediaProperty::FIELD_ORDER, FieldOrder::TOP_FIRST);
@@ -114,6 +116,12 @@ void FFMpegMediaFrame::extractVisualProperties()
     }
   } else {
     this->setProperty(MediaProperty::FIELD_ORDER, FieldOrder::PROGRESSIVE);
+  }
+
+  // PAR
+  Rational par {ff_frame_->sample_aspect_ratio.num, ff_frame_->sample_aspect_ratio.den};
+  if (par != Rational{0,1}) {
+    this->setProperty(MediaProperty::PIXEL_ASPECT_RATIO, par);
   }
 }
 
