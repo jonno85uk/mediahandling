@@ -190,6 +190,30 @@ INSTANTIATE_TEST_CASE_P(
 ));
 
 
+class CodecParameterTests : public testing::TestWithParam<std::tuple<std::string, Codec>>
+{
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (CodecParameterTests, CheckIsEqual)
+{
+  auto [path, codec] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  auto stream = source_->visualStream(0);
+  bool is_valid;
+  auto prop_codec = stream->property<Codec>(MediaProperty::CODEC, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(prop_codec, codec);
+}
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegStreamTest,
+      CodecParameterTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", Codec::H264),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", Codec::H264),
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", Codec::DNXHD)
+));
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadFrame)
 {

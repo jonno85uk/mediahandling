@@ -145,7 +145,7 @@ TEST (FFMpegSourceTest, h264FHDCodec)
   FFMpegSource src(fname);
 
   bool is_valid;
-  auto codec = src.property<std::string>(MediaProperty::CODEC, is_valid);
+  auto codec = src.property<std::string>(MediaProperty::CODEC_NAME, is_valid);
   ASSERT_FALSE(is_valid); // Property is of the stream
 }
 

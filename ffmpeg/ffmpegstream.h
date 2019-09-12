@@ -87,6 +87,7 @@ namespace media_handling::ffmpeg
       constexpr PixelFormat convertPixelFormat(const AVPixelFormat format) const;
       constexpr SampleFormat convertSampleFormat(const AVSampleFormat format) const;
       constexpr ChannelLayout convertChannelLayout(const uint64_t layout) const;
+      constexpr Codec convertCodecID(const AVCodecID id) const;
 
       /**
        * @brief Extract extra properties from a frame

@@ -151,7 +151,9 @@ media_handling::StreamType FFMpegStream::type() const
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {
   assert(context.codec);
-  MediaPropertyObject::setProperty(MediaProperty::CODEC, std::string(context.codec->name));
+  MediaPropertyObject::setProperty(MediaProperty::CODEC_NAME, std::string(context.codec->name));
+  const media_handling::Codec cdc = convertCodecID(context.codec_id);
+  MediaPropertyObject::setProperty(MediaProperty::CODEC, cdc);
   // TODO: if we use this things could go wrong on container != essence
   auto base = stream.time_base;
   if (base.den > 0) {
@@ -526,6 +528,39 @@ constexpr media_handling::ChannelLayout FFMpegStream::convertChannelLayout(const
   }
 
   return conv_layout;
+}
+
+
+constexpr media_handling::Codec FFMpegStream::convertCodecID(const AVCodecID id) const
+{
+  media_handling::Codec cdc = media_handling::Codec::UNKNOWN;
+
+  switch (id)
+  {
+    case AV_CODEC_ID_AAC:
+      cdc = media_handling::Codec::AAC;
+      break;
+    case AV_CODEC_ID_DNXHD:
+      cdc = media_handling::Codec::DNXHD;
+      break;
+    case AV_CODEC_ID_H264:
+      cdc = media_handling::Codec::H264;
+      break;
+    case AV_CODEC_ID_MPEG2VIDEO:
+      cdc = media_handling::Codec::MPEG2_VIDEO;
+      break;
+    case AV_CODEC_ID_MPEG4:
+      cdc = media_handling::Codec::MPEG4;
+      break;
+    case AV_CODEC_ID_RAWVIDEO:
+      cdc = media_handling::Codec::RAW;
+      break;
+    default:
+      cdc = media_handling::Codec::UNKNOWN;
+      break;
+  }
+
+  return cdc;
 }
 
 void FFMpegStream::extractFrameProperties()

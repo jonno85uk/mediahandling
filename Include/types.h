@@ -45,7 +45,8 @@ namespace media_handling
 enum class MediaProperty
 {
   PROFILE,              //TODO: for mpeg2/4, aac, dnxhd, etc encoded profile
-  CODEC,                // std::string
+  CODEC,                // Codec
+  CODEC_NAME,           // std::string
   AUDIO_FORMAT,         // SampleFormat
   AUDIO_LAYOUT,
   AUDIO_SAMPLING_RATE,  // int32_t
@@ -73,6 +74,16 @@ enum class MediaProperty
   COLOUR_TRANSFER_CHARACTERISTICS // TODO:
 };
 
+enum class Codec
+{
+  UNKNOWN,
+  AAC,
+  DNXHD,
+  H264,
+  MPEG2_VIDEO,
+  MPEG4,
+  RAW
+};
 
 enum class StreamType
 {

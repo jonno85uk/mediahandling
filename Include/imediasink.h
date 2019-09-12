@@ -47,6 +47,12 @@ namespace media_handling
          * @return        true==success
          */
         virtual bool encode(std::shared_ptr<MediaFramePtr> sample) = 0;
+
+        /**
+         * @brief     Identify if sink is correctly setup for encoding
+         * @return    true==is ready
+         */
+        virtual bool isReady() = 0;
     };
 }
 
