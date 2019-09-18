@@ -41,8 +41,13 @@ enum class BackendType
 
 namespace media_handling
 {
-  // static void assignLoggerCallback();
+  typedef void (*LOGGINGFN)(const std::string&);
+
+  void assignLoggerCallback(LOGGINGFN func);
+
   bool initialise(const BackendType backend);
+
+  void logMessage(const std::string& msg);
 
 }
 
