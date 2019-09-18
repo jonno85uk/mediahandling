@@ -4,7 +4,7 @@ set(CMAKE_BUILD_TYPE Release)
 
 add_definitions(-Wall -Werror -pedantic -O0 -g3 -std=c++17)
 
-include_directories(ffmpeg Include)
+include_directories(ffmpeg Include ./)
 
 file(GLOB SOURCES "ffmpeg/*.cpp" "Src/*.cpp" "*.cpp")
 

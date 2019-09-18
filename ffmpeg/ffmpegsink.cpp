@@ -25,45 +25,72 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "ffmpegsink.h"
+
+#include <filesystem>
+
 #include "mediahandling.h"
-#include <iostream>
 
-#ifdef OLD_FFMPEG
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavfilter/avfilter.h>
-}
-#endif
+using media_handling::ffmpeg::FFMpegSink;
 
-void defaultLog(const std::string& msg)
+constexpr size_t ERR_LEN = 256;
+
+namespace
 {
-  std::cerr << msg << std::endl;
+  std::string err(ERR_LEN, '\0');
 }
 
-
-static media_handling::LOGGINGFN logging_func = defaultLog;
-
-bool media_handling::initialise(const BackendType backend)
+FFMpegSink::FFMpegSink(const std::string& file_path)
 {
-
-#ifdef OLD_FFMPEG // lavf 58.9.100
-  avcodec_register_all();
-  av_register_all();
-  avfilter_register_all();
-#endif
-  return true;
-}
-
-
-
-void media_handling::assignLoggerCallback(media_handling::LOGGINGFN func)
-{
-  logging_func = func;
-}
-
-void media_handling::logMessage(const std::string& msg)
-{
-  if (logging_func != nullptr) {
-    logging_func(msg);
+  if (!initialise(file_path)) {
+    std::throw_with_nested(std::runtime_error("FFMpegSink::initialise failed, filepath=" + file_path) );
   }
+}
+
+FFMpegSink::~FFMpegSink()
+{
+
+}
+
+bool FFMpegSink::encode(std::shared_ptr<MediaFramePtr> sample)
+{
+  // TODO:
+  return false;
+}
+
+bool FFMpegSink::isReady()
+{
+  if (!ready_)
+  {
+    // TODO:
+  }
+
+  return ready_;
+}
+
+
+bool FFMpegSink::initialise(const std::string& path)
+{
+  std::filesystem::path tmp_path(path);
+  if (path.empty() || !std::filesystem::exists(tmp_path.parent_path())) {
+    return false;
+  }
+
+  MediaPropertyObject::setProperty(media_handling::MediaProperty::FILENAME, path);
+
+  int ret = avformat_alloc_output_context2(&fmt_ctx_, nullptr, nullptr, path.c_str());
+  if ( (ret < 0) || (fmt_ctx_ == nullptr)) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    logMessage("Could not create output context, code=" + err);
+    return false;
+  }
+
+  ret = avio_open(&fmt_ctx_->pb,  path.c_str(), AVIO_FLAG_WRITE);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    logMessage("Could not open output file, code=" + err);
+    return false;
+  }
+
+  return true;
 }

@@ -25,45 +25,42 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "mediahandling.h"
-#include <iostream>
+#ifndef FFMPEGSINK_H
+#define FFMPEGSINK_H
 
-#ifdef OLD_FFMPEG
+#include "imediasink.h"
+
 extern "C" {
 #include <libavformat/avformat.h>
-#include <libavfilter/avfilter.h>
 }
-#endif
 
-void defaultLog(const std::string& msg)
+namespace media_handling::ffmpeg
 {
-  std::cerr << msg << std::endl;
+  class FFMpegSink : public IMediaSink
+  {
+  public:
+    FFMpegSink() = delete;
+    /**
+     * @brief FFMpegSink
+     * @param file_path   Absolute or relative path to file to be created
+     */
+    explicit FFMpegSink(const std::string& file_path);
+
+    ~FFMpegSink() override;
+
+    bool encode(std::shared_ptr<MediaFramePtr> sample) override;
+
+    bool isReady() override;
+
+  private:
+    bool ready_ {false};
+
+    AVFormatContext* fmt_ctx_ {nullptr};
+
+    bool initialise(const std::string& path);
+  };
 }
 
 
-static media_handling::LOGGINGFN logging_func = defaultLog;
 
-bool media_handling::initialise(const BackendType backend)
-{
-
-#ifdef OLD_FFMPEG // lavf 58.9.100
-  avcodec_register_all();
-  av_register_all();
-  avfilter_register_all();
-#endif
-  return true;
-}
-
-
-
-void media_handling::assignLoggerCallback(media_handling::LOGGINGFN func)
-{
-  logging_func = func;
-}
-
-void media_handling::logMessage(const std::string& msg)
-{
-  if (logging_func != nullptr) {
-    logging_func(msg);
-  }
-}
+#endif // FFMPEGSINK_H

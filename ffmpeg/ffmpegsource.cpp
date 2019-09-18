@@ -32,6 +32,7 @@
 
 #include "ffmpegsource.h"
 #include "ffmpegstream.h"
+#include "mediahandling.h"
 
 using media_handling::ffmpeg::FFMpegSource;
 using media_handling::ffmpeg::FFMpegStream;
@@ -46,14 +47,14 @@ extern "C" {
 
 namespace
 {
-  std::array<char, ERR_LEN> err;
+  std::string err(ERR_LEN, '\0');
 }
 
 
 FFMpegSource::FFMpegSource(std::string file_path) : file_path_(std::move(file_path))
 {
   if (!FFMpegSource::initialise()) {
-    throw std::exception();
+    std::throw_with_nested(std::runtime_error("FFMpegSource::initialise failed, filepath=" + file_path_) );
   }
 }
 
@@ -77,7 +78,7 @@ bool FFMpegSource::initialise()
   int err_code = avformat_open_input(&format_ctx_, file_path_.c_str(), nullptr, nullptr);
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
-    std::cerr << err.data() << std::endl;
+    logMessage("Failed to open file, code=" + err);
     return false;
   }
 
@@ -85,7 +86,7 @@ bool FFMpegSource::initialise()
   err_code = avformat_find_stream_info(format_ctx_, nullptr);
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
-    std::cerr << err.data() << std::endl;
+    logMessage("Failed to read file info, code=" + err);
     return false;
   }
 

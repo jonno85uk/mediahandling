@@ -25,45 +25,21 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "mediahandling.h"
-#include <iostream>
 
-#ifdef OLD_FFMPEG
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavfilter/avfilter.h>
-}
-#endif
 
-void defaultLog(const std::string& msg)
+#include <gtest/gtest.h>
+
+#include "ffmpegsink.h"
+
+using namespace media_handling;
+using namespace media_handling::ffmpeg;
+
+TEST (FFMpegSinkTest, AllocateNonExistent)
 {
-  std::cerr << msg << std::endl;
-}
-
-
-static media_handling::LOGGINGFN logging_func = defaultLog;
-
-bool media_handling::initialise(const BackendType backend)
-{
-
-#ifdef OLD_FFMPEG // lavf 58.9.100
-  avcodec_register_all();
-  av_register_all();
-  avfilter_register_all();
-#endif
-  return true;
+  EXPECT_ANY_THROW(FFMpegSink thing("null"));
 }
 
-
-
-void media_handling::assignLoggerCallback(media_handling::LOGGINGFN func)
+TEST (FFMpegSinkTest, AllocateOkPath)
 {
-  logging_func = func;
-}
-
-void media_handling::logMessage(const std::string& msg)
-{
-  if (logging_func != nullptr) {
-    logging_func(msg);
-  }
+  EXPECT_NO_THROW(FFMpegSink thing("./test.mp4"));
 }
