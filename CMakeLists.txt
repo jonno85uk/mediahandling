@@ -1,13 +1,23 @@
-cmake_minimum_required(VERSION 2.8.9)
-project(mediahandling)
-set(CMAKE_BUILD_TYPE Release)
+cmake_minimum_required(VERSION 3.5)
 
-add_definitions(-Wall -Werror -pedantic -O0 -g3 -std=c++17)
-
-include_directories(ffmpeg Include ./)
+project(mediahandling VERSION 0.0 LANGUAGES CXX)
 
 file(GLOB SOURCES "ffmpeg/*.cpp" "Src/*.cpp" "*.cpp")
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
 add_library(mediaHandling SHARED ${SOURCES})
 
-install(TARGETS mediaHandling DESTINATION /usr/lib)
+find_package(ffmpeg REQUIRED)
+
+target_compile_features(mediaHandling PRIVATE cxx_std_17)
+
+target_include_directories(mediaHandling
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg
+)
+
+install(TARGETS mediaHandling DESTINATION lib)
