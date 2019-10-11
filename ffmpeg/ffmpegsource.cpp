@@ -132,7 +132,6 @@ MediaStreamPtr FFMpegSource::newMediaStream(AVStream& stream)
 {
   assert(format_ctx_);
   assert(format_ctx_->streams);
-  assert(format_ctx_->streams[index]);
   return std::make_shared<FFMpegStream>(format_ctx_, &stream);
 }
 

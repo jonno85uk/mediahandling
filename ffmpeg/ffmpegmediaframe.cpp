@@ -105,7 +105,7 @@ int64_t FFMpegMediaFrame::timestamp() const
 
 void FFMpegMediaFrame::extractVisualProperties()
 {
-  assert(ff_frame);
+  assert(ff_frame_);
 
   // field-order
   if (ff_frame_->interlaced_frame) {
@@ -128,7 +128,7 @@ void FFMpegMediaFrame::extractVisualProperties()
 
 void FFMpegMediaFrame::extractAudioProperties()
 {
-  assert(ff_frame);
+  assert(ff_frame_);
   this->setProperty(MediaProperty::AUDIO_SAMPLES, static_cast<int32_t>(ff_frame_->nb_samples));
 
   SampleFormat format;
