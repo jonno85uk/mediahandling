@@ -131,8 +131,14 @@ void FFMpegMediaFrame::extractAudioProperties()
   assert(ff_frame_);
   this->setProperty(MediaProperty::AUDIO_SAMPLES, static_cast<int32_t>(ff_frame_->nb_samples));
 
-  SampleFormat format;
-  switch (ff_frame_->format) {
+  const SampleFormat format = convert(static_cast<AVSampleFormat>(ff_frame_->format));
+  this->setProperty(MediaProperty::AUDIO_FORMAT, format);
+}
+
+constexpr media_handling::SampleFormat FFMpegMediaFrame::convert(enum AVSampleFormat av_format) const noexcept
+{
+  SampleFormat format = SampleFormat::NONE;
+  switch (av_format) {
     case AV_SAMPLE_FMT_NONE:
       [[fallthrough]];
     case AV_SAMPLE_FMT_NB:
@@ -177,8 +183,6 @@ void FFMpegMediaFrame::extractAudioProperties()
       format = SampleFormat::SIGNED_64P;
       break;
   }
-  this->setProperty(MediaProperty::AUDIO_FORMAT, format);
-
+  return format;
 }
-
 

@@ -77,6 +77,13 @@ namespace media_handling
       void extractVisualProperties();
 
       void extractAudioProperties();
+
+      /**
+       * @brief Convert from FFMpeg type to media_handling type
+       * @param format FFMpeg sample format
+       * @return SampleFormat
+       */
+      constexpr SampleFormat convert(enum AVSampleFormat format) const noexcept;
   };
 }
 
