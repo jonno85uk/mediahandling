@@ -48,25 +48,17 @@ namespace media_handling
       virtual std::optional<bool> isVisual() const = 0;
 
       /**
-       * @brief Size of the data held
-       * @return size in bytes
+       * @brief Obtain the line size of a plane
+       * @param index The plane
+       * @return size if found
        */
-      virtual int64_t size() const = 0;
+      virtual std::optional<int64_t> lineSize(const int index) const = 0;
 
       /**
        * @brief Obtain the sample data of this frame, either read from a stream (decode) or written to (encode)
-       * @return  data or null
-       * @see setData
+       * @return non-owning pointer to data or null
        */
-      virtual std::shared_ptr<uint8_t**> data() const = 0;
-
-      /**
-       * @brief             Set the data of this frame for encode
-       * @param frame_data
-       * @param size        Size in bytes
-       * @see data
-       */
-      virtual void setData(std::shared_ptr<uint8_t**> frame_data, const int64_t size) = 0;
+      virtual uint8_t** data() = 0;
 
       /**
        * @brief It is not always resource-wise to extract all properties for every frame when decoding

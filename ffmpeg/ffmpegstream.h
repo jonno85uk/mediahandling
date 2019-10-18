@@ -55,6 +55,8 @@ namespace media_handling::ffmpeg
       MediaFramePtr frame(const int64_t timestamp=-1) final;
       bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
       StreamType type() const final;
+      bool setOutputFormat(const PixelFormat format) final;
+      bool setOutputFormat(const SampleFormat format) final;
 
     private:
       AVFormatContext* parent_ {nullptr};

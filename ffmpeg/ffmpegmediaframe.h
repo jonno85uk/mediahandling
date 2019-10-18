@@ -55,11 +55,9 @@ namespace media_handling
 
       std::optional<bool> isVisual() const override;
 
-      int64_t size() const override;
+      std::optional<int64_t> lineSize(const int index) const override;
 
-      std::shared_ptr<uint8_t**> data() const override;
-
-      void setData(std::shared_ptr<uint8_t**> frame_data, const int64_t size) override;
+      uint8_t** data() override;
 
       void extractProperties() override;
 
@@ -70,8 +68,7 @@ namespace media_handling
       bool visual_;
       std::optional<bool> is_audio_;
       std::optional<bool> is_visual_;
-      int64_t data_size_ {0};
-      std::shared_ptr<uint8_t**> data_ {nullptr};
+      uint8_t** data_ {nullptr};
       int64_t timestamp_ {-1};
 
       void extractVisualProperties();

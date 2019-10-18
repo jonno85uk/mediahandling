@@ -222,7 +222,6 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadFrame)
   auto stream = src->visualStream(0);
   auto frame = stream->frame(0);
   ASSERT_TRUE(frame != nullptr);
-  ASSERT_TRUE(frame->size() > 0);
   ASSERT_EQ(frame->timestamp(), 0);
 }
 
@@ -255,6 +254,14 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadToEOS)
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   auto stream = src->visualStream(0);
   MediaFramePtr frame = stream->frame(0);
+
+  auto sz = frame->lineSize(0);
+  ASSERT_EQ(sz, 1920); // y
+  sz = frame->lineSize(1);
+  ASSERT_EQ(sz, 960); //  u
+  sz = frame->lineSize(2);
+  ASSERT_EQ(sz, 960); //  v
+
   int64_t timestamp = -1;
   int frames = 0;
   while (frame) {
@@ -267,6 +274,15 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadToEOS)
 
   ASSERT_TRUE(frames > 0);
   ASSERT_TRUE(timestamp > 0);
+}
+
+TEST (FFMpegStreamTest, SetOutputFormatVideo)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+
+  auto stream = src->visualStream(0);
+  ASSERT_TRUE(stream->setOutputFormat(PixelFormat::RGB24));
 }
 
 
@@ -370,7 +386,6 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrame)
   auto stream = src->audioStream(0);
   auto frame = stream->frame(0);
   ASSERT_TRUE(frame != nullptr);
-  ASSERT_TRUE(frame->size() > 0);
 }
 
 TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrameProperties)
@@ -419,6 +434,12 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrameToEOS)
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   auto stream = src->audioStream(0);
   MediaFramePtr frame = stream->frame(0);
+
+  auto sz = frame->lineSize(0);
+  ASSERT_EQ(sz, 8192);
+  sz = frame->lineSize(1);
+  ASSERT_EQ(sz, 0);
+
   int64_t timestamp = -1;
   int frames = 0;
   while (frame) {
@@ -431,5 +452,14 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrameToEOS)
 
   ASSERT_TRUE(frames > 0);
   ASSERT_TRUE(timestamp > 0);
+}
+
+TEST (FFMpegStreamTest, SetOutputFormatAudio)
+{
+  auto fname = "./ReferenceMedia/Audio/ac3/5_1.ac3";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+
+  auto stream = src->audioStream(0);
+  ASSERT_TRUE(stream->setOutputFormat(SampleFormat::FLOAT));
 }
 

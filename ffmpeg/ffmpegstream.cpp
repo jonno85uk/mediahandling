@@ -147,6 +147,17 @@ media_handling::StreamType FFMpegStream::type() const
   return type_;
 }
 
+bool FFMpegStream::setOutputFormat(const PixelFormat format)
+{
+  // TODO:
+  return false;
+}
+
+bool FFMpegStream::setOutputFormat(const SampleFormat format)
+{
+  // TODO:
+  return false;
+}
 
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {

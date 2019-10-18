@@ -127,6 +127,10 @@ struct Dimensions
   int height {};
 };
 
+/**
+ * @brief The PixelFormat enum
+ * @note only 8bit per channel
+ */
 enum class PixelFormat
 {
   RGB24,

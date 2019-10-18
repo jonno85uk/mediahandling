@@ -29,6 +29,8 @@
 
 #include <cassert>
 
+#include "mediahandling.h"
+
 using media_handling::FFMpegMediaFrame;
 using media_handling::MediaProperty;
 
@@ -44,17 +46,6 @@ FFMpegMediaFrame::FFMpegMediaFrame(media_handling::AVFrameUPtr frame, const bool
   assert(ff_frame_);
   assert(ff_frame_->pts >= 0);
   timestamp_ = ff_frame_->pts;
-  data_ = std::make_shared<uint8_t**>(ff_frame_->data);
-
-  if (visual) {
-    auto y = ff_frame_->linesize[0] * ff_frame_->height;
-    auto u = ff_frame_->linesize[1] * ff_frame_->height;
-    auto v = ff_frame_->linesize[2] * ff_frame_->height;
-    data_size_ = y + u + v;
-  } else {
-    data_size_ = ff_frame_->linesize[0]; // FIXME: correct
-  }
-
 }
 
 FFMpegMediaFrame::~FFMpegMediaFrame()
@@ -71,21 +62,22 @@ std::optional<bool> FFMpegMediaFrame::isVisual() const
   return is_visual_;
 }
 
-int64_t FFMpegMediaFrame::size() const
+std::optional<int64_t> FFMpegMediaFrame::lineSize(const int index) const
 {
-  return data_size_;
+  assert(ff_frame_);
+  if (index > AV_NUM_DATA_POINTERS) {
+    media_handling::logMessage("FFMpegMediaFrame::lineSize() -- index out of range");
+    return {};
+  }
+  return ff_frame_->linesize[index];
 }
 
-std::shared_ptr<uint8_t**> FFMpegMediaFrame::data() const
+uint8_t** FFMpegMediaFrame::data()
 {
-  return data_;
+  assert(ff_frame_);
+  return ff_frame_->data;
 }
 
-void FFMpegMediaFrame::setData(std::shared_ptr<uint8_t**> frame_data, const int64_t size)
-{
-  data_ = frame_data;
-  data_size_ = size;
-}
 
 void FFMpegMediaFrame::extractProperties()
 {

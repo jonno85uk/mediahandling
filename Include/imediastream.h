@@ -67,6 +67,22 @@ namespace media_handling
      * @return  type if known, otherwise UNKNOWN
      */
     virtual StreamType type() const = 0;
+
+    /**
+     * @brief         Automatically convert the stream's output format type
+     * @note          This is for video only
+     * @param format  pixel format to change source file to i.e yuv420 -> rgb24
+     * @return        true==output format set
+     */
+    virtual bool setOutputFormat(const PixelFormat format) = 0;
+
+    /**
+     * @brief         Automatically convert the stream's output format type
+     * @note          This is for audio only
+     * @param format  sample format to change source file to
+     * @return        true==output format set
+     */
+    virtual bool setOutputFormat(const SampleFormat format) = 0;
   };
 
   using MediaStreamPtr = std::shared_ptr<IMediaStream>;
