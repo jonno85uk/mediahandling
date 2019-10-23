@@ -34,9 +34,21 @@
 using media_handling::FFMpegMediaFrame;
 using media_handling::MediaProperty;
 
-void media_handling::avframe_deleter(AVFrame* frame)
+
+void media_handling::avframeDeleter(AVFrame* frame)
 {
   av_frame_free(&frame);
+}
+
+void media_handling::swsContextDeleter(SwsContext* context)
+{
+  sws_freeContext(context);
+}
+
+
+void media_handling::swrContextDeleter(SwrContext* context)
+{
+  swr_free(&context);
 }
 
 FFMpegMediaFrame::FFMpegMediaFrame(media_handling::AVFrameUPtr frame, const bool visual)
@@ -72,12 +84,39 @@ std::optional<int64_t> FFMpegMediaFrame::lineSize(const int index) const
   return ff_frame_->linesize[index];
 }
 
-uint8_t** FFMpegMediaFrame::data()
+uint8_t** FFMpegMediaFrame::data() noexcept
 {
   assert(ff_frame_);
   return ff_frame_->data;
+
 }
 
+uint8_t** FFMpegMediaFrame::convertedData() noexcept
+{
+  assert(ff_frame_);
+  if (visual_ && output_format_.pixel_.has_value()) {
+    if (!sws_context_) {
+      sws_context_.reset(createSwsContext());
+    }
+    if (sws_context_) {
+      // TODO: convert
+      return nullptr;
+    } else {
+      media_handling::logMessage("FFMpegMediaFrame::data() -- failed to create format converter");
+    }
+  } else if (!visual_ && output_format_.sample_.has_value()) {
+    if (!swr_context_) {
+      swr_context_.reset(createSwrContext());
+    }
+    if (swr_context_) {
+      // TODO: convert
+      return nullptr;
+    } else {
+      media_handling::logMessage("FFMpegMediaFrame::data() -- failed to create format converter");
+    }
+  }
+  return nullptr;
+}
 
 void FFMpegMediaFrame::extractProperties()
 {
@@ -94,6 +133,28 @@ int64_t FFMpegMediaFrame::timestamp() const
   return timestamp_;
 }
 
+
+bool FFMpegMediaFrame::setOutputFormat(const AVPixelFormat fmt)
+{
+  if (!visual_) {
+    media_handling::logMessage("FFMpegMediaFrame::setOutputFormat() -- not able to set pixel format of audio frame");
+    return false;
+  }
+
+  output_format_.pixel_ = fmt;
+  return true;
+}
+
+bool FFMpegMediaFrame::setOutputFormat(const AVSampleFormat fmt)
+{
+  if (visual_) {
+    media_handling::logMessage("FFMpegMediaFrame::setOutputFormat() -- not able to set pixel format of audio frame");
+    return false;
+  }
+
+  output_format_.sample_ = fmt;
+  return true;
+}
 
 void FFMpegMediaFrame::extractVisualProperties()
 {
@@ -176,5 +237,15 @@ constexpr media_handling::SampleFormat FFMpegMediaFrame::convert(enum AVSampleFo
       break;
   }
   return format;
+}
+
+SwsContext* FFMpegMediaFrame::createSwsContext()
+{
+
+}
+
+SwrContext* FFMpegMediaFrame::createSwrContext()
+{
+
 }
 

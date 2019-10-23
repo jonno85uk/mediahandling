@@ -61,9 +61,14 @@ void media_handling::assignLoggerCallback(media_handling::LOGGINGFN func)
   logging_func = func;
 }
 
-void media_handling::logMessage(const std::string& msg)
+void media_handling::logMessage(const std::string& msg) noexcept
 {
-  if (logging_func != nullptr) {
+  if (logging_func == nullptr) {
+    return;
+  }
+  try {
     logging_func(msg);
+  }  catch (...) {
+    // TODO: stderr
   }
 }

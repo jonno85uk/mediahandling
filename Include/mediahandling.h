@@ -47,7 +47,7 @@ namespace media_handling
 
   bool initialise(const BackendType backend);
 
-  void logMessage(const std::string& msg);
+  void logMessage(const std::string& msg) noexcept;
 
 }
 

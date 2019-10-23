@@ -32,15 +32,22 @@
 
 extern "C" {
 #include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
 }
 
 namespace media_handling
 {
 
-  void avframe_deleter(AVFrame* frame);
+  void avframeDeleter(AVFrame* frame);
+  void swsContextDeleter(SwsContext* context);
+  void swrContextDeleter(SwrContext* context);
+
   template <auto fn>
   using deleter_from_fn = std::integral_constant<decltype(fn), fn>;
-  using AVFrameUPtr = std::unique_ptr<AVFrame, deleter_from_fn<avframe_deleter>>;
+  using AVFrameUPtr = std::unique_ptr<AVFrame, deleter_from_fn<avframeDeleter>>;
+  using SWSContextUPtr = std::unique_ptr<SwsContext, deleter_from_fn<swsContextDeleter>>;
+  using SWRContextUPtr = std::unique_ptr<SwrContext, deleter_from_fn<swrContextDeleter>>;
 
   class FFMpegMediaFrame : public IMediaFrame
   {
@@ -57,19 +64,44 @@ namespace media_handling
 
       std::optional<int64_t> lineSize(const int index) const override;
 
-      uint8_t** data() override;
+      uint8_t** data() noexcept override;
+
+      uint8_t** convertedData() noexcept override;
 
       void extractProperties() override;
 
       int64_t timestamp() const override;
 
+      // TODO: may want to pass in a Converter that was setup in the stream instead of creating one each time
+      /**
+       * @brief     Set the pixel output format that the frame data should available in
+       * @note      This function is for visual streams
+       * @param fmt AVPixelFormat
+       * @return    true==output format has been set
+       */
+      bool setOutputFormat(const AVPixelFormat fmt);
+      /**
+       * @brief     Set the pixel output format that the frame data should available in
+       * @note      This function is for audio streams
+       * @param fmt AVPixelFormat
+       * @return    true==output format has been set
+       */
+      bool setOutputFormat(const AVSampleFormat fmt);
+
     private:
       AVFrameUPtr ff_frame_ {nullptr};
-      bool visual_;
       std::optional<bool> is_audio_;
       std::optional<bool> is_visual_;
       uint8_t** data_ {nullptr};
       int64_t timestamp_ {-1};
+      SWSContextUPtr sws_context_{nullptr};
+      SWRContextUPtr swr_context_{nullptr};
+      struct {
+        std::optional<AVPixelFormat>  pixel_;
+        std::optional<AVSampleFormat> sample_;
+      } output_format_;
+      bool visual_;
+
 
       void extractVisualProperties();
 
@@ -81,6 +113,9 @@ namespace media_handling
        * @return SampleFormat
        */
       constexpr SampleFormat convert(enum AVSampleFormat format) const noexcept;
+
+      SwsContext* createSwsContext();
+      SwrContext* createSwrContext();
   };
 }
 
