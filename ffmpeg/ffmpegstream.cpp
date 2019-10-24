@@ -30,7 +30,7 @@
 #include <sstream>
 #include <thread>
 
-#include "ffmpegmediaframe.h"
+#include "mediahandling.h"
 
 
 extern "C" {
@@ -149,8 +149,39 @@ media_handling::StreamType FFMpegStream::type() const
 
 bool FFMpegStream::setOutputFormat(const PixelFormat format)
 {
-  // TODO:
-  return false;
+  assert(codec_);
+  const AVPixelFormat output_av_fmt = convertPixelFormat(format);
+  if (output_av_fmt == AV_PIX_FMT_NONE) {
+    media_handling::logMessage("FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
+    return false;
+  }
+
+  bool is_valid = false;
+  const PixelFormat src_fmt = this->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, is_valid);
+  if (!is_valid) {
+    throw std::runtime_error("Do not know the pixel format of this stream");
+  }
+
+  const AVPixelFormat src_av_fmt = convertPixelFormat(src_fmt);
+  if (src_av_fmt == AV_PIX_FMT_NONE) {
+    media_handling::logMessage("FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
+    return false;
+  }
+
+
+  auto dims = this->property<media_handling::Dimensions>(MediaProperty::DIMENSIONS, is_valid);
+  if (!is_valid) {
+    media_handling::logMessage("FFMpegStream::setOutputFormat() -- Unknown dimensions of the stream");
+    return false;
+  }
+
+  sws_context_ = std::shared_ptr<SwsContext>(sws_getContext(dims.width, dims.height, src_av_fmt,
+                                                            dims.width, dims.height, output_av_fmt,
+                                                            SWS_FAST_BILINEAR,
+                                                            nullptr, nullptr, nullptr),
+                                             media_handling::swsContextDeleter);
+
+  return sws_context_ != nullptr;
 }
 
 bool FFMpegStream::setOutputFormat(const SampleFormat format)
@@ -404,6 +435,31 @@ void FFMpegStream::setupDecoder(const AVCodecID codec_id, AVDictionary* dict) co
   }
 }
 
+constexpr AVPixelFormat FFMpegStream::convertPixelFormat(const media_handling::PixelFormat format) const noexcept
+{
+  AVPixelFormat converted {AV_PIX_FMT_NONE};
+
+  switch (format) {
+    case PixelFormat::RGB24:
+      converted = AV_PIX_FMT_RGB24;
+      break;
+    case PixelFormat::YUV420:
+      converted = AV_PIX_FMT_YUV420P;
+      break;
+    case PixelFormat::YUV422:
+      converted = AV_PIX_FMT_YUV422P;
+      break;
+    case PixelFormat::YUV444:
+      converted = AV_PIX_FMT_YUV444P;
+      break;
+    default:
+      converted = AV_PIX_FMT_NONE;
+      break;
+  }
+
+  return converted;
+}
+
 
 constexpr media_handling::PixelFormat FFMpegStream::convertPixelFormat(const AVPixelFormat format) const
 {
@@ -635,6 +691,17 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
       if (dec_err_code == 0) {
         // successful read
         assert(type_ != media_handling::StreamType::UNKNOWN);
+        if (type_ == StreamType::VISUAL && sws_context_) {
+          return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame),
+                                                                    true,
+                                                                    sws_context_);
+        }
+
+        if (type_ == StreamType::AUDIO && swr_context_) {
+          return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame),
+                                                                    true,
+                                                                    swr_context_);
+        }
         return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame), type_ == StreamType::VISUAL);
       }
 

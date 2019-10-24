@@ -53,11 +53,24 @@ void media_handling::swrContextDeleter(SwrContext* context)
 
 FFMpegMediaFrame::FFMpegMediaFrame(media_handling::AVFrameUPtr frame, const bool visual)
   : ff_frame_(std::move(frame)),
-    visual_(visual)
+    is_visual_(visual)
 {
   assert(ff_frame_);
   assert(ff_frame_->pts >= 0);
   timestamp_ = ff_frame_->pts;
+}
+
+
+FFMpegMediaFrame::FFMpegMediaFrame(media_handling::AVFrameUPtr frame, const bool visual, SWSContextPtr converter)
+  : FFMpegMediaFrame(std::move(frame), visual)
+{
+  sws_context_ = converter;
+}
+
+FFMpegMediaFrame::FFMpegMediaFrame(AVFrameUPtr frame, const bool visual, SWRContextPtr converter)
+  : FFMpegMediaFrame(std::move(frame), visual)
+{
+  swr_context_ = converter;
 }
 
 FFMpegMediaFrame::~FFMpegMediaFrame()
@@ -94,34 +107,25 @@ uint8_t** FFMpegMediaFrame::data() noexcept
 uint8_t** FFMpegMediaFrame::convertedData() noexcept
 {
   assert(ff_frame_);
-  if (visual_ && output_format_.pixel_.has_value()) {
-    if (!sws_context_) {
-      sws_context_.reset(createSwsContext());
-    }
-    if (sws_context_) {
-      // TODO: convert
-      return nullptr;
-    } else {
-      media_handling::logMessage("FFMpegMediaFrame::data() -- failed to create format converter");
-    }
-  } else if (!visual_ && output_format_.sample_.has_value()) {
-    if (!swr_context_) {
-      swr_context_.reset(createSwrContext());
-    }
-    if (swr_context_) {
-      // TODO: convert
-      return nullptr;
-    } else {
-      media_handling::logMessage("FFMpegMediaFrame::data() -- failed to create format converter");
-    }
+  uint8_t** data = nullptr;
+  if (is_visual_ && sws_context_) {
+    // change the pixel format
+    // TODO: allocate data
+    const auto out_slice_height = sws_scale(sws_context_.get(), ff_frame_->data, ff_frame_->linesize, 0, ff_frame_->height, data, ff_frame_->linesize);
+    return data;
+  } else if (!is_visual_ && swr_context_) {
+    // change the sample format
+    // TODO:
+    return data;
   }
+  media_handling::logMessage("FFMpegMediaFrame::data() -- No converted data available");
   return nullptr;
 }
 
 void FFMpegMediaFrame::extractProperties()
 {
   assert(ff_frame_);
-  if (visual_) {
+  if (is_visual_) {
     extractVisualProperties();
   } else {
     extractAudioProperties();
@@ -133,28 +137,6 @@ int64_t FFMpegMediaFrame::timestamp() const
   return timestamp_;
 }
 
-
-bool FFMpegMediaFrame::setOutputFormat(const AVPixelFormat fmt)
-{
-  if (!visual_) {
-    media_handling::logMessage("FFMpegMediaFrame::setOutputFormat() -- not able to set pixel format of audio frame");
-    return false;
-  }
-
-  output_format_.pixel_ = fmt;
-  return true;
-}
-
-bool FFMpegMediaFrame::setOutputFormat(const AVSampleFormat fmt)
-{
-  if (visual_) {
-    media_handling::logMessage("FFMpegMediaFrame::setOutputFormat() -- not able to set pixel format of audio frame");
-    return false;
-  }
-
-  output_format_.sample_ = fmt;
-  return true;
-}
 
 void FFMpegMediaFrame::extractVisualProperties()
 {
@@ -237,15 +219,5 @@ constexpr media_handling::SampleFormat FFMpegMediaFrame::convert(enum AVSampleFo
       break;
   }
   return format;
-}
-
-SwsContext* FFMpegMediaFrame::createSwsContext()
-{
-
-}
-
-SwrContext* FFMpegMediaFrame::createSwrContext()
-{
-
 }
 

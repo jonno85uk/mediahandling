@@ -283,6 +283,10 @@ TEST (FFMpegStreamTest, SetOutputFormatVideo)
 
   auto stream = src->visualStream(0);
   ASSERT_TRUE(stream->setOutputFormat(PixelFormat::RGB24));
+
+  auto frame = stream->frame(0);
+  auto data = frame->convertedData();
+  ASSERT_TRUE(data != nullptr);
 }
 
 
