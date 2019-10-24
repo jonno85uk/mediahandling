@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 
 project(mediahandling VERSION 0.0 LANGUAGES CXX)
+set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g3 -O0 -pedantic-errors")
+set(CMAKE_CXX_FLAGS_RELEASE "-g0 -O2")
 
 file(GLOB SOURCES "ffmpeg/*.cpp" "Src/*.cpp" "*.cpp")
 
