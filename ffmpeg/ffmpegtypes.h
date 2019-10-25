@@ -25,62 +25,45 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef FFMPEGMEDIAFRAME_H
-#define FFMPEGMEDIAFRAME_H
+#ifndef FFMPEGTYPES_H
+#define FFMPEGTYPES_H
 
-#include "imediaframe.h"
-#include "ffmpegtypes.h"
+#include <memory>
+
+#include "types.h"
 
 extern "C" {
-#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
 }
 
-namespace media_handling
+namespace media_handling::types
 {
-  class FFMpegMediaFrame : public IMediaFrame
-  {
-    public:
-      FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual);
+  void avframeDeleter(AVFrame* frame);
+  void swsContextDeleter(SwsContext* context);
+  void swrContextDeleter(SwrContext* context);
 
-      FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, types::SWSContextPtr converter);
-
-      FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, types::SWRContextPtr converter);
-
-      ~FFMpegMediaFrame() override;
-
-      // FIXME: rule of five
-
-      std::optional<bool> isAudio() const override;
-
-      std::optional<bool> isVisual() const override;
-
-      std::optional<int64_t> lineSize(const int index) const override;
-
-      uint8_t** data() noexcept override;
-
-      uint8_t** convertedData() noexcept override;
-
-      void extractProperties() override;
-
-      int64_t timestamp() const override;
-
-    private:
-      types::AVFrameUPtr ff_frame_ {nullptr};
-      std::optional<bool> is_audio_;
-      std::optional<bool> is_visual_;
-      uint8_t** data_ {nullptr};
-      int64_t timestamp_ {-1};
-      types::SWSContextPtr sws_context_{nullptr};
-      types::SWRContextPtr swr_context_{nullptr};
-
-      void extractVisualProperties();
-
-      void extractAudioProperties();
+  template <auto fn>
+  using deleter_from_fn = std::integral_constant<decltype(fn), fn>;
+  using AVFrameUPtr = std::unique_ptr<AVFrame, deleter_from_fn<avframeDeleter>>;
+  using SWSContextUPtr = std::unique_ptr<SwsContext, deleter_from_fn<swsContextDeleter>>;
+  using SWSContextPtr = std::shared_ptr<SwsContext>;
+  using SWRContextUPtr = std::unique_ptr<SwrContext, deleter_from_fn<swrContextDeleter>>;
+  using SWRContextPtr = std::shared_ptr<SwrContext>;
 
 
-  };
+  AVPixelFormat convertPixelFormat(const media_handling::PixelFormat format) noexcept;
+  media_handling::PixelFormat convertPixelFormat(const AVPixelFormat format) noexcept;
+  media_handling::SampleFormat convertSampleFormat(const AVSampleFormat format) noexcept;
+  media_handling::ChannelLayout convertChannelLayout(const uint64_t layout) noexcept;
+  media_handling::Codec convertCodecID(const AVCodecID id) noexcept;
+  /**
+   * @brief Convert from FFMpeg type to media_handling type
+   * @param format FFMpeg sample format
+   * @return SampleFormat
+   */
+  SampleFormat convert(enum AVSampleFormat format) noexcept;
 }
 
-#endif // FFMPEGMEDIAFRAME_H
+#endif // FFMPEGTYPES_H

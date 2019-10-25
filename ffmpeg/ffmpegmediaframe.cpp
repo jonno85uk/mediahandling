@@ -35,23 +35,7 @@ using media_handling::FFMpegMediaFrame;
 using media_handling::MediaProperty;
 
 
-void media_handling::avframeDeleter(AVFrame* frame)
-{
-  av_frame_free(&frame);
-}
-
-void media_handling::swsContextDeleter(SwsContext* context)
-{
-  sws_freeContext(context);
-}
-
-
-void media_handling::swrContextDeleter(SwrContext* context)
-{
-  swr_free(&context);
-}
-
-FFMpegMediaFrame::FFMpegMediaFrame(media_handling::AVFrameUPtr frame, const bool visual)
+FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual)
   : ff_frame_(std::move(frame)),
     is_visual_(visual)
 {
@@ -61,13 +45,13 @@ FFMpegMediaFrame::FFMpegMediaFrame(media_handling::AVFrameUPtr frame, const bool
 }
 
 
-FFMpegMediaFrame::FFMpegMediaFrame(media_handling::AVFrameUPtr frame, const bool visual, SWSContextPtr converter)
+FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, types::SWSContextPtr converter)
   : FFMpegMediaFrame(std::move(frame), visual)
 {
   sws_context_ = converter;
 }
 
-FFMpegMediaFrame::FFMpegMediaFrame(AVFrameUPtr frame, const bool visual, SWRContextPtr converter)
+FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, types::SWRContextPtr converter)
   : FFMpegMediaFrame(std::move(frame), visual)
 {
   swr_context_ = converter;
@@ -166,58 +150,9 @@ void FFMpegMediaFrame::extractAudioProperties()
   assert(ff_frame_);
   this->setProperty(MediaProperty::AUDIO_SAMPLES, static_cast<int32_t>(ff_frame_->nb_samples));
 
-  const SampleFormat format = convert(static_cast<AVSampleFormat>(ff_frame_->format));
+  const SampleFormat format = types::convert(static_cast<AVSampleFormat>(ff_frame_->format));
   this->setProperty(MediaProperty::AUDIO_FORMAT, format);
 }
 
-constexpr media_handling::SampleFormat FFMpegMediaFrame::convert(enum AVSampleFormat av_format) const noexcept
-{
-  SampleFormat format = SampleFormat::NONE;
-  switch (av_format) {
-    case AV_SAMPLE_FMT_NONE:
-      [[fallthrough]];
-    case AV_SAMPLE_FMT_NB:
-      [[fallthrough]];
-    default:
-      format = SampleFormat::NONE;
-      break;
-    case AV_SAMPLE_FMT_U8:
-      format = SampleFormat::UNSIGNED_8;
-      break;
-    case AV_SAMPLE_FMT_S16:
-      format = SampleFormat::SIGNED_16;
-      break;
-    case AV_SAMPLE_FMT_S32:
-      format = SampleFormat::SIGNED_32;
-      break;
-    case AV_SAMPLE_FMT_FLT:
-      format = SampleFormat::FLOAT;
-      break;
-    case AV_SAMPLE_FMT_DBL:
-      format = SampleFormat::DOUBLE;
-      break;
-    case AV_SAMPLE_FMT_U8P:
-      format = SampleFormat::UNSIGNED_8P;
-      break;
-    case AV_SAMPLE_FMT_S16P:
-      format = SampleFormat::SIGNED_16P;
-      break;
-    case AV_SAMPLE_FMT_S32P:
-      format = SampleFormat::SIGNED_32P;
-      break;
-    case AV_SAMPLE_FMT_FLTP:
-      format = SampleFormat::FLOAT_P;
-      break;
-    case AV_SAMPLE_FMT_DBLP:
-      format = SampleFormat::DOUBLE_P;
-      break;
-    case AV_SAMPLE_FMT_S64:
-      format = SampleFormat::SIGNED_64;
-      break;
-    case AV_SAMPLE_FMT_S64P:
-      format = SampleFormat::SIGNED_64P;
-      break;
-  }
-  return format;
-}
+
 

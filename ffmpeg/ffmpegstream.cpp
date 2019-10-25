@@ -32,7 +32,6 @@
 
 #include "mediahandling.h"
 
-
 extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
@@ -150,7 +149,7 @@ media_handling::StreamType FFMpegStream::type() const
 bool FFMpegStream::setOutputFormat(const PixelFormat format)
 {
   assert(codec_);
-  const AVPixelFormat output_av_fmt = convertPixelFormat(format);
+  const AVPixelFormat output_av_fmt = types::convertPixelFormat(format);
   if (output_av_fmt == AV_PIX_FMT_NONE) {
     media_handling::logMessage("FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
     return false;
@@ -162,7 +161,7 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format)
     throw std::runtime_error("Do not know the pixel format of this stream");
   }
 
-  const AVPixelFormat src_av_fmt = convertPixelFormat(src_fmt);
+  const AVPixelFormat src_av_fmt = types::convertPixelFormat(src_fmt);
   if (src_av_fmt == AV_PIX_FMT_NONE) {
     media_handling::logMessage("FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
     return false;
@@ -179,7 +178,7 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format)
                                                             dims.width, dims.height, output_av_fmt,
                                                             SWS_FAST_BILINEAR,
                                                             nullptr, nullptr, nullptr),
-                                             media_handling::swsContextDeleter);
+                                             types::swsContextDeleter);
 
   return sws_context_ != nullptr;
 }
@@ -194,7 +193,7 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
 {
   assert(context.codec);
   MediaPropertyObject::setProperty(MediaProperty::CODEC_NAME, std::string(context.codec->name));
-  const media_handling::Codec cdc = convertCodecID(context.codec_id);
+  const media_handling::Codec cdc = types::convertCodecID(context.codec_id);
   MediaPropertyObject::setProperty(MediaProperty::CODEC, cdc);
   // TODO: if we use this things could go wrong on container != essence
   auto base = stream.time_base;
@@ -216,7 +215,7 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
 void FFMpegStream::extractVisualProperties(const AVStream& stream, const AVCodecContext& context)
 {
   this->setProperty(MediaProperty::FRAME_COUNT, static_cast<int64_t>(stream.nb_frames));
-  const PixelFormat p_format = convertPixelFormat(context.pix_fmt);
+  const PixelFormat p_format = types::convertPixelFormat(context.pix_fmt);
   this->setProperty(MediaProperty::PIXEL_FORMAT, p_format);
   Dimensions dims {context.width, context.height};
   this->setProperty(MediaProperty::DIMENSIONS, dims);
@@ -238,14 +237,14 @@ void FFMpegStream::extractAudioProperties(const AVStream& stream, const AVCodecC
 {
   this->setProperty(MediaProperty::AUDIO_CHANNELS, static_cast<int32_t>(context.channels));
   this->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, static_cast<int32_t>(context.sample_rate));
-  const SampleFormat s_format = convertSampleFormat(context.sample_fmt);
+  const SampleFormat s_format = types::convertSampleFormat(context.sample_fmt);
   this->setProperty(MediaProperty::AUDIO_FORMAT, s_format);
 
 #ifdef DEBUG
   av_get_channel_layout_string(err.data(), ERR_LEN, context.channels, context.channel_layout);
   std::cout << err.data() << std::endl;
 #endif
-  const ChannelLayout layout = convertChannelLayout(context.channel_layout);
+  const ChannelLayout layout = types::convertChannelLayout(context.channel_layout);
   this->setProperty(MediaProperty::AUDIO_LAYOUT, layout);
 
   //stream.codecpar->color_space;
@@ -435,200 +434,6 @@ void FFMpegStream::setupDecoder(const AVCodecID codec_id, AVDictionary* dict) co
   }
 }
 
-constexpr AVPixelFormat FFMpegStream::convertPixelFormat(const media_handling::PixelFormat format) const noexcept
-{
-  AVPixelFormat converted {AV_PIX_FMT_NONE};
-
-  switch (format) {
-    case PixelFormat::RGB24:
-      converted = AV_PIX_FMT_RGB24;
-      break;
-    case PixelFormat::YUV420:
-      converted = AV_PIX_FMT_YUV420P;
-      break;
-    case PixelFormat::YUV422:
-      converted = AV_PIX_FMT_YUV422P;
-      break;
-    case PixelFormat::YUV444:
-      converted = AV_PIX_FMT_YUV444P;
-      break;
-    default:
-      converted = AV_PIX_FMT_NONE;
-      break;
-  }
-
-  return converted;
-}
-
-
-constexpr media_handling::PixelFormat FFMpegStream::convertPixelFormat(const AVPixelFormat format) const
-{
-  PixelFormat converted {PixelFormat::UNKNOWN};
-  switch (format) {
-    case AV_PIX_FMT_RGB24:
-      converted = PixelFormat::RGB24;
-      break;
-    case AV_PIX_FMT_YUV420P:
-      converted = PixelFormat::YUV420;
-      break;
-    case AV_PIX_FMT_YUV422P:
-      converted = PixelFormat::YUV422;
-      break;
-    case AV_PIX_FMT_YUV444P:
-      converted = PixelFormat::YUV444;
-      break;
-    default:
-      converted = PixelFormat::UNKNOWN;
-      break;
-  }
-  return converted;
-}
-
-
-constexpr media_handling::SampleFormat FFMpegStream::convertSampleFormat(const AVSampleFormat format) const
-{
-  SampleFormat converted {SampleFormat::NONE};
-
-  switch (format) {
-    case AV_SAMPLE_FMT_NONE:
-      [[fallthrough]];
-    case AV_SAMPLE_FMT_NB:
-      converted = SampleFormat::NONE;
-      break;
-    case AV_SAMPLE_FMT_U8:
-      converted = SampleFormat::UNSIGNED_8;
-      break;
-    case AV_SAMPLE_FMT_S16:
-      converted = SampleFormat::SIGNED_16;
-      break;
-    case AV_SAMPLE_FMT_S32:
-      converted = SampleFormat::SIGNED_32;
-      break;
-    case AV_SAMPLE_FMT_S64:
-      converted = SampleFormat::SIGNED_64;
-      break;
-    case AV_SAMPLE_FMT_FLT:
-      converted = SampleFormat::FLOAT;
-      break;
-    case AV_SAMPLE_FMT_DBL:
-      converted = SampleFormat::DOUBLE;
-      break;
-    case AV_SAMPLE_FMT_U8P:
-      converted = SampleFormat::UNSIGNED_8P;
-      break;
-    case AV_SAMPLE_FMT_S16P:
-      converted = SampleFormat::SIGNED_16P;
-      break;
-    case AV_SAMPLE_FMT_S32P:
-      converted = SampleFormat::SIGNED_32P;
-      break;
-    case AV_SAMPLE_FMT_S64P:
-      converted = SampleFormat::SIGNED_64P;
-      break;
-    case AV_SAMPLE_FMT_FLTP:
-      converted = SampleFormat::FLOAT_P;
-      break;
-    case AV_SAMPLE_FMT_DBLP:
-      converted = SampleFormat::DOUBLE_P;
-      break;
-  }
-
-  return converted;
-}
-
-
-constexpr media_handling::ChannelLayout FFMpegStream::convertChannelLayout(const uint64_t layout) const
-{
-  media_handling::ChannelLayout conv_layout = ChannelLayout::UNKNOWN;
-
-
-  switch (layout)
-  {
-    case AV_CH_LAYOUT_MONO:
-      conv_layout = ChannelLayout::MONO;
-      break;
-    case AV_CH_LAYOUT_STEREO:
-      conv_layout = ChannelLayout::STEREO;
-      break;
-    case AV_CH_LAYOUT_2POINT1:
-      conv_layout = ChannelLayout::STEREO_LFE;
-      break;
-    case AV_CH_LAYOUT_2_1:
-      conv_layout = ChannelLayout::THREE_SURROUND;
-      break;
-    case AV_CH_LAYOUT_SURROUND:
-      conv_layout = ChannelLayout::THREE_STEREO;
-      break;
-    case AV_CH_LAYOUT_3POINT1:
-      conv_layout = ChannelLayout::THREE_SURROUND_LFE;
-      break;
-    case AV_CH_LAYOUT_4POINT0:
-      conv_layout = ChannelLayout::FOUR_SURROUND;
-      break;
-    case AV_CH_LAYOUT_QUAD:
-      conv_layout = ChannelLayout::FOUR_STEREO;
-      break;
-    case AV_CH_LAYOUT_4POINT1:
-      conv_layout = ChannelLayout::FOUR_SURROUND_LFE;
-      break;
-    case AV_CH_LAYOUT_5POINT0:
-      conv_layout = ChannelLayout::FIVE;
-      break;
-    case AV_CH_LAYOUT_5POINT1:
-      conv_layout = ChannelLayout::FIVE_LFE;
-      break;
-    case AV_CH_LAYOUT_5POINT1_BACK:
-      conv_layout = ChannelLayout::FIVE_STEREO_LFE;
-      break;
-    case AV_CH_LAYOUT_6POINT0:
-      conv_layout = ChannelLayout::SIX;
-      break;
-    case AV_CH_LAYOUT_6POINT1:
-      conv_layout = ChannelLayout::SIX_LFE;
-      break;
-    case AV_CH_LAYOUT_7POINT0:
-      conv_layout = ChannelLayout::SEVEN;
-      break;
-    case AV_CH_LAYOUT_7POINT1:
-      conv_layout = ChannelLayout::SEVEN_LFE;
-      break;
-  }
-
-  return conv_layout;
-}
-
-
-constexpr media_handling::Codec FFMpegStream::convertCodecID(const AVCodecID id) const
-{
-  media_handling::Codec cdc = media_handling::Codec::UNKNOWN;
-
-  switch (id)
-  {
-    case AV_CODEC_ID_AAC:
-      cdc = media_handling::Codec::AAC;
-      break;
-    case AV_CODEC_ID_DNXHD:
-      cdc = media_handling::Codec::DNXHD;
-      break;
-    case AV_CODEC_ID_H264:
-      cdc = media_handling::Codec::H264;
-      break;
-    case AV_CODEC_ID_MPEG2VIDEO:
-      cdc = media_handling::Codec::MPEG2_VIDEO;
-      break;
-    case AV_CODEC_ID_MPEG4:
-      cdc = media_handling::Codec::MPEG4;
-      break;
-    case AV_CODEC_ID_RAWVIDEO:
-      cdc = media_handling::Codec::RAW;
-      break;
-    default:
-      cdc = media_handling::Codec::UNKNOWN;
-      break;
-  }
-
-  return cdc;
-}
 
 void FFMpegStream::extractFrameProperties()
 {
@@ -663,7 +468,7 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
 {
   int err_code = 0;
 
-  AVFrameUPtr frame(av_frame_alloc());
+  types::AVFrameUPtr frame(av_frame_alloc());
   while (err_code >= 0)
   {
     av_packet_unref(&pkt);

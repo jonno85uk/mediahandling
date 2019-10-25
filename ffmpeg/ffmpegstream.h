@@ -77,8 +77,8 @@ namespace media_handling::ffmpeg
 
       int64_t last_timestamp_ {-1};
       StreamType type_{StreamType::UNKNOWN};
-      media_handling::SWSContextPtr sws_context_ {nullptr};
-      media_handling::SWRContextPtr swr_context_ {nullptr};
+      types::SWSContextPtr sws_context_ {nullptr};
+      types::SWRContextPtr swr_context_ {nullptr};
       bool deinterlacer_setup_ {false};
 
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
@@ -89,13 +89,6 @@ namespace media_handling::ffmpeg
       void setupForVideo(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, int& pix_fmt) const;
       void setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, AVCodecContext& codec_context) const;
       void setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const;
-
-      // TODO: move type conversions out of this CLass
-      constexpr AVPixelFormat convertPixelFormat(const media_handling::PixelFormat format) const noexcept;
-      constexpr PixelFormat convertPixelFormat(const AVPixelFormat format) const;
-      constexpr SampleFormat convertSampleFormat(const AVSampleFormat format) const;
-      constexpr ChannelLayout convertChannelLayout(const uint64_t layout) const;
-      constexpr Codec convertCodecID(const AVCodecID id) const;
 
       /**
        * @brief Extract extra properties from a frame
