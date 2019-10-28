@@ -55,18 +55,11 @@ namespace media_handling
       virtual std::optional<int64_t> lineSize(const int index) const = 0;
 
       /**
-       * @brief Obtain the raw sample data of this frame, either read from a stream (decode) or written to (encode)
+       * @brief Obtain the sample data of this frame, either read from a stream (decode) or written to (encode)
+       * @note  This can be raw or converted data, depending on the subclass implementation
        * @return non-owning pointer to data or null
        */
       virtual uint8_t** data() noexcept = 0;
-
-      /**
-       * @brief Obtain the converted sample data of this frame, either read from a stream (decode) or written to (encode)
-       * @note  This function is intended to be used with an MediaStream whos output format has been set
-       * @return owning pointer to data or null
-       * @see MediaStream::setOutputFormat
-       */
-      virtual uint8_t** convertedData() noexcept = 0;
 
       /**
        * @brief It is not always resource-wise to extract all properties for every frame when decoding

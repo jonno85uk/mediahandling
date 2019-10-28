@@ -60,14 +60,13 @@ namespace media_handling
 
       uint8_t** data() noexcept override;
 
-      uint8_t** convertedData() noexcept override;
-
       void extractProperties() override;
 
       int64_t timestamp() const override;
 
     private:
       types::AVFrameUPtr ff_frame_ {nullptr};
+      types::AVFrameUPtr sws_frame_ {nullptr};
       std::optional<bool> is_audio_;
       std::optional<bool> is_visual_;
       uint8_t** data_ {nullptr};

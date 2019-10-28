@@ -84,26 +84,26 @@ std::optional<int64_t> FFMpegMediaFrame::lineSize(const int index) const
 uint8_t** FFMpegMediaFrame::data() noexcept
 {
   assert(ff_frame_);
+  if (is_visual_ && sws_context_) {
+    // TODO: convert
+    if (sws_frame_ == nullptr) {
+      sws_frame_.reset(av_frame_alloc());
+      sws_frame_->format = AV_PIX_FMT_RGB24; //TODO: get this programatically
+      sws_frame_->width = ff_frame_->width;
+      sws_frame_->height = ff_frame_->height;
+      av_frame_get_buffer(sws_frame_.get(), 0);
+    }
+    // change the pixel format
+    assert(sws_frame_);
+    const auto out_slice_height = sws_scale(sws_context_.get(), (const uint8_t* const*)ff_frame_->data, ff_frame_->linesize, 0,
+                                            ff_frame_->height, sws_frame_->data, sws_frame_->linesize);
+    return sws_frame_->data;
+  } else if (!is_visual_ && swr_context_) {
+    // TODO:
+    // change the sample format
+  }
   return ff_frame_->data;
 
-}
-
-uint8_t** FFMpegMediaFrame::convertedData() noexcept
-{
-  assert(ff_frame_);
-  uint8_t** data = nullptr;
-  if (is_visual_ && sws_context_) {
-    // change the pixel format
-    // TODO: allocate data
-    const auto out_slice_height = sws_scale(sws_context_.get(), ff_frame_->data, ff_frame_->linesize, 0, ff_frame_->height, data, ff_frame_->linesize);
-    return data;
-  } else if (!is_visual_ && swr_context_) {
-    // change the sample format
-    // TODO:
-    return data;
-  }
-  media_handling::logMessage("FFMpegMediaFrame::data() -- No converted data available");
-  return nullptr;
 }
 
 void FFMpegMediaFrame::extractProperties()

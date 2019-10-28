@@ -174,10 +174,11 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format)
     return false;
   }
 
-  sws_context_ = std::shared_ptr<SwsContext>(sws_getContext(dims.width, dims.height, src_av_fmt,
-                                                            dims.width, dims.height, output_av_fmt,
-                                                            SWS_FAST_BILINEAR,
-                                                            nullptr, nullptr, nullptr),
+  SwsContext* ctx = sws_getContext(dims.width, dims.height, src_av_fmt,
+                            dims.width, dims.height, output_av_fmt,
+                            0, // Not scaling
+                            nullptr, nullptr, nullptr);
+  sws_context_ = std::shared_ptr<SwsContext>(ctx,
                                              types::swsContextDeleter);
 
   return sws_context_ != nullptr;
@@ -363,18 +364,10 @@ void FFMpegStream::setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGr
   avfilter_graph_create_filter(&bufs.sink_, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, &graph);
 
   enum AVSampleFormat sample_fmts[] = { SAMPLE_FORMAT,  static_cast<AVSampleFormat>(-1) };
-  int err_code = av_opt_set_int_list(bufs.sink_, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN);
-  if (err_code < 0) {
-    av_strerror(err_code, err.data(), ERR_LEN);
-    std::cerr << "Could not set output sample format: " << err.data() << std::endl;
-  }
+  av_opt_set_int_list(bufs.sink_, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN);
 
   int64_t channel_layouts[] = { AV_CH_LAYOUT_STEREO, static_cast<AVSampleFormat>(-1) };
-  err_code = av_opt_set_int_list(bufs.sink_, "channel_layouts", channel_layouts, -1, AV_OPT_SEARCH_CHILDREN);
-  if (err_code < 0) {
-    av_strerror(err_code, err.data(), ERR_LEN);
-    std::cerr << "Could not set output channel layout: " << err.data() << std::endl;
-  }
+  av_opt_set_int_list(bufs.sink_, "channel_layouts", channel_layouts, -1, AV_OPT_SEARCH_CHILDREN);
 
   //  int target_sample_rate = current_audio_freq();
 
