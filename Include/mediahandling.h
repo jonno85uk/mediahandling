@@ -29,26 +29,47 @@
 #define MEDIAHANDLING_H
 
 #include "imediasource.h"
-#include "imediasink.h"
-#include "imediastream.h"
 
-enum class BackendType
-{
-  FFMPEG,
-  GSTREAMER,
-  INTEL
-};
+
 
 namespace media_handling
 {
+  enum class BackendType
+  {
+    FFMPEG,
+    GSTREAMER,
+    INTEL
+  };
+
   typedef void (*LOGGINGFN)(const std::string&);
 
+
+  /**
+   * @brief       Assign a callback for library messages
+   * @note        Library defaults to stderr
+   * @param func  The callback function
+   */
   void assignLoggerCallback(LOGGINGFN func);
 
+  /**
+   * @brief Initialise the library with a selected backend
+   * @note  This does nothing as only FFMpeg is available
+   * @return true==initialised ok
+   */
   bool initialise(const BackendType backend);
 
-  void logMessage(const std::string& msg) noexcept;
+  /**
+   * @brief             Create a new media source from a file using pre-selected backend
+   * @param file_path   Path (absolute or relative) to the file 
+   * @return  valid MediaSourcePtr or null
+   */
+  MediaSourcePtr createSource(std::string file_path);
 
+
+  /**
+   * @note intended for internal purposes only
+   */
+  void logMessage(const std::string& msg) noexcept;
 }
 
 #endif // MEDIAHANDLING_H

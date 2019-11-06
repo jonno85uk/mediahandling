@@ -35,6 +35,10 @@ extern "C" {
 }
 #endif
 
+#include "ffmpegsource.h"
+
+static auto media_backend = media_handling::BackendType::FFMPEG;
+
 void defaultLog(const std::string& msg)
 {
   std::cerr << msg << std::endl;
@@ -45,13 +49,17 @@ static media_handling::LOGGINGFN logging_func = defaultLog;
 
 bool media_handling::initialise(const BackendType backend)
 {
-
+  media_backend = backend;
+  if (backend == BackendType::FFMPEG) {
 #ifdef OLD_FFMPEG // lavf 58.9.100
   avcodec_register_all();
   av_register_all();
   avfilter_register_all();
 #endif
   return true;
+  }
+  logMessage("Chosen backend type is not available");
+  return false;
 }
 
 
@@ -70,5 +78,18 @@ void media_handling::logMessage(const std::string& msg) noexcept
     logging_func(msg);
   }  catch (...) {
     // TODO: stderr
+  }
+}
+
+
+media_handling::MediaSourcePtr media_handling::createSource(std::string file_path)
+{
+  switch (media_backend) {
+    case BackendType::FFMPEG:
+      return std::make_shared<ffmpeg::FFMpegSource>(file_path);
+    case BackendType::GSTREAMER:
+    [[fallthrough]];
+    case BackendType::INTEL:
+      return {};
   }
 }
