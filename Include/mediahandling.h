@@ -65,7 +65,6 @@ namespace media_handling
    */
   MediaSourcePtr createSource(std::string file_path);
 
-
   /**
    * @note intended for internal purposes only
    */

@@ -69,6 +69,12 @@ namespace media_handling
     virtual StreamType type() const = 0;
 
     /**
+     * @brief   Obtain the index of this stream within the source
+     * @return  >=0 valid values
+     */
+    virtual int32_t sourceIndex() const noexcept = 0;
+
+    /**
      * @brief         Automatically convert the stream's output format type
      * @note          This is for video only
      * @param format  pixel format to change source file to i.e yuv420 -> rgb24
@@ -86,6 +92,7 @@ namespace media_handling
   };
 
   using MediaStreamPtr = std::shared_ptr<IMediaStream>;
+  using MediaStreamMap = std::map<int, MediaStreamPtr>;
 }
 
 #endif // IMEDIASTREAM_H

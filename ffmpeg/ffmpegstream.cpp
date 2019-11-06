@@ -58,6 +58,7 @@ FFMpegStream::FFMpegStream(AVFormatContext* parent, AVStream* const stream)
   if ( (parent == nullptr) || (stream_ == nullptr) || (stream_->codecpar == nullptr) ) {
     throw std::exception();
   }
+  source_index_ = stream->index;
   codec_ = avcodec_find_decoder(stream_->codecpar->codec_id);
   codec_ctx_ = avcodec_alloc_context3(codec_);
   assert(codec_ctx_);
@@ -144,6 +145,12 @@ bool FFMpegStream::setFrame(const int64_t timestamp, MediaFramePtr sample)
 media_handling::StreamType FFMpegStream::type() const
 {
   return type_;
+}
+
+
+int32_t FFMpegStream::sourceIndex() const noexcept
+{
+  return source_index_;
 }
 
 bool FFMpegStream::setOutputFormat(const PixelFormat format)

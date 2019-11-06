@@ -64,7 +64,11 @@ namespace media_handling::ffmpeg
 
       MediaStreamPtr audioStream(const int index) const final;
 
+      MediaStreamMap audioStreams() const final;
+
       MediaStreamPtr visualStream(const int index) const final;
+
+      MediaStreamMap visualStreams() const final;
 
     protected:
       virtual MediaStreamPtr newMediaStream(AVStream& stream);
@@ -76,8 +80,8 @@ namespace media_handling::ffmpeg
 
       AVFormatContext* format_ctx_ {nullptr};
 
-      std::map<int, MediaStreamPtr> audio_streams_;
-      std::map<int, MediaStreamPtr> visual_streams_;
+      MediaStreamMap audio_streams_;
+      MediaStreamMap visual_streams_;
 
       bool configureStream(const int value);
       void extractProperties(const AVFormatContext& ctx);

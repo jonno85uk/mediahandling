@@ -57,6 +57,7 @@ namespace media_handling::ffmpeg
       MediaFramePtr frame(const int64_t timestamp=-1) final;
       bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
       StreamType type() const final;
+      int32_t sourceIndex() const noexcept final;
       bool setOutputFormat(const PixelFormat format) final;
       bool setOutputFormat(const SampleFormat format) final;
 
@@ -80,6 +81,7 @@ namespace media_handling::ffmpeg
       types::SWSContextPtr sws_context_ {nullptr};
       types::SWRContextPtr swr_context_ {nullptr};
       bool deinterlacer_setup_ {false};
+      int32_t source_index_ {-1};
 
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
       void extractVisualProperties(const AVStream& stream, const AVCodecContext& context);

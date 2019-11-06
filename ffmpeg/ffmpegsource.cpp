@@ -38,6 +38,7 @@ using media_handling::ffmpeg::FFMpegSource;
 using media_handling::ffmpeg::FFMpegStream;
 using media_handling::MediaFramePtr;
 using media_handling::MediaStreamPtr;
+using media_handling::MediaStreamMap;
 
 constexpr auto ERR_LEN = 1024;
 
@@ -91,10 +92,10 @@ bool FFMpegSource::initialise()
   }
 
   assert(format_ctx_);
+  findFrameRate();
   // Extract properties
   extractProperties(*format_ctx_);
 
-  findFrameRate();
 
 #ifdef VERBOSE_FFMPEG
   av_dump_format(format_ctx_, 0, file_path_.c_str(), 0);
@@ -118,6 +119,13 @@ MediaStreamPtr FFMpegSource::audioStream(const int index) const
   return nullptr;
 }
 
+
+MediaStreamMap FFMpegSource::audioStreams() const
+{
+  return audio_streams_;
+}
+
+
 MediaStreamPtr FFMpegSource::visualStream(const int index) const
 {
   if (visual_streams_.count(index) > 0)
@@ -127,6 +135,10 @@ MediaStreamPtr FFMpegSource::visualStream(const int index) const
   return nullptr;
 }
 
+MediaStreamMap FFMpegSource::visualStreams() const
+{
+  return visual_streams_;
+}
 
 MediaStreamPtr FFMpegSource::newMediaStream(AVStream& stream)
 {
@@ -158,8 +170,15 @@ void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t st
     assert(stream);
     switch (stream->codecpar->codec_type) {
       case AVMEDIA_TYPE_VIDEO:
+      {
         visual_streams_[visual_count] = newMediaStream(*stream);
+        assert(visual_streams_[visual_count]);
+        bool is_okay;
+        const auto frate = this->property(MediaProperty::FRAME_RATE, is_okay);
+        assert(is_okay);
+        visual_streams_[visual_count]->setProperty(MediaProperty::FRAME_RATE, frate);
         visual_count++;
+      }
         break;
       case AVMEDIA_TYPE_AUDIO:
         audio_streams_[audio_count] = newMediaStream(*stream);
@@ -178,6 +197,7 @@ void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t st
 
 void FFMpegSource::findFrameRate()
 {
+  // this is making a (reasonable) assumption that there is only ever 1 video stream
   gsl::span<AVStream*> streams{format_ctx_->streams, format_ctx_->nb_streams};
   AVStream* ref_stream = nullptr;
   for (auto& stream : streams)  {

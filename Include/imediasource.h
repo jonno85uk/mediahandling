@@ -67,6 +67,12 @@ namespace media_handling
        * @return        Stream on success or nullptr
        */
       virtual MediaStreamPtr audioStream(const int index) const = 0;
+      
+      /**
+       * @brief   Get all the audio streams
+       * @return  map of audio streams [index, stream]
+       */
+      virtual MediaStreamMap audioStreams() const = 0;
 
       /**
        * @brief         Obtain a visual (video/image) stream
@@ -74,6 +80,14 @@ namespace media_handling
        * @return        Stream on success or nullptr
        */
       virtual MediaStreamPtr visualStream(const int index) const = 0;
+
+      /**
+       * @brief   Get all the visual streams
+       * @return  map of visual streams [index, stream]
+       */
+      virtual MediaStreamMap visualStreams() const = 0;
+
+      
   };
 
   using MediaSourcePtr = std::shared_ptr<IMediaSource>;
