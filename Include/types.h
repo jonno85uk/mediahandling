@@ -80,9 +80,13 @@ enum class Codec
   AAC,
   DNXHD,
   H264,
+  JPEG,
+  JPEG2000,
   MPEG2_VIDEO,
   MPEG4,
-  RAW
+  PNG,
+  RAW,
+  TIFF
 };
 
 enum class StreamType
@@ -101,9 +105,9 @@ enum class FieldOrder
 };
 
 /**
-   * @brief The SampleFormat enum
-   * @note numbers indicate bits
-   */
+ * @brief The SampleFormat enum
+ * @note numbers indicate bits
+ */
 enum class SampleFormat
 {
   NONE,
@@ -135,7 +139,9 @@ struct Dimensions
 enum class PixelFormat
 {
   RGB24,
+  RGBA,
   YUV420,
+  YUVJ420,  // Full-range YUV420
   YUV422,
   YUV444,
   UNKNOWN

@@ -48,7 +48,7 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStream)
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   ASSERT_TRUE(src->visualStream(0));
-  ASSERT_TRUE(src->visualStream(0)->type() == media_handling::StreamType::VISUAL);
+  ASSERT_TRUE(src->visualStream(0)->type() == media_handling::StreamType::VIDEO);
   ASSERT_FALSE(src->visualStream(1));
 }
 
@@ -466,4 +466,40 @@ TEST (FFMpegStreamTest, SetOutputFormatAudio)
   auto stream = src->audioStream(0);
   ASSERT_TRUE(stream->setOutputFormat(SampleFormat::FLOAT));
 }
+
+
+class ImageReadingTests : public testing::TestWithParam<std::tuple<std::string, int, int, PixelFormat, Codec>>
+{
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (ImageReadingTests, PropertiesCorrect)
+{
+  auto [path, width, height, fmt, cdc] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  auto stream = source_->visualStream(0);
+  ASSERT_TRUE(stream->type() == StreamType::IMAGE);
+  bool okay = false;
+  auto dims = stream->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(dims.width, width);
+  ASSERT_EQ(dims.height, height);
+  auto strm_fmt = stream->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(strm_fmt, fmt);
+  auto strm_cdc = stream->property<Codec>(MediaProperty::CODEC, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(strm_cdc, cdc);
+}
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegStreamTest,
+      ImageReadingTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Image/test-001.png", 474, 889, PixelFormat::RGBA, Codec::PNG),
+                      std::make_tuple("./ReferenceMedia/Image/test-002.jpg", 800, 530, PixelFormat::YUVJ420, Codec::JPEG),
+                      std::make_tuple("./ReferenceMedia/Image/test-003.tiff", 640, 360, PixelFormat::RGB24, Codec::TIFF),
+                      std::make_tuple("./ReferenceMedia/Image/test-004.jp2", 640, 531, PixelFormat::RGBA, Codec::JPEG2000)
+));
+
 

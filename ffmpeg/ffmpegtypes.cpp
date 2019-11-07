@@ -77,8 +77,14 @@ media_handling::PixelFormat media_handling::types::convertPixelFormat(const AVPi
     case AV_PIX_FMT_RGB24:
       converted = PixelFormat::RGB24;
       break;
+    case AV_PIX_FMT_RGBA:
+      converted = PixelFormat::RGBA;
+      break;
     case AV_PIX_FMT_YUV420P:
       converted = PixelFormat::YUV420;
+      break;      
+    case AV_PIX_FMT_YUVJ420P:
+      converted = PixelFormat::YUVJ420;
       break;
     case AV_PIX_FMT_YUV422P:
       converted = PixelFormat::YUV422;
@@ -222,14 +228,26 @@ media_handling::Codec media_handling::types::convertCodecID(const AVCodecID id) 
     case AV_CODEC_ID_H264:
       cdc = media_handling::Codec::H264;
       break;
+    case AV_CODEC_ID_JPEG2000:
+      cdc = media_handling::Codec::JPEG2000;
+      break;
+    case AV_CODEC_ID_MJPEG:
+      cdc = media_handling::Codec::JPEG;
+      break;
     case AV_CODEC_ID_MPEG2VIDEO:
       cdc = media_handling::Codec::MPEG2_VIDEO;
       break;
     case AV_CODEC_ID_MPEG4:
       cdc = media_handling::Codec::MPEG4;
       break;
+    case AV_CODEC_ID_PNG:
+      cdc = media_handling::Codec::PNG;
+      break;
     case AV_CODEC_ID_RAWVIDEO:
       cdc = media_handling::Codec::RAW;
+      break;
+    case AV_CODEC_ID_TIFF:
+      cdc = media_handling::Codec::TIFF;
       break;
     default:
       cdc = media_handling::Codec::UNKNOWN;
