@@ -82,7 +82,11 @@ FFMpegStream::FFMpegStream(AVFormatContext* parent, AVStream* const stream)
   if (stream_->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
     type_ = StreamType::AUDIO;
   } else if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-    type_ = StreamType::VISUAL;
+    if (stream->avg_frame_rate.den == 0) {
+      type_ = StreamType::IMAGE;
+    } else {
+      type_ = StreamType::VIDEO;
+    }
   } else {
     throw std::exception(); // TODO: custom type
   }
@@ -211,7 +215,7 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   }
 
   // TODO: stream durations
-  if (type_ == StreamType::VISUAL) {
+  if ( (type_ == StreamType::VIDEO) || (type_ == StreamType::IMAGE) ) {
     extractVisualProperties(stream, context);
   } else if (type_ == StreamType::AUDIO) {
     extractAudioProperties(stream, context);
@@ -496,7 +500,8 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
       if (dec_err_code == 0) {
         // successful read
         assert(type_ != media_handling::StreamType::UNKNOWN);
-        if (type_ == StreamType::VISUAL && sws_context_) {
+        if ( ( (type_ == StreamType::VIDEO) || (type_ == StreamType::IMAGE) )
+             && sws_context_) {
           return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame),
                                                                     true,
                                                                     sws_context_);
@@ -507,7 +512,7 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
                                                                     true,
                                                                     swr_context_);
         }
-        return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame), type_ == StreamType::VISUAL);
+        return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame), type_ != StreamType::AUDIO);
       }
 
       if ( (dec_err_code == AVERROR(EAGAIN)) || (dec_err_code == AVERROR_EOF) ) {

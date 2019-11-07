@@ -88,7 +88,8 @@ enum class Codec
 enum class StreamType
 {
   AUDIO,
-  VISUAL,
+  VIDEO,
+  IMAGE,
   UNKNOWN
 };
 
