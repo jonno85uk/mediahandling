@@ -95,7 +95,7 @@ uint8_t** FFMpegMediaFrame::data() noexcept
     }
     // change the pixel format
     assert(sws_frame_);
-    const auto out_slice_height = sws_scale(sws_context_.get(), (const uint8_t* const*)ff_frame_->data, ff_frame_->linesize, 0,
+    const auto out_slice_height = sws_scale(sws_context_.get(), static_cast<const uint8_t* const*>(ff_frame_->data), ff_frame_->linesize, 0,
                                             ff_frame_->height, sws_frame_->data, sws_frame_->linesize);
     return sws_frame_->data;
   } else if (!is_visual_ && swr_context_) {

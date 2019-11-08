@@ -1308,7 +1308,7 @@ public:
     not_null( U && u )
     : ptr_( std::forward<U>( u ) )
 #else
-    not_null( U const & u )
+    explicit not_null( U const & u )
     : ptr_( u )
 #endif
     {
@@ -1398,7 +1398,7 @@ public:
     not_null_ic( U && u )
     : not_null<T>( std::forward<U>( u ) )
 #else
-    not_null_ic( U const & u )
+    explicit not_null_ic( U const & u )
     : not_null<T>( u )
 #endif
     {}
@@ -1797,7 +1797,7 @@ public:
 #elif gsl_HAVE( UNCONSTRAINED_SPAN_CONTAINER_CTOR )
 
     template< class Container >
-    gsl_api gsl_constexpr span( Container & cont )
+    explicit gsl_api gsl_constexpr span( Container & cont )
         : first_( cont.size() == 0 ? gsl_nullptr : gsl_ADDRESSOF( cont[0] ) )
         , last_ ( cont.size() == 0 ? gsl_nullptr : gsl_ADDRESSOF( cont[0] ) + cont.size() )
     {}
@@ -1909,13 +1909,13 @@ public:
 
     gsl_api gsl_constexpr14 span last( index_type count ) const gsl_noexcept
     {
-        Expects( 0 <= count && count <= this->size() );
+        Expects(count <= this->size() );
         return span( this->data() + this->size() - count, count );
     }
 
     gsl_api gsl_constexpr14 span subspan( index_type offset ) const gsl_noexcept
     {
-        Expects( 0 <= offset && offset <= this->size() );
+        Expects(offset <= this->size() );
         return span( this->data() + offset, this->size() - offset );
     }
 
@@ -2351,7 +2351,7 @@ struct is_basic_string_span : is_basic_string_span_oracle< typename std11::remov
 template< class T >
 gsl_api inline gsl_constexpr14 std::size_t string_length( T * ptr, std::size_t max )
 {
-    if ( ptr == gsl_nullptr || max <= 0 )
+    if ( ptr == gsl_nullptr || max == 0 )
         return 0;
 
     std::size_t len = 0;
@@ -2398,7 +2398,7 @@ public:
     {}
 #endif
 
-    gsl_api gsl_constexpr basic_string_span( pointer ptr )
+    gsl_api gsl_constexpr explicit basic_string_span( pointer ptr )
     : span_( remove_z( ptr, (std::numeric_limits<index_type>::max)() ) )
     {}
 
@@ -2411,7 +2411,7 @@ public:
     {}
 
     template< std::size_t N >
-    gsl_api gsl_constexpr basic_string_span( element_type (&arr)[N] )
+    gsl_api gsl_constexpr explicit basic_string_span( element_type (&arr)[N] )
     : span_( remove_z( gsl_ADDRESSOF( arr[0] ), N ) )
     {}
 
@@ -2467,7 +2467,7 @@ public:
     {}
 
     template< class Container >
-    gsl_api gsl_constexpr basic_string_span( Container const & cont )
+    gsl_api gsl_constexpr explicit basic_string_span( Container const & cont )
     : span_( cont )
     {}
 
@@ -2505,7 +2505,7 @@ public:
         gsl_REQUIRES_T(( std::is_convertible<typename basic_string_span<U>::pointer, pointer>::value ))
 #endif
     >
-    gsl_api gsl_constexpr basic_string_span( basic_string_span<U> const & rhs )
+    gsl_api gsl_constexpr explicit basic_string_span( basic_string_span<U> const & rhs )
     : span_( reinterpret_cast<pointer>( rhs.data() ), rhs.length() ) // NOLINT
     {}
 
@@ -2525,7 +2525,7 @@ public:
     {}
 
     template< class CharTraits, class Allocator >
-    gsl_api gsl_constexpr basic_string_span(
+    gsl_api gsl_constexpr explicit basic_string_span(
         std::basic_string< typename std11::remove_const<element_type>::type, CharTraits, Allocator > const & str )
     : span_( gsl_ADDRESSOF( str[0] ), str.length() )
     {}
@@ -3012,7 +3012,7 @@ public:
     typedef element_type * czstring_type;
     typedef basic_string_span<element_type> string_span_type;
 
-    gsl_api gsl_constexpr14 basic_zstring_span( span_type s )
+    gsl_api gsl_constexpr14 explicit basic_zstring_span( span_type s )
         : span_( s )
     {
         // expects a zero-terminated span

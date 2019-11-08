@@ -33,6 +33,13 @@
 using namespace media_handling;
 using namespace media_handling::ffmpeg;
 
+#define PNG_OUT
+#ifdef PNG_OUT
+#include <fstream>
+#include <iostream>
+#include <TinyPngOut/TinyPngOut.hpp>
+#endif
+
 
 TEST (FFMpegStreamTest, NullInst)
 {
@@ -282,11 +289,28 @@ TEST (FFMpegStreamTest, SetOutputFormatVideo)
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
 
   auto stream = src->visualStream(0);
-  ASSERT_TRUE(stream->setOutputFormat(PixelFormat::RGB24));
+  ASSERT_TRUE(stream->setOutputFormat(PixelFormat::YUV420));
 
-  auto frame = stream->frame(0);
-  auto data = frame->convertedData();
+  auto frame = stream->frame(100);
+  auto data = frame->data();
   ASSERT_TRUE(data != nullptr);
+
+#ifdef PNG_OUT
+  bool is_valid = false;
+  auto dims = stream->property<Dimensions>(MediaProperty::DIMENSIONS, is_valid);
+  if (is_valid) {
+//    for (auto i = 0; i < dims.width * dims.height * 3; ++i)
+//    {
+//      uint8_t val = data[i];
+//      auto thing = val * 2;
+//    }
+    std::ofstream out("test.png", std::ios::binary);
+    TinyPngOut pngout(dims.width, dims.height, out);
+    pngout.write(*data, dims.width * dims.height);
+    out.close();
+
+  }
+#endif
 }
 
 

@@ -344,7 +344,7 @@ void FFMpegStream::setupForVideo(const AVStream& strm, Buffers& bufs, AVFilterGr
 void FFMpegStream::setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, AVCodecContext& codec_context) const
 {
   if (codec_context.channel_layout == 0) {
-    codec_context.channel_layout = av_get_default_channel_layout(strm.codecpar->channels);
+    codec_context.channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(strm.codecpar->channels));
   }
 
   //  // set up cache

@@ -90,6 +90,8 @@ media_handling::MediaSourcePtr media_handling::createSource(std::string file_pat
     case BackendType::GSTREAMER:
     [[fallthrough]];
     case BackendType::INTEL:
+    [[fallthrough]];
+    default:
       return {};
   }
 }
