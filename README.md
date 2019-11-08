@@ -4,7 +4,7 @@ This is a library solely intended for the use in the project [Chestnut](https://
 by handling all media-file operations (properties/decoding/encoding).
 This is done by abstracting the underlying media library with a common interface.
 
-Currently, only the [FFmpeg](https://ffmpeg.org/) library is being.
+Currently, only the [FFmpeg](https://ffmpeg.org/) library is being used.
 
 ## Installation
 
