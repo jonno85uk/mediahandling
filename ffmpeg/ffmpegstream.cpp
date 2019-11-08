@@ -446,9 +446,14 @@ void FFMpegStream::extractFrameProperties()
   if (auto tmp_frame = this->frame(0)) {
     tmp_frame->extractProperties();
     bool is_valid;
-    auto val = tmp_frame->property<media_handling::FieldOrder>(MediaProperty::FIELD_ORDER, is_valid);
-    if (is_valid) {
-      MediaPropertyObject::setProperty(MediaProperty::FIELD_ORDER, val);
+    if (type_ == StreamType::VIDEO) {
+      auto val = tmp_frame->property<media_handling::FieldOrder>(MediaProperty::FIELD_ORDER, is_valid);
+      if (is_valid) {
+        MediaPropertyObject::setProperty(MediaProperty::FIELD_ORDER, val);
+      }
+    } else if (type_ == StreamType::IMAGE) {
+      logMessage("Setting image progressive");
+      MediaPropertyObject::setProperty(MediaProperty::FIELD_ORDER, FieldOrder::PROGRESSIVE);
     }
     auto par = MediaPropertyObject::property<Rational>(MediaProperty::PIXEL_ASPECT_RATIO, is_valid);
     if (!is_valid || (par == Rational{0,1}) ) {
@@ -458,7 +463,8 @@ void FFMpegStream::extractFrameProperties()
         MediaPropertyObject::setProperty(MediaProperty::PIXEL_ASPECT_RATIO, par);
       }
     }
-
+  } else {
+    logMessage("Failed to read a frame from stream");
   }
 
 }
