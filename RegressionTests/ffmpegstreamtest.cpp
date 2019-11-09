@@ -33,7 +33,6 @@
 using namespace media_handling;
 using namespace media_handling::ffmpeg;
 
-#define PNG_OUT
 #ifdef PNG_OUT
 #include <fstream>
 #include <iostream>
@@ -492,7 +491,7 @@ TEST (FFMpegStreamTest, SetOutputFormatAudio)
 }
 
 
-class ImageReadingTests : public testing::TestWithParam<std::tuple<std::string, int, int, PixelFormat, Codec>>
+class ImageReadingTests : public testing::TestWithParam<std::tuple<std::string, int, int, PixelFormat, Codec, int>>
 {
   public:
     std::unique_ptr<FFMpegSource> source_;
@@ -500,8 +499,10 @@ class ImageReadingTests : public testing::TestWithParam<std::tuple<std::string, 
 
 TEST_P (ImageReadingTests, PropertiesCorrect)
 {
-  auto [path, width, height, fmt, cdc] = this->GetParam();
+  auto [path, width, height, fmt, cdc, v_streams] = this->GetParam();
   source_ = std::make_unique<FFMpegSource>(path);
+  ASSERT_EQ(source_->visualStreams().size(), v_streams);
+  ASSERT_EQ(source_->audioStreams().size(), 0);
   auto stream = source_->visualStream(0);
   ASSERT_TRUE(stream->type() == StreamType::IMAGE);
   bool okay = false;
@@ -515,15 +516,16 @@ TEST_P (ImageReadingTests, PropertiesCorrect)
   auto strm_cdc = stream->property<Codec>(MediaProperty::CODEC, okay);
   ASSERT_TRUE(okay);
   ASSERT_EQ(strm_cdc, cdc);
+  
 }
 
 INSTANTIATE_TEST_CASE_P(
       FFMpegStreamTest,
       ImageReadingTests,
-      testing::Values(std::make_tuple("./ReferenceMedia/Image/test-001.png", 474, 889, PixelFormat::RGBA, Codec::PNG),
-                      std::make_tuple("./ReferenceMedia/Image/test-002.jpg", 800, 530, PixelFormat::YUVJ420, Codec::JPEG),
-                      std::make_tuple("./ReferenceMedia/Image/test-003.tiff", 640, 360, PixelFormat::RGB24, Codec::TIFF),
-                      std::make_tuple("./ReferenceMedia/Image/test-004.jp2", 640, 531, PixelFormat::RGBA, Codec::JPEG2000)
+      testing::Values(std::make_tuple("./ReferenceMedia/Image/test-001.png", 474, 889, PixelFormat::RGBA, Codec::PNG,1 ),
+                      std::make_tuple("./ReferenceMedia/Image/test-002.jpg", 800, 530, PixelFormat::YUVJ420, Codec::JPEG,1 ),
+                      std::make_tuple("./ReferenceMedia/Image/test-003.tiff", 640, 360, PixelFormat::RGB24, Codec::TIFF,1 ),
+                      std::make_tuple("./ReferenceMedia/Image/test-004.jp2", 640, 531, PixelFormat::RGBA, Codec::JPEG2000, 1)
 ));
 
 
