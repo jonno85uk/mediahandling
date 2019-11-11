@@ -42,6 +42,7 @@
 namespace media_handling
 {
 
+// TODO: maybe turn into a mapping
 enum class MediaProperty
 {
   PROFILE,              //TODO: for mpeg2/4, aac, dnxhd, etc encoded profile
@@ -69,9 +70,11 @@ enum class MediaProperty
   FIELD_ORDER,          // FieldOrder
   TIMESTAMP,            // int64_t
   FRAME_RATE,           // Rational
-  COLOUR_SPACE,         // TODO:
-  COLOUR_PRIMARY,       // TODO:
-  COLOUR_TRANSFER_CHARACTERISTICS // TODO:
+  SEQUENCE_PATTERN,     // std::string
+  COLOUR_SPACE,                    // TODO:
+  COLOUR_PRIMARY,                  // TODO:
+  COLOUR_TRANSFER_CHARACTERISTICS, // TODO:
+  COLOR_MATRIX_COEFFICIENTS        // TODO:
 };
 
 enum class Codec
@@ -79,6 +82,7 @@ enum class Codec
   UNKNOWN,
   AAC,
   DNXHD,
+  DPX,
   H264,
   JPEG,
   JPEG2000,

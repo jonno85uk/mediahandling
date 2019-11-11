@@ -525,7 +525,28 @@ INSTANTIATE_TEST_CASE_P(
       testing::Values(std::make_tuple("./ReferenceMedia/Image/test-001.png", 474, 889, PixelFormat::RGBA, Codec::PNG,1 ),
                       std::make_tuple("./ReferenceMedia/Image/test-002.jpg", 800, 530, PixelFormat::YUVJ420, Codec::JPEG,1 ),
                       std::make_tuple("./ReferenceMedia/Image/test-003.tiff", 640, 360, PixelFormat::RGB24, Codec::TIFF,1 ),
-                      std::make_tuple("./ReferenceMedia/Image/test-004.jp2", 640, 531, PixelFormat::RGBA, Codec::JPEG2000, 1)
+                      std::make_tuple("./ReferenceMedia/Image/test-004.jp2", 640, 531, PixelFormat::RGBA, Codec::JPEG2000, 1),
+                      std::make_tuple("./ReferenceMedia/Image/sequence/im_sequence-0001.dpx", 256, 144, PixelFormat::RGB24, Codec::DPX, 1)
 ));
+
+
+TEST (FFMpegStreamTest, ImageSequence)
+{
+  //  const auto f_path = "./ReferenceMedia/Image/sequence/im_sequence-0001.dpx";
+  //  source->setProperty(MediaProperty::SEQUENCE_PATTERN, "^(.+)-([0-9]+).dpx"); // ^(.+)[-_ .]([0-9]+).(dpx|exr|jp2|etc)
+  const auto f_path = "./ReferenceMedia/Image/sequence/im_sequence-%04d.dpx";
+  auto source = std::make_unique<FFMpegSource>(f_path);
+  ASSERT_EQ(source->visualStreams().size(), 1);
+  ASSERT_EQ(source->audioStreams().size(), 0);
+  auto stream = source->visualStream(0);
+  ASSERT_TRUE(stream->type() == StreamType::VIDEO);
+  bool okay = false;
+  auto duration = source->property<int64_t>(MediaProperty::DURATION, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(duration, 4040000);
+  auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(rate, Rational(25,1));
+}
 
 

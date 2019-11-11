@@ -225,6 +225,9 @@ media_handling::Codec media_handling::types::convertCodecID(const AVCodecID id) 
     case AV_CODEC_ID_DNXHD:
       cdc = media_handling::Codec::DNXHD;
       break;
+    case AV_CODEC_ID_DPX:
+      cdc = media_handling::Codec::DPX;
+      break;
     case AV_CODEC_ID_H264:
       cdc = media_handling::Codec::H264;
       break;

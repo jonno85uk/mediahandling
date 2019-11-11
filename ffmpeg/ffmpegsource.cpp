@@ -66,12 +66,17 @@ FFMpegSource::~FFMpegSource()
 
 bool FFMpegSource::initialise()
 {
-  if (!std::filesystem::exists(file_path_)) {
-    return false;
-  }
+  if (file_path_.find('%') == std::string::npos) {
+    if (!std::filesystem::exists(file_path_)) {
+      return false;
+    }
 
-  if (std::filesystem::status(file_path_).type() != std::filesystem::file_type::regular) {
-    return false;
+    if (std::filesystem::status(file_path_).type() != std::filesystem::file_type::regular) {
+      return false;
+    }
+  } else {
+    // trying to load an image sequence
+    // TODO: check another way
   }
 
 
