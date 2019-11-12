@@ -87,6 +87,27 @@ namespace media_handling::ffmpeg
       void extractProperties(const AVFormatContext& ctx);
       void extractStreamProperties(AVStream** streams, const uint32_t stream_count);
       void findFrameRate();
+
+      /**
+       * @brief Reset the instance to before it was initialised (minus properties)
+       * @note  Allows re-initialise with different starting values
+       */
+      void reset();
+
+      /**
+       * @brief       Identify if path is part of a contiguous sequence
+       * @param path  File path to existing file
+       * @return      true==path is in sequence
+       */
+      bool pathIsInSequence(const std::string& path) const;
+
+      /**
+       * @brief       Generate a sequence pattern ffmpeg understands
+       * @param path  File path to generate agains
+       * @return      Valid sequence pattern if value exists
+       */
+      std::optional<std::string> generateSequencePattern(const std::string& path) const;
+
   };
 }
 
