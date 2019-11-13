@@ -28,3 +28,4 @@ target_include_directories(mediaHandling
 )
 
 install(TARGETS mediaHandling DESTINATION lib)
+install(DIRECTORY Include/ DESTINATION include/mediahandling)
