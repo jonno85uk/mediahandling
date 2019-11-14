@@ -39,6 +39,8 @@ extern "C" {
 
 static auto media_backend = media_handling::BackendType::FFMPEG;
 
+std::atomic<bool> media_handling::global::auto_detect_img_sequence = true;
+
 void defaultLog(const std::string& msg)
 {
   std::cerr << msg << std::endl;
@@ -94,4 +96,13 @@ media_handling::MediaSourcePtr media_handling::createSource(std::string file_pat
     default:
       return {};
   }
+}
+
+/**
+ * @brief autoDetectImageSequences
+ * @param value
+ */
+void media_handling::autoDetectImageSequences(const bool value) noexcept
+{
+  media_handling::global::auto_detect_img_sequence = value;
 }

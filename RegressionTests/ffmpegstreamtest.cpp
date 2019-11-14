@@ -29,6 +29,7 @@
 
 #include "ffmpegstream.h"
 #include "ffmpegsource.h"
+#include "mediahandling.h"
 
 using namespace media_handling;
 using namespace media_handling::ffmpeg;
@@ -552,6 +553,25 @@ TEST (FFMpegStreamTest, ImageSequenceAuto)
   ASSERT_EQ(rate, Rational(25,1));
 }
 
+
+TEST (FFMpegStreamTest, ImageSequenceAutoCAPEXT)
+{
+  const auto f_path = "./ReferenceMedia/Image/sequence/jp2/im_sequence0001.JP2";
+  auto source = std::make_unique<FFMpegSource>(f_path);
+  ASSERT_EQ(source->visualStreams().size(), 1);
+  ASSERT_EQ(source->audioStreams().size(), 0);
+  auto stream = source->visualStream(0);
+  ASSERT_TRUE(stream->type() == StreamType::VIDEO);
+  bool okay = false;
+  auto duration = source->property<int64_t>(MediaProperty::DURATION, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(duration, 200000);
+  auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(rate, Rational(25,1));
+}
+
+
 TEST (FFMpegStreamTest, ImageSequenceManualFailure)
 {
   const auto f_path = "./ReferenceMedia/Image/sequence/im_sequence-0001.dpx";
@@ -591,4 +611,18 @@ TEST (FFMpegStreamTest, ImageSequenceManualSuccess)
   ASSERT_EQ(rate, Rational(25,1));
 }
 
+TEST (FFMpegStreamTest, ImageSequenceAutoDisabled)
+{
+  media_handling::autoDetectImageSequences(false);
+  const auto f_path = "./ReferenceMedia/Image/sequence/im_sequence-0001.dpx";
+  auto source = std::make_unique<FFMpegSource>(f_path);
+  ASSERT_EQ(source->visualStreams().size(), 1);
+  ASSERT_EQ(source->audioStreams().size(), 0);
+  auto stream = source->visualStream(0);
+  ASSERT_TRUE(stream->type() == StreamType::IMAGE);
+  bool okay = false;
+  auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(rate, Rational(25,1));
+}
 

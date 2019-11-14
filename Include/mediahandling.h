@@ -29,11 +29,17 @@
 #define MEDIAHANDLING_H
 
 #include "imediasource.h"
+#include <atomic>
 
 
 
 namespace media_handling
 {
+  namespace global
+  {
+    extern std::atomic<bool> auto_detect_img_sequence;
+  }
+
   enum class BackendType
   {
     FFMPEG,
@@ -64,6 +70,12 @@ namespace media_handling
    * @return  valid MediaSourcePtr or null
    */
   MediaSourcePtr createSource(std::string file_path);
+
+  /**
+   * @brief Globally set the ability to auto-detect image sequences
+   * @param value
+   */
+  void autoDetectImageSequences(const bool value) noexcept;
 
   /**
    * @note intended for internal purposes only
