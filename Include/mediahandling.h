@@ -35,9 +35,23 @@
 
 namespace media_handling
 {
+
+  constexpr auto SEQUENCE_MATCHING_PATTERN = "^(.+?)([0-9]+)\\.(bmp|dpx|exr|png|tiff|jp2|tga)$";
+  constexpr auto SPECIFIC_MATCHING_PATTERN = "([0-9]+)\\.(bmp|dpx|exr|png|tiff|jp2|tga)$";
+
   namespace global
   {
     extern std::atomic<bool> auto_detect_img_sequence;
+  }
+
+  namespace utils
+  {
+    /**
+     * @brief       Identify if path is part of a contiguous image sequence
+     * @param path  File path to existing file
+     * @return      true==path is in sequence
+     */
+    bool pathIsInSequence(const std::string& path);
   }
 
   enum class BackendType

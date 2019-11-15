@@ -42,8 +42,6 @@ using media_handling::MediaStreamPtr;
 using media_handling::MediaStreamMap;
 
 constexpr auto ERR_LEN = 1024;
-constexpr auto SEQUENCE_MATCHING_PATTERN = "^(.+?)([0-9]+)\\.(bmp|dpx|exr|png|tiff|jp2|tga)$";
-constexpr auto SPECIFIC_MATCHING_PATTERN = "([0-9]+)\\.(bmp|dpx|exr|png|tiff|jp2|tga)$";
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -86,7 +84,7 @@ bool FFMpegSource::initialise()
       return file_path_;
     }
 
-    if (pathIsInSequence(file_path_)) {
+    if (media_handling::utils::pathIsInSequence(file_path_)) {
       if (auto ptn = generateSequencePattern(file_path_)) {
         result = ptn.value();
       }
@@ -264,37 +262,6 @@ void FFMpegSource::reset()
   visual_streams_.clear();
 }
 
-
-bool FFMpegSource::pathIsInSequence(const std::string& path) const
-{
-  const std::filesystem::path file_path(path);
-  std::regex pattern(SEQUENCE_MATCHING_PATTERN, std::regex_constants::icase);
-  std::smatch match;
-  // strip path
-  const auto fname(file_path.filename().string());
-  if (!std::regex_search(fname, match, pattern)) {
-    logMessage(std::string(SEQUENCE_MATCHING_PATTERN) + " doesn't match filename " + path);
-    return false;
-  }
-
-  // Ensure to match using the first bit of the filename
-  pattern = std::regex(std::string("^") + match.str(1) + SPECIFIC_MATCHING_PATTERN, std::regex_constants::icase);
-  auto match_count = 0;
-
-  // Iterate through directory looking for matching files
-  for (const auto& entry : std::filesystem::directory_iterator(file_path.parent_path())) {
-    if (std::regex_match(entry.path().filename().string(), pattern)) {
-      match_count++;
-      if (match_count > 1) {
-        // Thats enough
-        logMessage(path + " is a sequence");
-        break;
-      }
-    }
-  }
-
-  return (match_count > 1);
-}
 
 
 std::optional<std::string> FFMpegSource::generateSequencePattern(const std::string& path) const

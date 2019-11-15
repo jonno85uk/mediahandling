@@ -27,23 +27,49 @@
 
 #include "mediahandling.h"
 #include <iostream>
-
-#ifdef OLD_FFMPEG
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavfilter/avfilter.h>
-}
-#endif
+#include <filesystem>
+#include <regex>
 
 #include "ffmpegsource.h"
 
-static auto media_backend = media_handling::BackendType::FFMPEG;
+static std::atomic<media_handling::BackendType> media_backend = media_handling::BackendType::FFMPEG;
 
 std::atomic<bool> media_handling::global::auto_detect_img_sequence = true;
 
 void defaultLog(const std::string& msg)
 {
   std::cerr << msg << std::endl;
+}
+
+bool media_handling::utils::pathIsInSequence(const std::string& path)
+{
+  const std::filesystem::path file_path(path);
+  std::regex pattern(SEQUENCE_MATCHING_PATTERN, std::regex_constants::icase);
+  std::smatch match;
+  // strip path
+  const auto fname(file_path.filename().string());
+  if (!std::regex_search(fname, match, pattern)) {
+    logMessage(std::string(SEQUENCE_MATCHING_PATTERN) + " doesn't match filename " + path);
+    return false;
+  }
+
+  // Ensure to match using the first bit of the filename
+  pattern = std::regex(std::string("^") + match.str(1) + SPECIFIC_MATCHING_PATTERN, std::regex_constants::icase);
+  auto match_count = 0;
+
+  // Iterate through directory looking for matching files
+  for (const auto& entry : std::filesystem::directory_iterator(file_path.parent_path())) {
+    if (std::regex_match(entry.path().filename().string(), pattern)) {
+      match_count++;
+      if (match_count > 1) {
+        // Thats enough
+        logMessage(path + " is a sequence");
+        break;
+      }
+    }
+  }
+
+  return (match_count > 1);
 }
 
 
@@ -53,12 +79,7 @@ bool media_handling::initialise(const BackendType backend)
 {
   media_backend = backend;
   if (backend == BackendType::FFMPEG) {
-#ifdef OLD_FFMPEG // lavf 58.9.100
-  avcodec_register_all();
-  av_register_all();
-  avfilter_register_all();
-#endif
-  return true;
+    return true;
   }
   logMessage("Chosen backend type is not available");
   return false;

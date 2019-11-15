@@ -95,13 +95,6 @@ namespace media_handling::ffmpeg
       void reset();
 
       /**
-       * @brief       Identify if path is part of a contiguous sequence
-       * @param path  File path to existing file
-       * @return      true==path is in sequence
-       */
-      bool pathIsInSequence(const std::string& path) const;
-
-      /**
        * @brief       Generate a sequence pattern ffmpeg understands
        * @param path  File path to generate agains
        * @return      Valid sequence pattern if value exists
