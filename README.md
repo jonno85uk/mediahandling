@@ -21,3 +21,16 @@ cd build
 cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr/local/ -DCMAKE_BUILD_TYPE=Release ..
 make
 sudo make install</code></pre>
+
+
+### Regression Tests
+
+Change directory to RegressionTests
+<pre><code>mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr/local/ -DCMAKE_BUILD_TYPE=Release ..
+make</code></pre>
+
+Change back to RegressionTests directory and run
+
+<pre>build/mh_regression</pre>
