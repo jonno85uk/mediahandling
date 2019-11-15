@@ -94,12 +94,7 @@ namespace media_handling::ffmpeg
        */
       void reset();
 
-      /**
-       * @brief       Generate a sequence pattern ffmpeg understands
-       * @param path  File path to generate agains
-       * @return      Valid sequence pattern if value exists
-       */
-      std::optional<std::string> generateSequencePattern(const std::string& path) const;
+
 
   };
 }

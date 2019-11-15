@@ -52,6 +52,12 @@ namespace media_handling
      * @return      true==path is in sequence
      */
     bool pathIsInSequence(const std::string& path);
+    /**
+     * @brief       Generate a sequence pattern ffmpeg understands
+     * @param path  File path to generate agains
+     * @return      Valid sequence pattern if value exists
+     */
+    std::optional<std::string> generateSequencePattern(const std::string& path);
   }
 
   enum class BackendType
@@ -87,9 +93,15 @@ namespace media_handling
 
   /**
    * @brief Globally set the ability to auto-detect image sequences
-   * @param value
+   * @param value true==auto-detecting
    */
   void autoDetectImageSequences(const bool value) noexcept;
+
+  /**
+   * @brief Obtain the global setting for auto-detect of image sequences
+   * @return true==auto-detecting
+   */
+  bool autoDetectImageSequences() noexcept;
 
   /**
    * @note intended for internal purposes only

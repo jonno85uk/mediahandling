@@ -36,10 +36,13 @@ static std::atomic<media_handling::BackendType> media_backend = media_handling::
 
 std::atomic<bool> media_handling::global::auto_detect_img_sequence = true;
 
+
 void defaultLog(const std::string& msg)
 {
   std::cerr << msg << std::endl;
 }
+
+static media_handling::LOGGINGFN logging_func = defaultLog;
 
 bool media_handling::utils::pathIsInSequence(const std::string& path)
 {
@@ -72,8 +75,38 @@ bool media_handling::utils::pathIsInSequence(const std::string& path)
   return (match_count > 1);
 }
 
+std::optional<std::string> media_handling::utils::generateSequencePattern(const std::string& path)
+{
+  const std::filesystem::path file_path(path);
+  std::regex pattern(SEQUENCE_MATCHING_PATTERN, std::regex_constants::icase);
+  std::smatch match;
+  // strip path
+  const auto fname(file_path.filename().string());
+  if (!std::regex_search(fname, match, pattern)) {
+    logMessage(std::string(SEQUENCE_MATCHING_PATTERN) + " doesn't match filename " + path);
+    return {};
+  }
 
-static media_handling::LOGGINGFN logging_func = defaultLog;
+  switch (media_backend) {
+    case BackendType::FFMPEG:
+    {
+      std::stringstream ss;
+      ss << match.str(1) << "%0" << match.str(2).length() << "d." <<  match.str(3);
+      auto par_path = file_path.parent_path();
+      par_path /= ss.str();
+      return par_path.string();
+    }
+    case BackendType::GSTREAMER:
+    [[fallthrough]];
+    case BackendType::INTEL:
+    [[fallthrough]];
+    default:
+      break;
+  }
+  return {};
+}
+
+
 
 bool media_handling::initialise(const BackendType backend)
 {
@@ -126,4 +159,9 @@ media_handling::MediaSourcePtr media_handling::createSource(std::string file_pat
 void media_handling::autoDetectImageSequences(const bool value) noexcept
 {
   media_handling::global::auto_detect_img_sequence = value;
+}
+
+bool media_handling::autoDetectImageSequences() noexcept
+{
+  return media_handling::global::auto_detect_img_sequence;
 }

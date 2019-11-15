@@ -85,7 +85,7 @@ bool FFMpegSource::initialise()
     }
 
     if (media_handling::utils::pathIsInSequence(file_path_)) {
-      if (auto ptn = generateSequencePattern(file_path_)) {
+      if (auto ptn = media_handling::utils::generateSequencePattern(file_path_)) {
         result = ptn.value();
       }
     }
@@ -262,22 +262,3 @@ void FFMpegSource::reset()
   visual_streams_.clear();
 }
 
-
-
-std::optional<std::string> FFMpegSource::generateSequencePattern(const std::string& path) const
-{
-  const std::filesystem::path file_path(path);
-  std::regex pattern(SEQUENCE_MATCHING_PATTERN, std::regex_constants::icase);
-  std::smatch match;
-  // strip path
-  const auto fname(file_path.filename().string());
-  if (!std::regex_search(fname, match, pattern)) {
-    logMessage(std::string(SEQUENCE_MATCHING_PATTERN) + " doesn't match filename " + path);
-    return {};
-  }
-  std::stringstream ss;
-  ss << match.str(1) << "%0" << match.str(2).length() << "d." <<  match.str(3);
-  auto par_path = file_path.parent_path();
-  par_path /= ss.str();
-  return par_path.string();
-}
