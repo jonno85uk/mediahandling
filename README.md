@@ -24,6 +24,11 @@ sudo make install</code></pre>
 
 ### Regression Tests
 
+Install [git-lfs](https://git-lfs.github.com/) and [google-test](https://github.com/google/googletest)
+<pre><code>git-lfs fetch
+git-lfs pull
+</pre></code>
+
 Change directory to RegressionTests
 <pre><code>mkdir build
 cd build
