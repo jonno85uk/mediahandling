@@ -22,7 +22,6 @@ cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr/local/ -DCMAKE_BUILD_TYPE=Release ..
 make
 sudo make install</code></pre>
 
-
 ### Regression Tests
 
 Change directory to RegressionTests
