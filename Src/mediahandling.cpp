@@ -152,10 +152,6 @@ media_handling::MediaSourcePtr media_handling::createSource(std::string file_pat
   }
 }
 
-/**
- * @brief autoDetectImageSequences
- * @param value
- */
 void media_handling::autoDetectImageSequences(const bool value) noexcept
 {
   media_handling::global::auto_detect_img_sequence = value;
