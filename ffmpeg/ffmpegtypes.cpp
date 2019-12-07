@@ -49,6 +49,9 @@ AVPixelFormat media_handling::types::convertPixelFormat(const media_handling::Pi
   AVPixelFormat converted {AV_PIX_FMT_NONE};
 
   switch (format) {
+    case PixelFormat::RGBA:
+      converted = AV_PIX_FMT_RGBA;
+      break;
     case PixelFormat::RGB24:
       converted = AV_PIX_FMT_RGB24;
       break;
