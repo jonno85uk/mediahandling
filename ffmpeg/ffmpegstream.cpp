@@ -521,7 +521,10 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
         return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame), type_ != StreamType::AUDIO);
       }
 
-      if ( (dec_err_code == AVERROR(EAGAIN)) || (dec_err_code == AVERROR_EOF) ) {
+      if (dec_err_code == AVERROR(EAGAIN)) {
+        continue;
+      }
+      else if (dec_err_code == AVERROR_EOF) {
         break;
       } else {
         av_strerror(dec_err_code, err.data(), ERR_LEN);
