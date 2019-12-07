@@ -39,6 +39,15 @@ namespace media_handling
   class IMediaFrame : public MediaPropertyObject
   {
     public:
+      struct FrameData
+      {
+        int32_t line_size_ {-1};
+        size_t data_size_ {0};
+        uint8_t** data_ {nullptr};
+        PixelFormat pix_fmt_ {PixelFormat::UNKNOWN};
+        SampleFormat samp_fmt_ {SampleFormat::NONE};
+      };
+      
       IMediaFrame() = default;
 
       ~IMediaFrame() override = default;
@@ -59,7 +68,7 @@ namespace media_handling
        * @note  This can be raw or converted data, depending on the subclass implementation
        * @return non-owning pointer to data or null
        */
-      virtual uint8_t** data() noexcept = 0;
+      virtual FrameData data() noexcept = 0;
 
       /**
        * @brief It is not always resource-wise to extract all properties for every frame when decoding

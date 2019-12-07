@@ -56,6 +56,7 @@ namespace
 FFMpegSource::FFMpegSource(std::string file_path) : file_path_(std::move(file_path))
 {
   if (!FFMpegSource::initialise()) {
+    //TODO: why did I use throw_with_nested?
     std::throw_with_nested(std::runtime_error("FFMpegSource::initialise failed, filepath=" + file_path_) );
   }
 }

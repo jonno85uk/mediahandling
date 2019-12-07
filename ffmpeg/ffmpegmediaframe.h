@@ -58,7 +58,7 @@ namespace media_handling
 
       std::optional<int64_t> lineSize(const int index) const override;
 
-      uint8_t** data() noexcept override;
+      IMediaFrame::FrameData data() noexcept override;
 
       void extractProperties() override;
 

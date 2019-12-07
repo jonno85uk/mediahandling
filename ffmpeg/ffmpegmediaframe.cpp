@@ -29,6 +29,8 @@
 
 #include <cassert>
 
+#include <libswscale/swscale.h>
+
 #include "mediahandling.h"
 
 using media_handling::FFMpegMediaFrame;
@@ -81,14 +83,15 @@ std::optional<int64_t> FFMpegMediaFrame::lineSize(const int index) const
   return ff_frame_->linesize[index];
 }
 
-uint8_t** FFMpegMediaFrame::data() noexcept
+media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
 {
   assert(ff_frame_);
+  media_handling::IMediaFrame::FrameData f_d;
   if (is_visual_ && sws_context_) {
     // TODO: convert
     if (sws_frame_ == nullptr) {
       sws_frame_.reset(av_frame_alloc());
-      sws_frame_->format = AV_PIX_FMT_RGB24; //TODO: get this programatically
+      sws_frame_->format = AV_PIX_FMT_RGBA; //TODO: get this programatically
       sws_frame_->width = ff_frame_->width;
       sws_frame_->height = ff_frame_->height;
       av_frame_get_buffer(sws_frame_.get(), 0);
@@ -97,12 +100,21 @@ uint8_t** FFMpegMediaFrame::data() noexcept
     assert(sws_frame_);
     const auto out_slice_height = sws_scale(sws_context_.get(), static_cast<const uint8_t* const*>(ff_frame_->data), ff_frame_->linesize, 0,
                                             ff_frame_->height, sws_frame_->data, sws_frame_->linesize);
-    return sws_frame_->data;
+    f_d.data_ = sws_frame_->data;
+    f_d.line_size_ = sws_frame_->linesize[0];
+    f_d.pix_fmt_ = PixelFormat::RGBA;
+    f_d.data_size_ = avpicture_get_size(static_cast<AVPixelFormat>(sws_frame_->format), sws_frame_->width, sws_frame_->height);
   } else if (!is_visual_ && swr_context_) {
     // TODO:
     // change the sample format
+  } else {
+    // No conversion
+    f_d.data_ = ff_frame_->data;
+    f_d.line_size_ = ff_frame_->linesize[0];
+    // f_d.pix_fmt_ = 
+    f_d.data_size_ = avpicture_get_size(static_cast<AVPixelFormat>(ff_frame_->format), ff_frame_->width, ff_frame_->height);
   }
-  return ff_frame_->data;
+  return f_d;
 
 }
 
