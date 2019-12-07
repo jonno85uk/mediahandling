@@ -64,6 +64,12 @@ AVPixelFormat media_handling::types::convertPixelFormat(const media_handling::Pi
     case PixelFormat::YUV444:
       converted = AV_PIX_FMT_YUV444P;
       break;
+    case PixelFormat::YUV422_P_10_LE:
+      converted = AV_PIX_FMT_YUV422P10LE;
+      break;
+    case PixelFormat::YUV444_P_12_LE:
+      converted = AV_PIX_FMT_YUV444P12LE;
+      break;
     default:
       converted = AV_PIX_FMT_NONE;
       break;
@@ -94,6 +100,12 @@ media_handling::PixelFormat media_handling::types::convertPixelFormat(const AVPi
       break;
     case AV_PIX_FMT_YUV444P:
       converted = PixelFormat::YUV444;
+      break;
+    case AV_PIX_FMT_YUV422P10LE:
+      converted = PixelFormat::YUV422_P_10_LE;
+      break;
+    case AV_PIX_FMT_YUV444P12LE:
+      converted = PixelFormat::YUV444_P_12_LE;
       break;
     default:
       converted = PixelFormat::UNKNOWN;

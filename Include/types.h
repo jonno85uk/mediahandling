@@ -34,8 +34,6 @@
 #include <boost/rational.hpp>
 
 
-//TODO: use fourccs
-
 /**
  * Place for all bespoke or aliased types used within the library
  */
@@ -79,6 +77,7 @@ enum class MediaProperty
 
 enum class Codec
 {
+  //TODO: use fourccs
   UNKNOWN,
   AAC,
   DNXHD,
@@ -142,12 +141,15 @@ struct Dimensions
  */
 enum class PixelFormat
 {
+  // TODO: use fourccs
   RGB24,
   RGBA,
   YUV420,
   YUVJ420,  // Full-range YUV420
   YUV422,
   YUV444,
+  YUV422_P_10_LE,
+  YUV444_P_12_LE,
   UNKNOWN
 };
 
