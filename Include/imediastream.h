@@ -78,9 +78,13 @@ namespace media_handling
      * @brief         Automatically convert the stream's output format type
      * @note          This is for video only
      * @param format  pixel format to change source file to i.e yuv420 -> rgb24
+     * @param dims    The desired output dimensions
+     * @param interp  The interpolation method to use for scaling
      * @return        true==output format set
      */
-    virtual bool setOutputFormat(const PixelFormat format) = 0;
+    virtual bool setOutputFormat(const PixelFormat format,
+                                 const Dimensions& dims = {0, 0},
+                                 InterpolationMethod interp = InterpolationMethod::NEAREST) = 0;
 
     /**
      * @brief         Automatically convert the stream's output format type

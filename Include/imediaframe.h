@@ -43,8 +43,21 @@ namespace media_handling
       {
         int32_t line_size_ {-1};
         size_t data_size_ {0};
+        /**
+         * @brief The data of the frame or null
+         * @note  Data exists for the lifetime of the IMediaFrame and until the next frame-retrieval
+         * @see IMediaFrame::frame
+         */
         uint8_t** data_ {nullptr};
+        /*
+         * @brief The pixel format used on conversion 
+         * @see IMediaStream::setOutputFormat
+         */
         PixelFormat pix_fmt_ {PixelFormat::UNKNOWN};
+        /*
+         * @brief The sample format used on conversion 
+         * @see IMediaStream::setOutputFormat
+         */
         SampleFormat samp_fmt_ {SampleFormat::NONE};
       };
       
@@ -66,7 +79,7 @@ namespace media_handling
       /**
        * @brief Obtain the sample data of this frame, either read from a stream (decode) or written to (encode)
        * @note  This can be raw or converted data, depending on the subclass implementation
-       * @return non-owning pointer to data or null
+       * @return 
        */
       virtual FrameData data() noexcept = 0;
 
@@ -76,7 +89,10 @@ namespace media_handling
        */
       virtual void extractProperties() = 0;
 
-      virtual int64_t timestamp() const = 0;
+      /**
+       * @brief Timestamp of this read frame
+       */
+      virtual int64_t timestamp() const noexcept = 0;
   };
 
   using MediaFramePtr = std::shared_ptr<IMediaFrame>;

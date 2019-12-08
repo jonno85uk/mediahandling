@@ -39,40 +39,40 @@ extern "C" {
 
 namespace media_handling
 {
+
   class FFMpegMediaFrame : public IMediaFrame
   {
     public:
+      struct OutputFormat
+      {
+          // Needed as there's no documented way to identify how swr/swscontexts were created
+          types::SWSContextPtr sws_context_ {nullptr};
+          types::SWRContextPtr swr_context_ {nullptr};
+          PixelFormat pix_fmt_ {PixelFormat::UNKNOWN};
+          SampleFormat sample_fmt_ {SampleFormat::NONE};
+          Dimensions dims_;
+      };
       FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual);
 
-      FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, types::SWSContextPtr converter);
-
-      FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, types::SWRContextPtr converter);
-
-      ~FFMpegMediaFrame() override;
+      FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, OutputFormat format);
 
       // FIXME: rule of five
 
+      /* IMediaFrame overrides */
       std::optional<bool> isAudio() const override;
-
       std::optional<bool> isVisual() const override;
-
       std::optional<int64_t> lineSize(const int index) const override;
-
       IMediaFrame::FrameData data() noexcept override;
-
       void extractProperties() override;
-
-      int64_t timestamp() const override;
+      int64_t timestamp() const noexcept override;
 
     private:
       types::AVFrameUPtr ff_frame_ {nullptr};
       types::AVFrameUPtr sws_frame_ {nullptr};
       std::optional<bool> is_audio_;
       std::optional<bool> is_visual_;
-      uint8_t** data_ {nullptr};
       int64_t timestamp_ {-1};
-      types::SWSContextPtr sws_context_{nullptr};
-      types::SWRContextPtr swr_context_{nullptr};
+      OutputFormat output_fmt_;
 
       void extractVisualProperties();
 

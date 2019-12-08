@@ -53,12 +53,14 @@ namespace media_handling::ffmpeg
       FFMpegStream(AVFormatContext* parent, AVStream* const stream);
       ~FFMpegStream() override;
 
-      /* IMediaStream */
+      /* IMediaStream override*/
       MediaFramePtr frame(const int64_t timestamp=-1) final;
       bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
       StreamType type() const final;
       int32_t sourceIndex() const noexcept final;
-      bool setOutputFormat(const PixelFormat format) final;
+      bool setOutputFormat(const PixelFormat format,
+                           const Dimensions& dims = {0, 0},
+                           InterpolationMethod interp = InterpolationMethod::NEAREST) final;
       bool setOutputFormat(const SampleFormat format) final;
 
     private:
@@ -75,11 +77,10 @@ namespace media_handling::ffmpeg
           AVFilterContext* source_ {nullptr};
       } buffer_ctx_;
       int pixel_format_{};
+      FFMpegMediaFrame::OutputFormat output_format_;
 
       int64_t last_timestamp_ {-1};
       StreamType type_{StreamType::UNKNOWN};
-      types::SWSContextPtr sws_context_ {nullptr};
-      types::SWRContextPtr swr_context_ {nullptr};
       bool deinterlacer_setup_ {false};
       int32_t source_index_ {-1};
 

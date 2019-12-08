@@ -157,7 +157,9 @@ int32_t FFMpegStream::sourceIndex() const noexcept
   return source_index_;
 }
 
-bool FFMpegStream::setOutputFormat(const PixelFormat format)
+bool FFMpegStream::setOutputFormat(const PixelFormat format,
+                                   const media_handling::Dimensions& dims,
+                                   media_handling::InterpolationMethod interp)
 {
   assert(codec_);
   const AVPixelFormat output_av_fmt = types::convertPixelFormat(format);
@@ -179,20 +181,30 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format)
   }
 
 
-  auto dims = this->property<media_handling::Dimensions>(MediaProperty::DIMENSIONS, is_valid);
+  auto src_dims = this->property<media_handling::Dimensions>(MediaProperty::DIMENSIONS, is_valid);
   if (!is_valid) {
     media_handling::logMessage("FFMpegStream::setOutputFormat() -- Unknown dimensions of the stream");
     return false;
   }
 
-  SwsContext* ctx = sws_getContext(dims.width, dims.height, src_av_fmt,
-                            dims.width, dims.height, output_av_fmt,
-                            0, // Not scaling
-                            nullptr, nullptr, nullptr);
-  sws_context_ = std::shared_ptr<SwsContext>(ctx,
-                                             types::swsContextDeleter);
+  const auto [out_dims, out_interp] = [&] {
+    if ( (dims.width) <= 0 || (dims.height <= 0)) {
+      media_handling::logMessage("FFMpegStream::setOutputFormat() -- Output dimensions invalid");
+      return std::make_tuple(src_dims, 0);
+    }
+    return std::make_tuple(dims, media_handling::types::convertInterpolationMethod(interp));
+  }();
 
-  return sws_context_ != nullptr;
+  SwsContext* ctx = sws_getContext(src_dims.width, src_dims.height, src_av_fmt,
+                                   out_dims.width, out_dims.height, output_av_fmt,
+                                   out_interp,
+                                   nullptr, nullptr, nullptr);
+  assert(ctx);
+  output_format_.sws_context_ = std::shared_ptr<SwsContext>(ctx, types::swsContextDeleter);
+  output_format_.pix_fmt_ = format;
+  output_format_.dims_ = out_dims;
+
+  return output_format_.sws_context_ != nullptr;
 }
 
 bool FFMpegStream::setOutputFormat(const SampleFormat format)
@@ -506,17 +518,10 @@ MediaFramePtr FFMpegStream::frame(AVFormatContext& format_ctx,
       if (dec_err_code == 0) {
         // successful read
         assert(type_ != media_handling::StreamType::UNKNOWN);
-        if ( ( (type_ == StreamType::VIDEO) || (type_ == StreamType::IMAGE) )
-             && sws_context_) {
+        if ( (output_format_.swr_context_ != nullptr) || (output_format_.sws_context_ != nullptr) ) {
           return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame),
-                                                                    true,
-                                                                    sws_context_);
-        }
-
-        if (type_ == StreamType::AUDIO && swr_context_) {
-          return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame),
-                                                                    true,
-                                                                    swr_context_);
+                                                                    type_ != StreamType::AUDIO,
+                                                                    output_format_);
         }
         return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame), type_ != StreamType::AUDIO);
       }

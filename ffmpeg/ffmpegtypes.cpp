@@ -27,6 +27,8 @@
 
 #include "ffmpegtypes.h"
 
+using media_handling::InterpolationMethod;
+
 
 void media_handling::types::avframeDeleter(AVFrame* frame)
 {
@@ -43,6 +45,31 @@ void media_handling::types::swrContextDeleter(SwrContext* context)
   swr_free(&context);
 }
 
+
+int media_handling::types::convertInterpolationMethod(const InterpolationMethod interpolation) noexcept
+{
+  int av_method;
+  switch (interpolation) {
+    case InterpolationMethod::NEAREST:
+      [[fallthrough]];
+    default:
+      av_method = 0;
+      break;
+    case InterpolationMethod::BILINEAR:
+      av_method = SWS_BILINEAR;
+      break;
+    case InterpolationMethod::BICUBLIN:
+      av_method = SWS_BICUBLIN;
+      break;
+    case InterpolationMethod::BICUBIC:
+      av_method = SWS_BICUBIC;
+      break;
+    case InterpolationMethod::LANCZOS:
+      av_method = SWS_LANCZOS;
+      break;
+  }
+  return av_method;
+}
 
 AVPixelFormat media_handling::types::convertPixelFormat(const media_handling::PixelFormat format) noexcept
 {

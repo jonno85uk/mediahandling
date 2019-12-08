@@ -53,6 +53,7 @@ namespace media_handling::types
   using SWRContextPtr = std::shared_ptr<SwrContext>;
 
 
+  int convertInterpolationMethod(const InterpolationMethod interpolation) noexcept;
   AVPixelFormat convertPixelFormat(const media_handling::PixelFormat format) noexcept;
   media_handling::PixelFormat convertPixelFormat(const AVPixelFormat format) noexcept;
   media_handling::SampleFormat convertSampleFormat(const AVSampleFormat format) noexcept;

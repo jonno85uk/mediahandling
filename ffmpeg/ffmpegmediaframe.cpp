@@ -28,10 +28,10 @@
 #include "ffmpegmediaframe.h"
 
 #include <cassert>
-
 #include <libswscale/swscale.h>
 
 #include "mediahandling.h"
+#include "ffmpegtypes.h"
 
 using media_handling::FFMpegMediaFrame;
 using media_handling::MediaProperty;
@@ -47,19 +47,10 @@ FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual)
 }
 
 
-FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, types::SWSContextPtr converter)
-  : FFMpegMediaFrame(std::move(frame), visual)
-{
-  sws_context_ = converter;
-}
-
-FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, types::SWRContextPtr converter)
-  : FFMpegMediaFrame(std::move(frame), visual)
-{
-  swr_context_ = converter;
-}
-
-FFMpegMediaFrame::~FFMpegMediaFrame()
+FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, OutputFormat format)
+  : ff_frame_(std::move(frame)),
+    is_visual_(visual),
+    output_fmt_(std::move(format))
 {
 }
 
@@ -87,31 +78,35 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
 {
   assert(ff_frame_);
   media_handling::IMediaFrame::FrameData f_d;
-  if (is_visual_ && sws_context_) {
-    // TODO: convert
+  if (is_visual_ && output_fmt_.sws_context_) {
     if (sws_frame_ == nullptr) {
+      // FIXME: this doesn't allow for changes to putput format after the first set
       sws_frame_.reset(av_frame_alloc());
-      sws_frame_->format = AV_PIX_FMT_RGBA; //TODO: get this programatically
-      sws_frame_->width = ff_frame_->width;
-      sws_frame_->height = ff_frame_->height;
+      sws_frame_->format = media_handling::types::convertPixelFormat(output_fmt_.pix_fmt_);
+      sws_frame_->width = output_fmt_.dims_.width;
+      sws_frame_->height = output_fmt_.dims_.height;
       av_frame_get_buffer(sws_frame_.get(), 0);
     }
     // change the pixel format
     assert(sws_frame_);
-    const auto out_slice_height = sws_scale(sws_context_.get(), static_cast<const uint8_t* const*>(ff_frame_->data), ff_frame_->linesize, 0,
-                                            ff_frame_->height, sws_frame_->data, sws_frame_->linesize);
+    sws_scale(output_fmt_.sws_context_.get(),
+              static_cast<const uint8_t* const*>(ff_frame_->data),
+              ff_frame_->linesize,
+              0,
+              ff_frame_->height,
+              sws_frame_->data,
+              sws_frame_->linesize);
     f_d.data_ = sws_frame_->data;
     f_d.line_size_ = sws_frame_->linesize[0];
-    f_d.pix_fmt_ = PixelFormat::RGBA;
+    f_d.pix_fmt_ = output_fmt_.pix_fmt_;
     f_d.data_size_ = avpicture_get_size(static_cast<AVPixelFormat>(sws_frame_->format), sws_frame_->width, sws_frame_->height);
-  } else if (!is_visual_ && swr_context_) {
+  } else if (!is_visual_ && output_fmt_.swr_context_) {
     // TODO:
     // change the sample format
   } else {
     // No conversion
     f_d.data_ = ff_frame_->data;
     f_d.line_size_ = ff_frame_->linesize[0];
-    // f_d.pix_fmt_ = 
     f_d.data_size_ = avpicture_get_size(static_cast<AVPixelFormat>(ff_frame_->format), ff_frame_->width, ff_frame_->height);
   }
   return f_d;
@@ -128,7 +123,7 @@ void FFMpegMediaFrame::extractProperties()
   }
 }
 
-int64_t FFMpegMediaFrame::timestamp() const
+int64_t FFMpegMediaFrame::timestamp() const noexcept
 {
   return timestamp_;
 }

@@ -131,8 +131,17 @@ enum class SampleFormat
 
 struct Dimensions
 {
-  int width {};
-  int height {};
+  int width {-1};
+  int height {-1};
+};
+
+enum class InterpolationMethod
+{
+  NEAREST,
+  BILINEAR,
+  BICUBLIN,
+  BICUBIC,
+  LANCZOS
 };
 
 /**

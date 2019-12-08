@@ -293,8 +293,10 @@ TEST (FFMpegStreamTest, SetOutputFormatVideo)
 
   auto frame = stream->frame(100);
   auto data = frame->data();
-  ASSERT_TRUE(data != nullptr);
-
+  ASSERT_TRUE(data.data_ != nullptr);
+  ASSERT_TRUE(data.data_size_ == 3110400);
+  ASSERT_TRUE(data.line_size_ == 1920);
+  ASSERT_TRUE(data.pix_fmt_ == PixelFormat::YUV420);
 #ifdef PNG_OUT
   bool is_valid = false;
   auto dims = stream->property<Dimensions>(MediaProperty::DIMENSIONS, is_valid);
@@ -311,6 +313,22 @@ TEST (FFMpegStreamTest, SetOutputFormatVideo)
 
   }
 #endif
+}
+
+TEST (FFMpegStreamTest, SetOutputFormatVideoScaled)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+
+  auto stream = src->visualStream(0);
+  ASSERT_TRUE(stream->setOutputFormat(PixelFormat::YUV420, {640, 480}));
+
+  auto frame = stream->frame(0);
+  auto data = frame->data();
+  ASSERT_TRUE(data.data_ != nullptr);
+  ASSERT_TRUE(data.data_size_ == 460800);
+  ASSERT_TRUE(data.line_size_ == 640);
+  ASSERT_TRUE(data.pix_fmt_ == PixelFormat::YUV420);
 }
 
 
