@@ -46,6 +46,37 @@ void media_handling::types::swrContextDeleter(SwrContext* context)
 }
 
 
+media_handling::ColourPrimaries media_handling::types::convertColourPrimary(const AVColorPrimaries primary) noexcept
+{
+  media_handling::ColourPrimaries val;
+  switch (primary) {
+    case AVCOL_PRI_BT709:
+      val = ColourPrimaries::BT_709;
+      break;
+    case AVCOL_PRI_BT470M:
+      val = ColourPrimaries::BT_470M;
+      break;
+    case AVCOL_PRI_BT470BG:
+      [[fallthrough]];
+    case AVCOL_PRI_SMPTE170M:
+      val = ColourPrimaries::BT_601;
+      break;
+    case AVCOL_PRI_BT2020:
+      val = ColourPrimaries::BT_2020;
+      break;
+    case AVCOL_PRI_SMPTE240M:
+      val = ColourPrimaries::SMPTE_240M;
+      break;
+    case AVCOL_PRI_SMPTE428:
+      val = ColourPrimaries::SMPTE_428;
+      break;
+    default:
+      val = ColourPrimaries::UNKNOWN;
+      break;
+  }
+  return val;
+}
+
 int media_handling::types::convertInterpolationMethod(const InterpolationMethod interpolation) noexcept
 {
   int av_method;

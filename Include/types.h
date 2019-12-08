@@ -69,10 +69,10 @@ enum class MediaProperty
   TIMESTAMP,            // int64_t
   FRAME_RATE,           // Rational
   SEQUENCE_PATTERN,     // std::string
-  COLOUR_SPACE,                    // TODO:
-  COLOUR_PRIMARY,                  // TODO:
-  COLOUR_TRANSFER_CHARACTERISTICS, // TODO:
-  COLOR_MATRIX_COEFFICIENTS        // TODO:
+  COLOUR_SPACE,                       // TODO:
+  COLOUR_PRIMARIES,                   // ColorPrimaries
+  COLOUR_TRANSFER_CHARACTERISTICS,    // TODO:
+  COLOR_MATRIX_COEFFICIENTS           // TODO:
 };
 
 enum class Codec
@@ -183,6 +183,18 @@ enum class ChannelLayout
   SEVEN,                // 7.0
   SEVEN_LFE,            // 7.1
   UNKNOWN
+};
+
+enum class ColourPrimaries
+{
+  UNKNOWN,
+  BT_470M,
+  BT_601,
+  BT_709,
+  BT_2020,
+  BT_2100,
+  SMPTE_240M,
+  SMPTE_428
 };
 
 

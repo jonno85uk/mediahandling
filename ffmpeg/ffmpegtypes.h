@@ -53,12 +53,13 @@ namespace media_handling::types
   using SWRContextPtr = std::shared_ptr<SwrContext>;
 
 
+  ColourPrimaries convertColourPrimary(const AVColorPrimaries primary) noexcept;
   int convertInterpolationMethod(const InterpolationMethod interpolation) noexcept;
-  AVPixelFormat convertPixelFormat(const media_handling::PixelFormat format) noexcept;
-  media_handling::PixelFormat convertPixelFormat(const AVPixelFormat format) noexcept;
-  media_handling::SampleFormat convertSampleFormat(const AVSampleFormat format) noexcept;
-  media_handling::ChannelLayout convertChannelLayout(const uint64_t layout) noexcept;
-  media_handling::Codec convertCodecID(const AVCodecID id) noexcept;
+  AVPixelFormat convertPixelFormat(const PixelFormat format) noexcept;
+  PixelFormat convertPixelFormat(const AVPixelFormat format) noexcept;
+  SampleFormat convertSampleFormat(const AVSampleFormat format) noexcept;
+  ChannelLayout convertChannelLayout(const uint64_t layout) noexcept;
+  Codec convertCodecID(const AVCodecID id) noexcept;
   /**
    * @brief Convert from FFMpeg type to media_handling type
    * @param format FFMpeg sample format

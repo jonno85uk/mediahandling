@@ -222,6 +222,32 @@ INSTANTIATE_TEST_CASE_P(
                       std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", Codec::DNXHD)
 ));
 
+class ColourInfoTests : public testing::TestWithParam<std::tuple<std::string, ColourPrimaries>>
+{
+  public:
+    std::unique_ptr<FFMpegSource> source_;
+};
+
+TEST_P (ColourInfoTests, CheckIsEqual)
+{
+  auto [path, src_prim] = this->GetParam();
+  source_ = std::make_unique<FFMpegSource>(path);
+  auto stream = source_->visualStream(0);
+  bool is_valid;
+  auto prim = stream->property<ColourPrimaries>(MediaProperty::COLOUR_PRIMARIES, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(prim, src_prim);
+}
+
+INSTANTIATE_TEST_CASE_P(
+      FFMpegStreamTest,
+      ColourInfoTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", ColourPrimaries::UNKNOWN),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", ColourPrimaries::UNKNOWN),
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", ColourPrimaries::UNKNOWN),
+                      std::make_tuple("./ReferenceMedia/Video/h264/_20111231T141252_5.MP4", ColourPrimaries::BT_709)
+));
+
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadFrame)
 {
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";

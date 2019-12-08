@@ -149,6 +149,10 @@ void FFMpegMediaFrame::extractVisualProperties()
   if (par != Rational{0,1}) {
     this->setProperty(MediaProperty::PIXEL_ASPECT_RATIO, par);
   }
+
+  // Colour info
+  const media_handling::ColourPrimaries primary = media_handling::types::convertColourPrimary(ff_frame_->color_primaries);
+  this->setProperty(MediaProperty::COLOUR_PRIMARIES, primary);
 }
 
 

@@ -475,6 +475,10 @@ void FFMpegStream::extractFrameProperties()
         MediaPropertyObject::setProperty(MediaProperty::PIXEL_ASPECT_RATIO, par);
       }
     }
+    const auto primary = tmp_frame->property<ColourPrimaries>(MediaProperty::COLOUR_PRIMARIES, is_valid);
+    if (is_valid) {
+      MediaPropertyObject::setProperty(MediaProperty::COLOUR_PRIMARIES, primary);
+    }
   } else {
     logMessage("Failed to read a frame from stream");
   }
