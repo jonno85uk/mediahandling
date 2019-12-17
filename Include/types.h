@@ -31,7 +31,8 @@
 #include <cstdint>
 #include <memory>
 #include <cmath>
-#include <boost/rational.hpp>
+#include <limits>
+#include <ostream>
 
 
 /**
@@ -197,8 +198,47 @@ enum class ColourPrimaries
   SMPTE_428
 };
 
+class Rational
+{
+  public:
+    Rational() = default;
+    Rational& operator+(const Rational&) = delete;
+    Rational& operator-(const Rational&) = delete;
+    Rational& operator*(const Rational&) = delete;
+    Rational& operator/(const Rational&) = delete;
+    bool operator==(const Rational& rhs) const noexcept
+    {
+      return (numerator_ == rhs.numerator_) && (denominator_ == rhs.denominator_);
+    }
+    bool operator!=(const Rational& rhs) const noexcept
+    {
+      return !operator==(rhs);
+    }
+    Rational(const int64_t num, const int64_t denom)
+      : numerator_(num), denominator_(denom){ }
+    int64_t numerator() const noexcept {return numerator_;}
+    int64_t denominator() const noexcept {return denominator_;}
+    double toDouble() const noexcept
+    {
+      if (denominator_ == 0) {
+        return std::numeric_limits<double>::infinity();
+      }
+      return static_cast<double>(numerator_) / static_cast<double>(denominator_);
+    }
+    friend std::ostream& operator<<(std::ostream& os, const Rational& rhs);
+  private:
+    int64_t numerator_ {0};
+    int64_t denominator_ {0};    
+};
 
-using Rational = boost::rational<int64_t>;
+inline std::ostream& operator<<(std::ostream& os, const Rational& rhs)
+{
+    os << '(' << rhs.numerator() << '/' << rhs.denominator() << ')';
+    return os;
 }
+
+}
+
+
 
 #endif // PROPERTIES_H

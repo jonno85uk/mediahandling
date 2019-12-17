@@ -265,7 +265,7 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadTenthFrame)
   auto stream = src->visualStream(0);
   bool is_valid;
   auto t_base = stream->property<Rational>(MediaProperty::TIMESCALE, is_valid);
-  auto pos = int64_t(std::round(10 / boost::rational_cast<double>(t_base)));
+  auto pos = int64_t(std::round(10 / t_base.toDouble()));
   auto frame = stream->frame(pos);
   ASSERT_TRUE(frame != nullptr);
   ASSERT_EQ(frame->timestamp(), pos);
