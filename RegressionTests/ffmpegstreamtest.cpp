@@ -532,7 +532,7 @@ TEST (FFMpegStreamTest, SetOutputFormatAudio)
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
 
   auto stream = src->audioStream(0);
-  ASSERT_TRUE(stream->setOutputFormat(SampleFormat::FLOAT));
+  ASSERT_TRUE(stream->setOutputFormat(SampleFormat::SIGNED_32));
 }
 
 

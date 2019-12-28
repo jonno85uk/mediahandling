@@ -36,6 +36,7 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
 #include <libavutil/channel_layout.h>
+#include <libswresample/swresample.h>
 }
 
 
@@ -116,6 +117,7 @@ FFMpegStream::~FFMpegStream()
 {
   stream_ = nullptr; //TODO: check this
   av_packet_free(&pkt_);
+  avcodec_close(codec_ctx_);
   avcodec_free_context(&codec_ctx_);
   av_dict_free(&opts_);
 }
@@ -209,8 +211,30 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
 
 bool FFMpegStream::setOutputFormat(const SampleFormat format)
 {
-  // TODO:
-  return false;
+  bool okay = false;
+  const auto layout = property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
+  assert(okay);
+  const auto sample_rate = property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
+  assert(okay);
+  const auto src_fmt = property<SampleFormat>(MediaProperty::AUDIO_FORMAT, okay);
+  assert(okay);
+  const auto av_layout = types::convertChannelLayout(layout);
+  assert(av_layout != 0);
+  const auto av_src_fmt = types::convertSampleFormat(src_fmt);
+  const auto av_format = types::convertSampleFormat(format);
+  SwrContext* ctx = swr_alloc_set_opts(nullptr,
+                                       av_layout,
+                                       av_format,
+                                       sample_rate,
+                                       av_layout,
+                                       av_src_fmt,
+                                       sample_rate,
+                                       0,
+                                       nullptr);
+  assert(ctx);
+  output_format_.sample_fmt_ = format;
+  output_format_.swr_context_ = std::shared_ptr<SwrContext>(ctx, types::swrContextDeleter);
+  return true;
 }
 
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
@@ -270,8 +294,7 @@ void FFMpegStream::extractAudioProperties(const AVStream& stream, const AVCodecC
 #endif
   const ChannelLayout layout = types::convertChannelLayout(context.channel_layout);
   this->setProperty(MediaProperty::AUDIO_LAYOUT, layout);
-
-  //stream.codecpar->color_space;
+  this->setProperty(MediaProperty::BITRATE, context.bit_rate);
 }
 
 bool FFMpegStream::seek(const int64_t timestamp)
@@ -445,6 +468,7 @@ void FFMpegStream::setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGr
 void FFMpegStream::setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const
 {
   if (codec_id == AV_CODEC_ID_H264) {
+    // NOTE: av_dict_set leaks memory, nothing we can do
     av_dict_set(&dict, "tune", "fastdecode", 0);
     av_dict_set(&dict, "tune", "zerolatency", 0);
   }

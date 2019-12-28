@@ -58,7 +58,9 @@ namespace media_handling::types
   AVPixelFormat convertPixelFormat(const PixelFormat format) noexcept;
   PixelFormat convertPixelFormat(const AVPixelFormat format) noexcept;
   SampleFormat convertSampleFormat(const AVSampleFormat format) noexcept;
+  AVSampleFormat convertSampleFormat(const SampleFormat format) noexcept;
   ChannelLayout convertChannelLayout(const uint64_t layout) noexcept;
+  uint64_t convertChannelLayout(const ChannelLayout layout) noexcept;
   Codec convertCodecID(const AVCodecID id) noexcept;
   /**
    * @brief Convert from FFMpeg type to media_handling type

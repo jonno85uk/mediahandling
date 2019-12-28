@@ -39,7 +39,8 @@ using media_handling::MediaProperty;
 
 FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual)
   : ff_frame_(std::move(frame)),
-    is_visual_(visual)
+    is_visual_(visual),
+    is_audio_(!visual)
 {
   assert(ff_frame_);
   assert(ff_frame_->pts >= 0);
@@ -50,6 +51,7 @@ FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual)
 FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, OutputFormat format)
   : ff_frame_(std::move(frame)),
     is_visual_(visual),
+    is_audio_(!visual),
     output_fmt_(std::move(format))
 {
 }
@@ -116,10 +118,12 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
 void FFMpegMediaFrame::extractProperties()
 {
   assert(ff_frame_);
-  if (is_visual_) {
+  if (is_visual_ && (is_visual_ == true) ) {
     extractVisualProperties();
-  } else {
+  } else if (is_audio_ && (is_audio_ == true) ) {
     extractAudioProperties();
+  } else {
+    // TODO: log
   }
 }
 

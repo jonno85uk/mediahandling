@@ -48,7 +48,7 @@ enum class MediaProperty
   CODEC,                // Codec
   CODEC_NAME,           // std::string
   AUDIO_FORMAT,         // SampleFormat
-  AUDIO_LAYOUT,
+  AUDIO_LAYOUT,         // ChannelLayout
   AUDIO_SAMPLING_RATE,  // int32_t
   AUDIO_SAMPLES,        // int32_t per channel
   AUDIO_CHANNELS,       // int32_t

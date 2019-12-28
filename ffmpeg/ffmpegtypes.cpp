@@ -228,6 +228,42 @@ media_handling::SampleFormat media_handling::types::convertSampleFormat(const AV
 }
 
 
+AVSampleFormat media_handling::types::convertSampleFormat(const media_handling::SampleFormat format) noexcept
+{
+  switch (format)
+  {
+    case SampleFormat::UNSIGNED_8:
+      return AV_SAMPLE_FMT_U8;
+    case SampleFormat::SIGNED_16:
+      return AV_SAMPLE_FMT_S16;
+    case SampleFormat::SIGNED_32:
+      return AV_SAMPLE_FMT_S32;
+    case SampleFormat::SIGNED_64:
+      return AV_SAMPLE_FMT_S64;
+    case SampleFormat::FLOAT:
+      return AV_SAMPLE_FMT_FLT;
+    case SampleFormat::DOUBLE:
+      return AV_SAMPLE_FMT_DBL;
+    case SampleFormat::UNSIGNED_8P:
+      return AV_SAMPLE_FMT_U8P;
+    case SampleFormat::SIGNED_16P:
+      return AV_SAMPLE_FMT_S16P;
+    case SampleFormat::SIGNED_32P:
+      return AV_SAMPLE_FMT_S32P;
+    case SampleFormat::FLOAT_P:
+      return AV_SAMPLE_FMT_FLTP;
+    case SampleFormat::DOUBLE_P:
+      return AV_SAMPLE_FMT_DBLP;
+    case SampleFormat::SIGNED_64P:
+      return AV_SAMPLE_FMT_S64P;
+    case SampleFormat::NONE:
+      [[fallthrough]];
+    default:
+      return AV_SAMPLE_FMT_NONE;
+  }
+}
+
+
 media_handling::ChannelLayout media_handling::types::convertChannelLayout(const uint64_t layout) noexcept
 {
   media_handling::ChannelLayout conv_layout = ChannelLayout::UNKNOWN;
@@ -286,6 +322,54 @@ media_handling::ChannelLayout media_handling::types::convertChannelLayout(const 
   }
 
   return conv_layout;
+}
+
+
+uint64_t media_handling::types::convertChannelLayout(const ChannelLayout layout) noexcept
+{
+  switch (layout)
+  {
+    case ChannelLayout::MONO:
+      return AV_CH_LAYOUT_MONO;
+    case ChannelLayout::STEREO:
+    return AV_CH_LAYOUT_STEREO;
+    case ChannelLayout::STEREO_LFE:
+      return AV_CH_LAYOUT_2POINT1;
+    case ChannelLayout::THREE_STEREO:
+      return AV_CH_LAYOUT_SURROUND;
+    case ChannelLayout::THREE_SURROUND:
+      return AV_CH_LAYOUT_2_1;
+    case ChannelLayout::THREE_SURROUND_LFE:
+      return AV_CH_LAYOUT_3POINT1;
+    case ChannelLayout::FOUR_STEREO:
+      return AV_CH_LAYOUT_QUAD;
+    case ChannelLayout::FOUR_SURROUND:
+      return AV_CH_LAYOUT_4POINT0;
+    case ChannelLayout::FOUR_SURROUND_LFE:
+      return AV_CH_LAYOUT_4POINT1;
+    case ChannelLayout::FIVE:
+      return AV_CH_LAYOUT_5POINT0;
+    case ChannelLayout::FIVE_LFE:
+      return AV_CH_LAYOUT_5POINT1;
+    case ChannelLayout::FIVE_STEREO_LFE:
+      return AV_CH_LAYOUT_5POINT1_BACK;
+    case ChannelLayout::SIX:
+      return AV_CH_LAYOUT_6POINT0;
+    case ChannelLayout::SIX_LFE:
+      return AV_CH_LAYOUT_6POINT1;
+    case ChannelLayout::SEVEN:
+      return AV_CH_LAYOUT_7POINT0;
+    case ChannelLayout::SEVEN_LFE:
+      return AV_CH_LAYOUT_7POINT1;
+    case ChannelLayout::FIVE_STEREO:
+      [[fallthrough]];
+    case ChannelLayout::THREE_STEREO_LFE:
+      [[fallthrough]];
+    case ChannelLayout::UNKNOWN:
+      [[fallthrough]];
+    default:
+      return 0;
+  }
 }
 
 

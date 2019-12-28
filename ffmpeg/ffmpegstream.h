@@ -69,9 +69,8 @@ namespace media_handling::ffmpeg
       AVCodec* codec_ {nullptr};
       AVCodecContext* codec_ctx_ {nullptr};
       AVPacket* pkt_ {nullptr};
-      AVFrame* frame_ {nullptr};
       AVDictionary* opts_ {nullptr};
-      AVFilterGraph* filter_graph_ {nullptr};
+//      AVFilterGraph* filter_graph_ {nullptr};
       struct Buffers {
           AVFilterContext* sink_ {nullptr};
           AVFilterContext* source_ {nullptr};
