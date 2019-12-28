@@ -458,46 +458,56 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrame)
   auto stream = src->audioStream(0);
   auto frame = stream->frame(0);
   ASSERT_TRUE(frame != nullptr);
+  auto data = frame->data();
+  ASSERT_EQ(data.timestamp_, 1024);
+  ASSERT_EQ(data.data_size_, 2048);
 }
 
-TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrameProperties)
+TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadConvertedFrame)
 {
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   auto stream = src->audioStream(0);
-  auto frame = stream->frame(0);
-  frame->extractProperties();
-  bool is_valid;
-  auto format = frame->property<media_handling::SampleFormat>(media_handling::MediaProperty::AUDIO_FORMAT, is_valid);
-  ASSERT_TRUE(is_valid);
-  ASSERT_EQ(format, media_handling::SampleFormat::FLOAT_P);
+  ASSERT_TRUE(stream->setOutputFormat(SampleFormat::SIGNED_32));
+  auto frame = stream->frame();
+  ASSERT_TRUE(frame != nullptr);
+  auto data = frame->data();
+  ASSERT_EQ(data.timestamp_, 7168);
+  ASSERT_EQ(data.data_size_, 2048);
 }
 
-class AudioLayoutParameterTests : public testing::TestWithParam<std::tuple<std::string, ChannelLayout>>
+
+class AudioPropertiesTests : public testing::TestWithParam<std::tuple<std::string, ChannelLayout, SampleFormat, int64_t>>
 {
   public:
     std::unique_ptr<FFMpegSource> source_;
 };
 
-TEST_P (AudioLayoutParameterTests, CheckEqual)
+TEST_P (AudioPropertiesTests, CheckEqual)
 {
-  auto [path, layout] = this->GetParam();
+  const auto [path, layout, format, bitrate] = this->GetParam();
   source_ = std::make_unique<FFMpegSource>(path);
   auto stream = source_->audioStream(0);
   bool is_valid;
   auto prop_layout = stream->property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, is_valid);
   ASSERT_TRUE(is_valid);
   ASSERT_EQ(prop_layout, layout);
+  auto prop_format = stream->property<SampleFormat>(MediaProperty::AUDIO_FORMAT, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(prop_format, format);
+  auto prop_bitrate = stream->property<int64_t>(MediaProperty::BITRATE, is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(prop_bitrate, bitrate);
 }
 
 INSTANTIATE_TEST_CASE_P(
       FFMpegStreamTest,
-      AudioLayoutParameterTests,
-      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", ChannelLayout::STEREO),
-                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", ChannelLayout::STEREO),
-                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", ChannelLayout::STEREO),
-                      std::make_tuple("./ReferenceMedia/Audio/ogg/5_1.ogg", ChannelLayout::FIVE_STEREO_LFE),
-                      std::make_tuple("./ReferenceMedia/Audio/ac3/5_1.ac3", ChannelLayout::FIVE_LFE)
+      AudioPropertiesTests,
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", ChannelLayout::STEREO, SampleFormat::FLOAT_P, 240'623),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", ChannelLayout::STEREO, SampleFormat::FLOAT_P, 256'000),
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", ChannelLayout::STEREO, SampleFormat::SIGNED_16, 1'536'000),
+                      std::make_tuple("./ReferenceMedia/Audio/ogg/5_1.ogg", ChannelLayout::FIVE_STEREO_LFE, SampleFormat::FLOAT_P, 450'000),
+                      std::make_tuple("./ReferenceMedia/Audio/ac3/5_1.ac3", ChannelLayout::FIVE_LFE, SampleFormat::FLOAT_P, 192'000)
 ));
 
 TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrameToEOS)

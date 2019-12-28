@@ -50,6 +50,8 @@ namespace media_handling
           types::SWRContextPtr swr_context_ {nullptr};
           PixelFormat pix_fmt_ {PixelFormat::UNKNOWN};
           SampleFormat sample_fmt_ {SampleFormat::NONE};
+          ChannelLayout layout_ {ChannelLayout::UNKNOWN};
+          int32_t sample_rate_ {-1};
           Dimensions dims_;
       };
       FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual);
@@ -68,8 +70,8 @@ namespace media_handling
 
     private:
       types::AVFrameUPtr ff_frame_ {nullptr};
-      types::AVFrameUPtr sws_frame_ {nullptr};
-      std::optional<bool> is_audio_;
+      types::AVFrameUPtr conv_frame_ {nullptr};
+      std::optional<bool> is_audio_; // TODO: just use one
       std::optional<bool> is_visual_;
       int64_t timestamp_ {-1};
       OutputFormat output_fmt_;

@@ -28,13 +28,22 @@
 #include "ffmpegmediaframe.h"
 
 #include <cassert>
+extern "C" {
 #include <libswscale/swscale.h>
-
+#include <libavutil/imgutils.h>
+}
 #include "mediahandling.h"
 #include "ffmpegtypes.h"
 
 using media_handling::FFMpegMediaFrame;
 using media_handling::MediaProperty;
+
+constexpr auto ERR_LEN = 1024;
+
+namespace
+{
+  std::string err(ERR_LEN, '\0');
+}
 
 
 FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual)
@@ -80,36 +89,63 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
 {
   assert(ff_frame_);
   media_handling::IMediaFrame::FrameData f_d;
-  if (is_visual_ && output_fmt_.sws_context_) {
-    if (sws_frame_ == nullptr) {
+  f_d.timestamp_ = ff_frame_->best_effort_timestamp; // value lost in resampled frame
+  int ret = 0;
+  if (is_visual_ && (is_visual_ == true) && output_fmt_.sws_context_) {
+    if (conv_frame_ == nullptr) {
       // FIXME: this doesn't allow for changes to putput format after the first set
-      sws_frame_.reset(av_frame_alloc());
-      sws_frame_->format = media_handling::types::convertPixelFormat(output_fmt_.pix_fmt_);
-      sws_frame_->width = output_fmt_.dims_.width;
-      sws_frame_->height = output_fmt_.dims_.height;
-      av_frame_get_buffer(sws_frame_.get(), 0);
+      conv_frame_.reset(av_frame_alloc());
+      conv_frame_->format = media_handling::types::convertPixelFormat(output_fmt_.pix_fmt_);
+      conv_frame_->width = output_fmt_.dims_.width;
+      conv_frame_->height = output_fmt_.dims_.height;
+      av_frame_get_buffer(conv_frame_.get(), 0);
     }
     // change the pixel format
-    assert(sws_frame_);
-    sws_scale(output_fmt_.sws_context_.get(),
-              static_cast<const uint8_t* const*>(ff_frame_->data),
-              ff_frame_->linesize,
-              0,
-              ff_frame_->height,
-              sws_frame_->data,
-              sws_frame_->linesize);
-    f_d.data_ = sws_frame_->data;
-    f_d.line_size_ = sws_frame_->linesize[0];
+    assert(conv_frame_);
+    ret = sws_scale(output_fmt_.sws_context_.get(),
+                    static_cast<const uint8_t* const*>(ff_frame_->data),
+                    ff_frame_->linesize,
+                    0,
+                    ff_frame_->height,
+                    conv_frame_->data,
+                    conv_frame_->linesize);
+    f_d.data_ = conv_frame_->data;
+    f_d.line_size_ = conv_frame_->linesize[0];
     f_d.pix_fmt_ = output_fmt_.pix_fmt_;
-    f_d.data_size_ = avpicture_get_size(static_cast<AVPixelFormat>(sws_frame_->format), sws_frame_->width, sws_frame_->height);
-  } else if (!is_visual_ && output_fmt_.swr_context_) {
-    // TODO:
+    f_d.data_size_ = static_cast<size_t>(av_image_get_buffer_size(static_cast<AVPixelFormat>(conv_frame_->format),
+                                                                  conv_frame_->width,
+                                                                  conv_frame_->height,
+                                                                  1));
+  } else if (is_audio_ && (is_audio_ == true) && output_fmt_.swr_context_) {
     // change the sample format
+    if (conv_frame_ == nullptr) {
+      conv_frame_.reset(av_frame_alloc());
+      conv_frame_->channel_layout = types::convertChannelLayout(output_fmt_.layout_);
+      conv_frame_->sample_rate = output_fmt_.sample_rate_;
+      conv_frame_->format = types::convertSampleFormat(output_fmt_.sample_fmt_);
+      av_frame_make_writable(conv_frame_.get());
+    }
+    ret = swr_convert_frame(output_fmt_.swr_context_.get(), conv_frame_.get(), ff_frame_.get());
+    if (ret < 0) {
+        av_strerror(ret, err.data(), ERR_LEN);
+        std::cerr << "Could not resample audio frame: " << err.data() << std::endl;
+        return {};
+    }
+    f_d.data_ = conv_frame_->data;
+    f_d.data_size_ = static_cast<size_t>(conv_frame_->nb_samples * conv_frame_->channels);
+    f_d.samp_fmt_ = output_fmt_.sample_fmt_;
   } else {
     // No conversion
     f_d.data_ = ff_frame_->data;
     f_d.line_size_ = ff_frame_->linesize[0];
-    f_d.data_size_ = avpicture_get_size(static_cast<AVPixelFormat>(ff_frame_->format), ff_frame_->width, ff_frame_->height);
+    if (is_visual_ && (is_visual_ == true)) {
+      f_d.data_size_ = static_cast<size_t>(av_image_get_buffer_size(static_cast<AVPixelFormat>(ff_frame_->format),
+                                                                    ff_frame_->width,
+                                                                    ff_frame_->height,
+                                                                    1));
+    } else if (is_audio_ && (is_audio_ == true)) {
+      f_d.data_size_ = static_cast<size_t>(ff_frame_->nb_samples * ff_frame_->channels);
+    }
   }
   return f_d;
 
@@ -164,7 +200,6 @@ void FFMpegMediaFrame::extractAudioProperties()
 {
   assert(ff_frame_);
   this->setProperty(MediaProperty::AUDIO_SAMPLES, static_cast<int32_t>(ff_frame_->nb_samples));
-
   const SampleFormat format = types::convert(static_cast<AVSampleFormat>(ff_frame_->format));
   this->setProperty(MediaProperty::AUDIO_FORMAT, format);
 }

@@ -223,16 +223,26 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format)
   const auto av_src_fmt = types::convertSampleFormat(src_fmt);
   const auto av_format = types::convertSampleFormat(format);
   SwrContext* ctx = swr_alloc_set_opts(nullptr,
-                                       av_layout,
+                                       static_cast<int64_t>(av_layout),
                                        av_format,
                                        sample_rate,
-                                       av_layout,
+                                       static_cast<int64_t>(av_layout),
                                        av_src_fmt,
                                        sample_rate,
                                        0,
                                        nullptr);
+
+  const auto ret = swr_init(ctx);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    std::cerr << "Could not init resample context: " << err.data() << std::endl;
+    return false;
+  }
+
   assert(ctx);
   output_format_.sample_fmt_ = format;
+  output_format_.layout_ = layout;
+  output_format_.sample_rate_ = sample_rate;
   output_format_.swr_context_ = std::shared_ptr<SwrContext>(ctx, types::swrContextDeleter);
   return true;
 }
@@ -240,15 +250,16 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format)
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {
   assert(context.codec);
-  MediaPropertyObject::setProperty(MediaProperty::CODEC_NAME, std::string(context.codec->name));
+  this->setProperty(MediaProperty::CODEC_NAME, std::string(context.codec->name));
   const media_handling::Codec cdc = types::convertCodecID(context.codec_id);
-  MediaPropertyObject::setProperty(MediaProperty::CODEC, cdc);
+  this->setProperty(MediaProperty::CODEC, cdc);
   // TODO: if we use this things could go wrong on container != essence
   auto base = stream.time_base;
   if (base.den > 0) {
     Rational timescale(base.num, base.den);
-    MediaPropertyObject::setProperty(MediaProperty::TIMESCALE, timescale);
+    this->setProperty(MediaProperty::TIMESCALE, timescale);
   }
+  this->setProperty(MediaProperty::BITRATE, context.bit_rate);
 
   // TODO: stream durations
   if ( (type_ == StreamType::VIDEO) || (type_ == StreamType::IMAGE) ) {
@@ -294,7 +305,6 @@ void FFMpegStream::extractAudioProperties(const AVStream& stream, const AVCodecC
 #endif
   const ChannelLayout layout = types::convertChannelLayout(context.channel_layout);
   this->setProperty(MediaProperty::AUDIO_LAYOUT, layout);
-  this->setProperty(MediaProperty::BITRATE, context.bit_rate);
 }
 
 bool FFMpegStream::seek(const int64_t timestamp)
