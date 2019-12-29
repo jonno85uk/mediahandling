@@ -26,6 +26,7 @@
 */
 
 #include <gtest/gtest.h>
+#include <ao/ao.h>
 
 #include "ffmpegstream.h"
 #include "ffmpegsource.h"
@@ -543,6 +544,62 @@ TEST (FFMpegStreamTest, SetOutputFormatAudio)
 
   auto stream = src->audioStream(0);
   ASSERT_TRUE(stream->setOutputFormat(SampleFormat::SIGNED_32));
+}
+
+TEST (FFMpegStreamTest, PlayAudio)
+{
+//  auto fname = "./ReferenceMedia/Audio/ac3/5_1.ac3";
+  auto fname = "./ReferenceMedia/Audio/ogg/monotone.ogg";
+//  auto fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+  auto stream = src->audioStream(0);
+  stream->setOutputFormat(SampleFormat::SIGNED_16);
+  bool okay;
+  const auto channels = stream->property<int32_t>(MediaProperty::AUDIO_CHANNELS, okay);
+  ASSERT_TRUE(okay);
+  const auto rate = stream->property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
+  ASSERT_TRUE(okay);
+
+#ifdef PRINTOUT_VALS
+  auto print_data = [](uint8_t** bytes, size_t data_size) {
+    gsl::span<uint8_t> s_d(*bytes, data_size);
+    for (auto i = 0; i < data_size; i+=2) {
+      int16_t val = s_d[i] | s_d[i+1] << 8;
+      std::cout << val << std::endl;
+    }
+  };
+
+
+  for (auto i = 0; i < 8 ; ++i) {
+    const auto frame = stream->frame();
+    const auto f_d = frame->data();
+    print_data(f_d.data_, f_d.data_size_);
+  }
+#else
+  ao_initialize();
+  const int driver = ao_default_driver_id();
+  ao_info* info = ao_driver_info(driver);
+  ao_sample_format sample_format;
+  sample_format.bits = 16;
+  sample_format.channels = channels;
+  sample_format.rate = rate;
+  sample_format.byte_format = AO_FMT_NATIVE;
+  sample_format.matrix = 0;
+
+  ao_device* device = ao_open_live(driver, &sample_format, nullptr);
+//  ASSERT_TRUE(device != nullptr);
+
+  for (;;) {
+    auto frame = stream->frame();
+    if (!frame) {
+      break;
+    }
+    auto data = frame->data();
+    ASSERT_TRUE(data.data_ != nullptr);
+    ao_play(device, reinterpret_cast<char*>(*data.data_), data.data_size_);
+  }
+#endif
+
 }
 
 

@@ -132,19 +132,23 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
         return {};
     }
     f_d.data_ = conv_frame_->data;
-    f_d.data_size_ = static_cast<size_t>(conv_frame_->nb_samples * conv_frame_->channels);
+    f_d.data_size_ = static_cast<size_t>(conv_frame_->nb_samples
+                                         * av_get_bytes_per_sample(static_cast<AVSampleFormat>(conv_frame_->format))
+                                         * conv_frame_->channels);
     f_d.samp_fmt_ = output_fmt_.sample_fmt_;
   } else {
     // No conversion
     f_d.data_ = ff_frame_->data;
-    f_d.line_size_ = ff_frame_->linesize[0];
     if (is_visual_ && (is_visual_ == true)) {
+      f_d.line_size_ = ff_frame_->linesize[0];
       f_d.data_size_ = static_cast<size_t>(av_image_get_buffer_size(static_cast<AVPixelFormat>(ff_frame_->format),
                                                                     ff_frame_->width,
                                                                     ff_frame_->height,
                                                                     1));
     } else if (is_audio_ && (is_audio_ == true)) {
-      f_d.data_size_ = static_cast<size_t>(ff_frame_->nb_samples * ff_frame_->channels);
+      f_d.data_size_ = static_cast<size_t>(ff_frame_->nb_samples
+                                           * av_get_bytes_per_sample(static_cast<AVSampleFormat>(ff_frame_->format))
+                                           * ff_frame_->channels);
     }
   }
   return f_d;
