@@ -31,8 +31,8 @@
 #include <cstdint>
 #include <memory>
 #include <cmath>
-#include <limits>
 #include <ostream>
+#include <cassert>
 
 
 /**
@@ -202,10 +202,60 @@ class Rational
 {
   public:
     Rational() = default;
-    Rational& operator+(const Rational&) = delete;
-    Rational& operator-(const Rational&) = delete;
-    Rational& operator*(const Rational&) = delete;
-    Rational& operator/(const Rational&) = delete;
+
+    Rational& operator=(const Rational& rhs) noexcept
+    {
+      if (this != &rhs) {
+        numerator_ = rhs.numerator_;
+        denominator_ = rhs.denominator_;
+      }
+      return *this;
+    }
+
+    Rational& operator*=(const Rational& rhs) noexcept
+    {
+      *this = *this * rhs;
+      const auto div = gcd();
+      if (div > 1) {
+        numerator_ /= div;
+        denominator_ /= div;
+      }
+      return *this;
+    }
+
+    Rational& operator*=(const int32_t rhs) noexcept
+    {
+      return operator*=(Rational(rhs, 1));
+    }
+
+    Rational& operator/=(const Rational& rhs) noexcept
+    {
+      *this = *this / rhs;
+      const auto div = gcd();
+      if (div > 1) {
+        numerator_ /= div;
+        denominator_ /= div;
+      }
+      return *this;
+    }
+
+    Rational& operator/=(const int32_t rhs) noexcept
+    {
+      return operator/=(Rational(rhs, 1));
+    }
+
+    bool operator>(const Rational& rhs) const noexcept
+    {
+      const auto a = numerator_ * rhs.denominator_;
+      const auto b = rhs.numerator_ * denominator_;
+      return a > b;
+    }
+    bool operator<(const Rational& rhs) const noexcept
+    {
+      const auto a = numerator_ * rhs.denominator_;
+      const auto b = rhs.numerator_ * denominator_;
+      return a < b;
+    }
     bool operator==(const Rational& rhs) const noexcept
     {
       return (numerator_ == rhs.numerator_) && (denominator_ == rhs.denominator_);
@@ -215,28 +265,104 @@ class Rational
       return !operator==(rhs);
     }
     Rational(const int64_t num, const int64_t denom)
-      : numerator_(num), denominator_(denom){ }
-    int64_t numerator() const noexcept {return numerator_;}
-    int64_t denominator() const noexcept {return denominator_;}
-    double toDouble() const noexcept
+      : numerator_(num), denominator_(denom)
     {
-      if (denominator_ == 0) {
-        return std::numeric_limits<double>::infinity();
+      if (denom == 0) {
+        throw std::runtime_error("Denominator of Rational is zero");
       }
+      const auto div = gcd();
+      if (div > 1) {
+        numerator_ /= div;
+        denominator_ /= div;
+      }
+    }
+    Rational invert() const noexcept
+    {
+      if (numerator_ == 0) {
+        return {0, 1};
+      }
+      return {denominator_, numerator_};
+    }
+    constexpr int64_t numerator() const noexcept {return numerator_;}
+    constexpr int64_t denominator() const noexcept {return denominator_;}
+    constexpr double toDouble() const noexcept
+    {
+      assert(denominator_ != 0);
       return static_cast<double>(numerator_) / static_cast<double>(denominator_);
     }
-    friend std::ostream& operator<<(std::ostream& os, const Rational& rhs);
+
+    friend std::ostream& operator<<(std::ostream& os, const Rational& rhs)
+    {
+      os << '(' << rhs.numerator() << '/' << rhs.denominator() << ')';
+      return os;
+    }
+    friend Rational operator*(const Rational& lhs, const Rational& rhs) noexcept
+    {
+      return {lhs.numerator_ * rhs.numerator_, lhs.denominator_ * rhs.denominator_};
+    }
+    friend Rational operator*(const Rational& lhs, const int32_t value) noexcept
+    {
+      return {lhs.numerator_ * value, lhs.denominator_};
+    }
+    friend Rational operator*(const int32_t value, const Rational& rhs) noexcept
+    {
+      return rhs * value;
+    }
+    friend Rational operator/(const Rational& lhs, const Rational& rhs) noexcept
+    {
+      return lhs * rhs.invert();
+    }
+    friend Rational operator/(const Rational& lhs, const int32_t value) noexcept
+    {
+      return lhs * Rational(1, value);
+    }
+    friend Rational operator/(const int32_t value, const Rational& rhs) noexcept
+    {
+      return Rational(value, 1) * rhs.invert();
+    }
+    friend Rational operator+(const Rational& lhs, const Rational& rhs) noexcept
+    {
+      const auto n = (lhs.numerator_ * rhs.denominator_) + (rhs.numerator_ * lhs.denominator_);
+      const auto d = lhs.denominator_ * rhs.denominator_;
+      return {n, d};
+    }
+    friend Rational operator+(const Rational& lhs, const int32_t value) noexcept
+    {
+      return lhs + Rational(value, 1);
+    }
+    friend Rational operator+(const int32_t value, const Rational& rhs) noexcept
+    {
+      return Rational(value, 1) + rhs;
+    }
+    friend Rational operator-(const Rational& lhs, const Rational& rhs) noexcept
+    {
+      const auto n = (lhs.numerator_ * rhs.denominator_) - (rhs.numerator_ * lhs.denominator_);
+      const auto d = lhs.denominator_ * rhs.denominator_;
+      return {n, d};
+    }
+    friend Rational operator-(const Rational& lhs, const int32_t value) noexcept
+    {
+      return lhs - Rational(value, 1);
+    }
+    friend Rational operator-(const int32_t value, const Rational& rhs) noexcept
+    {
+      return Rational(value, 1) - rhs;
+    }
+
   private:
     int64_t numerator_ {0};
-    int64_t denominator_ {0};    
+    int64_t denominator_ {0};
+    int64_t gcd ()
+    {
+      // FIXME: brute forced
+      for (auto i = denominator_; i > 0; --i) {
+        if ( ((numerator_ % i) == 0) && ((denominator_ % i) == 0) ) {
+          return i;
+        }
+      }
+      return 1;
+    }
 };
-
-inline std::ostream& operator<<(std::ostream& os, const Rational& rhs)
-{
-    os << '(' << rhs.numerator() << '/' << rhs.denominator() << ')';
-    return os;
-}
-
 }
 
 
