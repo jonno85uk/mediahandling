@@ -311,6 +311,9 @@ media_handling::ChannelLayout media_handling::types::convertChannelLayout(const 
     case AV_CH_LAYOUT_5POINT0:
       conv_layout = ChannelLayout::FIVE;
       break;
+    case AV_CH_LAYOUT_5POINT0_BACK:
+      conv_layout = ChannelLayout::FIVE_STEREO;
+      break;
     case AV_CH_LAYOUT_5POINT1:
       conv_layout = ChannelLayout::FIVE_LFE;
       break;
@@ -359,6 +362,8 @@ uint64_t media_handling::types::convertChannelLayout(const ChannelLayout layout)
       return AV_CH_LAYOUT_4POINT1;
     case ChannelLayout::FIVE:
       return AV_CH_LAYOUT_5POINT0;
+    case ChannelLayout::FIVE_STEREO:
+      return AV_CH_LAYOUT_5POINT0_BACK;
     case ChannelLayout::FIVE_LFE:
       return AV_CH_LAYOUT_5POINT1;
     case ChannelLayout::FIVE_STEREO_LFE:
@@ -371,8 +376,6 @@ uint64_t media_handling::types::convertChannelLayout(const ChannelLayout layout)
       return AV_CH_LAYOUT_7POINT0;
     case ChannelLayout::SEVEN_LFE:
       return AV_CH_LAYOUT_7POINT1;
-    case ChannelLayout::FIVE_STEREO:
-      [[fallthrough]];
     case ChannelLayout::THREE_STEREO_LFE:
       [[fallthrough]];
     case ChannelLayout::UNKNOWN:
