@@ -10,7 +10,7 @@ Currently, only the [FFmpeg](https://ffmpeg.org/) library is being used.
 
 ### Dependencies
 
-Boost and FFMpeg development headers. FFMpeg libraries
+[fmt](https://github.com/fmtlib/fmt) and [FFmpeg](https://ffmpeg.org/) development headers and libraries
 
 ### Building
 
