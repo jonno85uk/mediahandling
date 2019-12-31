@@ -30,6 +30,7 @@
 #include <iostream>
 #include <sstream>
 #include <regex>
+#include <fmt/core.h>
 
 #include "ffmpegsource.h"
 #include "ffmpegstream.h"
@@ -117,7 +118,7 @@ bool FFMpegSource::initialise()
   int err_code = avformat_open_input(&ctx, p, nullptr, nullptr);
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
-    logMessage("Failed to open file, code=" + err + "fileName=" + p);
+    logMessage(LogType::CRITICAL, "Failed to open file, code=" + err + "fileName=" + p);
     return false;
   }
   format_ctx_.reset(ctx);
@@ -126,7 +127,7 @@ bool FFMpegSource::initialise()
   err_code = avformat_find_stream_info(format_ctx_.get(), nullptr);
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
-    logMessage("Failed to read file info, code=" + err);
+    logMessage(LogType::CRITICAL, "Failed to read file info, code=" + err);
     return false;
   }
 
@@ -243,7 +244,7 @@ void FFMpegSource::unqueueStream(const int stream_index)
   if (packeting_.indexes_.count(stream_index) == 1) {
     packeting_.indexes_[stream_index]--;
   } else {
-    logMessage("Stream was already unqueued");
+    logMessage(LogType::INFO, "Stream was already unqueued");
   }
 }
 
@@ -252,36 +253,36 @@ media_handling::types::AVPacketPtr FFMpegSource::nextPacket(const int stream_ind
   // prevent unnecessary read of demuxed packets
   auto read_packet = [&] () -> media_handling::types::AVPacketPtr {
                      while (true) {
-                     AVPacket* pkt = av_packet_alloc();
-                     assert(format_ctx_ && pkt);
-                     const auto ret = av_read_frame(format_ctx_.get(), pkt);
-                     if (ret < 0) {
-                     av_strerror(ret, err.data(), ERR_LEN);
-                     std::cerr << "Failed to read frame: " << err.data() << std::endl;
-                     break;
-}
-                     auto pkt_sp = std::shared_ptr<AVPacket>(pkt, types::avPacketDeleter);
-                     if (pkt->stream_index == stream_index) {
-                     return pkt_sp;
-} else if ( (packeting_.indexes_.count(stream_index) == 1) && (packeting_.indexes_.at(stream_index) > 0)) {
-                     // only queue packets for needed streams
-                     packeting_.queue_[pkt->stream_index].push(pkt_sp);
-}
-}
-                     return {};
-};
+                      AVPacket* pkt = av_packet_alloc();
+                      assert(format_ctx_ && pkt);
+                      const auto ret = av_read_frame(format_ctx_.get(), pkt);
+                      if (ret < 0) {
+                        av_strerror(ret, err.data(), ERR_LEN);
+                        logMessage(LogType::CRITICAL, fmt::format("Failed to read frame: {}", err.data()));
+                        break;
+                      }
+                      auto pkt_sp = std::shared_ptr<AVPacket>(pkt, types::avPacketDeleter);
+                      if (pkt->stream_index == stream_index) {
+                        return pkt_sp;
+                      } else if ( (packeting_.indexes_.count(stream_index) == 1)
+                                  && (packeting_.indexes_.at(stream_index) > 0)) {
+                        // only queue packets for needed streams
+                        packeting_.queue_[pkt->stream_index].push(pkt_sp);
+                      }
+                    }
+                    return {};};
 
-if (packeting_.queue_.count(stream_index) == 1) {
-  if (!packeting_.queue_.at(stream_index).empty()) {
-    auto pkt = packeting_.queue_.at(stream_index).front();
-    packeting_.queue_.at(stream_index).pop();
-    return pkt;
+  if (packeting_.queue_.count(stream_index) == 1) {
+    if (!packeting_.queue_.at(stream_index).empty()) {
+      auto pkt = packeting_.queue_.at(stream_index).front();
+      packeting_.queue_.at(stream_index).pop();
+      return pkt;
+    } else {
+      return read_packet();
+    }
   } else {
     return read_packet();
   }
-} else {
-return read_packet();
-}
 }
 
 void FFMpegSource::resetPacketQueue()

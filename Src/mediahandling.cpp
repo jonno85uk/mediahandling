@@ -37,9 +37,28 @@ static std::atomic<media_handling::BackendType> media_backend = media_handling::
 std::atomic<bool> media_handling::global::auto_detect_img_sequence = true;
 
 
-void defaultLog(const std::string& msg)
+void defaultLog(const media_handling::LogType log_type, const std::string& msg)
 {
-  std::cerr << msg << std::endl;
+  std::string prefix("---");
+  switch (log_type) {
+    case media_handling::LogType::FATAL:
+      prefix = "FATAL";
+      break;
+    case media_handling::LogType::CRITICAL:
+      prefix = "CRITICAL";
+      break;
+    case media_handling::LogType::WARNING:
+      prefix = "WARNING";
+      break;
+    case media_handling::LogType::INFO:
+      prefix = "INFO";
+      break;
+    case media_handling::LogType::DEBUG:
+      prefix = "DEBUG";
+      break;
+  }
+
+  std::cout << '[' << prefix << "] " << msg << std::endl;
 }
 
 static media_handling::LOGGINGFN logging_func = defaultLog;
@@ -52,7 +71,7 @@ bool media_handling::utils::pathIsInSequence(const std::string& path)
   // strip path
   const auto fname(file_path.filename().string());
   if (!std::regex_search(fname, match, pattern)) {
-    logMessage(std::string(SEQUENCE_MATCHING_PATTERN) + " doesn't match filename " + path);
+    logMessage(LogType::WARNING, std::string(SEQUENCE_MATCHING_PATTERN) + " doesn't match filename " + path);
     return false;
   }
 
@@ -66,7 +85,7 @@ bool media_handling::utils::pathIsInSequence(const std::string& path)
       match_count++;
       if (match_count > 1) {
         // Thats enough
-        logMessage(path + " is a sequence");
+        logMessage(LogType::INFO, path + " is a sequence");
         break;
       }
     }
@@ -83,7 +102,7 @@ std::optional<std::string> media_handling::utils::generateSequencePattern(const 
   // strip path
   const auto fname(file_path.filename().string());
   if (!std::regex_search(fname, match, pattern)) {
-    logMessage(std::string(SEQUENCE_MATCHING_PATTERN) + " doesn't match filename " + path);
+    logMessage(LogType::DEBUG, std::string(SEQUENCE_MATCHING_PATTERN) + " doesn't match filename " + path);
     return {};
   }
 
@@ -114,7 +133,7 @@ bool media_handling::initialise(const BackendType backend)
   if (backend == BackendType::FFMPEG) {
     return true;
   }
-  logMessage("Chosen backend type is not available");
+  logMessage(LogType::WARNING, "Chosen backend type is not available");
   return false;
 }
 
@@ -125,13 +144,13 @@ void media_handling::assignLoggerCallback(media_handling::LOGGINGFN func)
   logging_func = func;
 }
 
-void media_handling::logMessage(const std::string& msg) noexcept
+void media_handling::logMessage(const LogType log_type, const std::string& msg) noexcept
 {
   if (logging_func == nullptr) {
     return;
   }
   try {
-    logging_func(msg);
+    logging_func(log_type, msg);
   }  catch (...) {
     // TODO: stderr
   }

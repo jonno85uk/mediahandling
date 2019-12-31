@@ -29,6 +29,7 @@
 #include <cassert>
 #include <sstream>
 #include <thread>
+#include <fmt/core.h>
 
 #include "mediahandling.h"
 #include "ffmpegsource.h"
@@ -68,8 +69,9 @@ FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
   int err_code = avcodec_parameters_to_context(codec_ctx_, stream_->codecpar);
   if (err_code < 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
-    std::cerr << "Failed to populate codec context: " << err.data() << std::endl;
-    throw std::exception();
+    const auto msg = fmt::format("Failed to populate codec context: {}", err.data());
+    logMessage(LogType::CRITICAL, msg);
+    throw std::runtime_error(msg);
   }
 
   codec_ctx_->thread_count = static_cast<int32_t>(std::thread::hardware_concurrency());
@@ -78,8 +80,9 @@ FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
   err_code = avcodec_open2(codec_ctx_, codec_, &opts_);
   if (err_code < 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
-    std::cerr << "Could not open codec: " << err.data() << std::endl;
-    throw std::exception();
+    const auto msg = fmt::format("Could not open codec:  {}", err.data());
+    logMessage(LogType::CRITICAL, msg);
+    throw std::runtime_error(msg);
   }
 
   if (stream_->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -125,7 +128,7 @@ MediaFramePtr FFMpegStream::frame(const int64_t timestamp)
   if ((timestamp >= 0) && (last_timestamp_ != timestamp)) {
     // TODO: more checks to prevent unneeded seek
     if (!seek(timestamp)) {
-      std::cerr << "Failed to seek: " << timestamp << std::endl;
+      logMessage(LogType::WARNING, fmt::format("Failed to seek:  {}", timestamp));
       return nullptr;
     }
   } // else read next frame
@@ -159,7 +162,7 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
   assert(codec_);
   const AVPixelFormat output_av_fmt = types::convertPixelFormat(format);
   if (output_av_fmt == AV_PIX_FMT_NONE) {
-    media_handling::logMessage("FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
+    logMessage(LogType::CRITICAL, "FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
     return false;
   }
 
@@ -171,20 +174,20 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
 
   const AVPixelFormat src_av_fmt = types::convertPixelFormat(src_fmt);
   if (src_av_fmt == AV_PIX_FMT_NONE) {
-    media_handling::logMessage("FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
+    logMessage(LogType::CRITICAL, "FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
     return false;
   }
 
 
   auto src_dims = this->property<media_handling::Dimensions>(MediaProperty::DIMENSIONS, is_valid);
   if (!is_valid) {
-    media_handling::logMessage("FFMpegStream::setOutputFormat() -- Unknown dimensions of the stream");
+    logMessage(LogType::CRITICAL, "FFMpegStream::setOutputFormat() -- Unknown dimensions of the stream");
     return false;
   }
 
   const auto [out_dims, out_interp] = [&] {
     if ( (dims.width) <= 0 || (dims.height <= 0)) {
-      media_handling::logMessage("FFMpegStream::setOutputFormat() -- Output dimensions invalid");
+      logMessage(LogType::INFO, "FFMpegStream::setOutputFormat() -- Output dimensions invalid");
       return std::make_tuple(src_dims, 0);
     }
     return std::make_tuple(dims, media_handling::types::convertInterpolationMethod(interp));
@@ -228,7 +231,7 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format)
   const auto ret = swr_init(ctx);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    std::cerr << "Could not init resample context: " << err.data() << std::endl;
+    logMessage(LogType::CRITICAL, fmt::format("Could not init resample context: {}", err.data()));
     return false;
   }
 
@@ -310,7 +313,7 @@ bool FFMpegStream::seek(const int64_t timestamp)
   int ret = av_seek_frame(parent_->context(), stream_->index, timestamp, SEEK_DIRECTION);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    std::cerr << "Could not seek frame: " << err.data() << std::endl;
+    logMessage(LogType::WARNING, fmt::format("Could not seek frame: {}", err.data()));
     return false;
   }
   return true;
@@ -338,7 +341,7 @@ void FFMpegStream::extractFrameProperties()
         MediaPropertyObject::setProperty(MediaProperty::FIELD_ORDER, val);
       }
     } else if (type_ == StreamType::IMAGE) {
-      logMessage("Setting image progressive");
+      logMessage(LogType::DEBUG, "Setting image progressive");
       MediaPropertyObject::setProperty(MediaProperty::FIELD_ORDER, FieldOrder::PROGRESSIVE);
     }
     auto par = MediaPropertyObject::property<Rational>(MediaProperty::PIXEL_ASPECT_RATIO, is_valid);
@@ -354,7 +357,7 @@ void FFMpegStream::extractFrameProperties()
       MediaPropertyObject::setProperty(MediaProperty::COLOUR_PRIMARIES, primary);
     }
   } else {
-    logMessage("Failed to read a frame from stream");
+    logMessage(LogType::CRITICAL, "Failed to read a frame from stream");
   }
 }
 
@@ -375,7 +378,7 @@ MediaFramePtr FFMpegStream::frame(AVCodecContext& codec_ctx, const int stream_id
     err_code = avcodec_send_packet(&codec_ctx, pkt.get());
     if (err_code < 0) {
       av_strerror(err_code, err.data(), ERR_LEN);
-      std::cerr << "Failed sending a packet for decoding: " << err.data() << std::endl;
+      logMessage(LogType::WARNING, fmt::format("Failed sending a packet for decoding: {}", err.data()));
       break;
     }
 
@@ -403,7 +406,7 @@ MediaFramePtr FFMpegStream::frame(AVCodecContext& codec_ctx, const int stream_id
         break;
       } else {
         av_strerror(dec_err_code, err.data(), ERR_LEN);
-        std::cerr << "Failed to decode: " << err.data() << std::endl;
+        logMessage(LogType::CRITICAL, fmt::format("Failed to decode: {}", err.data()));
         break;
       }
     }//while

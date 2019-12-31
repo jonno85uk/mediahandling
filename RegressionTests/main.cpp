@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "mediahandling.h"
 
-void logFunc(const std::string&)
+void logFunc(const media_handling::LogType, const std::string&)
 {
   // Do nothing
 }

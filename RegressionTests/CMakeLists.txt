@@ -9,4 +9,4 @@ file(GLOB SOURCES "*.cpp")
 add_executable(mh_regression ${SOURCES})
 
 
-target_link_libraries(mh_regression -lgtest -lmediaHandling -lavcodec -lavfilter -lao)
+target_link_libraries(mh_regression -lgtest -lmediaHandling -lavcodec -lavfilter -lao -lfmt)

@@ -81,14 +81,14 @@ bool FFMpegSink::initialise(const std::string& path)
   int ret = avformat_alloc_output_context2(&fmt_ctx_, nullptr, nullptr, path.c_str());
   if ( (ret < 0) || (fmt_ctx_ == nullptr)) {
     av_strerror(ret, err.data(), ERR_LEN);
-    logMessage("Could not create output context, code=" + err);
+    logMessage(LogType::CRITICAL, "Could not create output context, code=" + err);
     return false;
   }
 
   ret = avio_open(&fmt_ctx_->pb,  path.c_str(), AVIO_FLAG_WRITE);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    logMessage("Could not open output file, code=" + err);
+    logMessage(LogType::CRITICAL, "Could not open output file, code=" + err);
     return false;
   }
 

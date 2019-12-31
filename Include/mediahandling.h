@@ -67,7 +67,16 @@ namespace media_handling
     INTEL
   };
 
-  typedef void (*LOGGINGFN)(const std::string&);
+  enum class LogType
+  {
+    FATAL,
+    CRITICAL,
+    WARNING,
+    INFO,
+    DEBUG
+  };
+
+  typedef void (*LOGGINGFN)(const LogType, const std::string&);
 
 
   /**
@@ -106,7 +115,7 @@ namespace media_handling
   /**
    * @note intended for internal purposes only
    */
-  void logMessage(const std::string& msg) noexcept;
+  void logMessage(const LogType log_type, const std::string& msg) noexcept;
 }
 
 #endif // MEDIAHANDLING_H

@@ -28,6 +28,7 @@
 #include "ffmpegmediaframe.h"
 
 #include <cassert>
+#include <fmt/core.h>
 extern "C" {
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
@@ -79,7 +80,7 @@ std::optional<int64_t> FFMpegMediaFrame::lineSize(const int index) const
 {
   assert(ff_frame_);
   if (index > AV_NUM_DATA_POINTERS) {
-    media_handling::logMessage("FFMpegMediaFrame::lineSize() -- index out of range");
+    logMessage(LogType::WARNING, "FFMpegMediaFrame::lineSize() -- index out of range");
     return {};
   }
   return ff_frame_->linesize[index];
@@ -128,7 +129,7 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
     ret = swr_convert_frame(output_fmt_.swr_context_.get(), conv_frame_.get(), ff_frame_.get());
     if (ret < 0) {
         av_strerror(ret, err.data(), ERR_LEN);
-        std::cerr << "Could not resample audio frame: " << err.data() << std::endl;
+        logMessage(LogType::CRITICAL, fmt::format("Could not resample audio frame: {}", err.data()));
         return {};
     }
     f_d.data_ = conv_frame_->data;
