@@ -61,6 +61,7 @@ FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
     throw std::runtime_error("Required parameter(s) is/are null");
   }
   source_index_ = stream->index;
+  parent->queueStream(source_index_);
   codec_ = avcodec_find_decoder(stream_->codecpar->codec_id);
   codec_ctx_ = avcodec_alloc_context3(codec_);
   assert(codec_ctx_);
@@ -210,8 +211,6 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format)
   assert(okay);
   const auto src_fmt = property<SampleFormat>(MediaProperty::AUDIO_FORMAT, okay);
   assert(okay);
-  const auto channels = property<int32_t>(MediaProperty::AUDIO_CHANNELS, okay);
-  assert(okay);
   const auto av_layout = types::convertChannelLayout(layout);
   assert(av_layout != 0);
   const auto av_src_fmt = types::convertSampleFormat(src_fmt);
@@ -237,7 +236,6 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format)
   output_format_.sample_fmt_ = format;
   output_format_.layout_ = layout;
   output_format_.sample_rate_ = sample_rate;
-  output_format_.channels_ = channels;
   output_format_.swr_context_ = std::shared_ptr<SwrContext>(ctx, types::swrContextDeleter);
   return true;
 }

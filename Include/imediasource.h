@@ -66,26 +66,26 @@ namespace media_handling
        * @param index   Index from the available audio-streams (not index of all streams)
        * @return        Stream on success or nullptr
        */
-      virtual MediaStreamPtr audioStream(const int index) const = 0;
+      virtual MediaStreamPtr audioStream(const int index) = 0;
       
       /**
        * @brief   Get all the audio streams
        * @return  map of audio streams [index, stream]
        */
-      virtual MediaStreamMap audioStreams() const = 0;
+      virtual MediaStreamMap audioStreams() = 0;
 
       /**
        * @brief         Obtain a visual (video/image) stream
        * @param index   Index from the available visual-streams (not index of all streams)
        * @return        Stream on success or nullptr
        */
-      virtual MediaStreamPtr visualStream(const int index) const = 0;
+      virtual MediaStreamPtr visualStream(const int index) = 0;
 
       /**
        * @brief   Get all the visual streams
        * @return  map of visual streams [index, stream]
        */
-      virtual MediaStreamMap visualStreams() const = 0;
+      virtual MediaStreamMap visualStreams() = 0;
 
       
   };

@@ -58,10 +58,10 @@ namespace media_handling::ffmpeg
     public: /* IMediaSource overrides */
       bool initialise() override;
       void setFilePath(const std::string& file_path) override;
-      MediaStreamPtr audioStream(const int index) const final;
-      MediaStreamMap audioStreams() const final;
-      MediaStreamPtr visualStream(const int index) const final;
-      MediaStreamMap visualStreams() const final;
+      MediaStreamPtr audioStream(const int index) final;
+      MediaStreamMap audioStreams() final;
+      MediaStreamPtr visualStream(const int index) final;
+      MediaStreamMap visualStreams() final;
     protected:
       virtual MediaStreamPtr newMediaStream(AVStream& stream);
     private:
@@ -70,8 +70,6 @@ namespace media_handling::ffmpeg
       std::string file_path_;
       uint64_t calculated_length_ {0};
       types::AVFormatContextUPtr format_ctx_ {nullptr};
-      MediaStreamMap audio_streams_;
-      MediaStreamMap visual_streams_;
       /**
        * @brief structure holding packets for a stream which was retrieved when retrieving packet for another stream
        * @note  By doing this, unnecessary seeks and av_read_frame are prevented

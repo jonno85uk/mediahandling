@@ -453,7 +453,12 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadConvertedFrame)
   auto frame = stream->frame();
   ASSERT_TRUE(frame != nullptr);
   auto data = frame->data();
-  ASSERT_EQ(data.timestamp_, 7168);
+  ASSERT_EQ(data.timestamp_, 0);
+  ASSERT_EQ(data.data_size_, 8192);
+  frame = stream->frame();
+  ASSERT_TRUE(frame != nullptr);
+  data = frame->data();
+  ASSERT_EQ(data.timestamp_, 1024);
   ASSERT_EQ(data.data_size_, 8192);
 }
 

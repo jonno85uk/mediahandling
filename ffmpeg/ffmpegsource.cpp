@@ -147,36 +147,80 @@ void FFMpegSource::setFilePath(const std::string& file_path)
 }
 
 
-MediaStreamPtr FFMpegSource::audioStream(const int index) const
+MediaStreamPtr FFMpegSource::audioStream(const int index)
 {
-  if (audio_streams_.count(index) == 1)
-  {
-    queueStream(audio_streams_.at(index)->sourceIndex());
-    return audio_streams_.at(index);
+  if (format_ctx_ == nullptr) {
+    return {};
   }
-  return nullptr;
-}
-
-
-MediaStreamMap FFMpegSource::audioStreams() const
-{
-  return audio_streams_;
-}
-
-
-MediaStreamPtr FFMpegSource::visualStream(const int index) const
-{
-  if (visual_streams_.count(index) == 1)
-  {
-    queueStream(visual_streams_.at(index)->sourceIndex());
-    return visual_streams_.at(index);
+  int streams = 0;
+  gsl::span<AVStream*> span_streams(format_ctx_->streams, format_ctx_->nb_streams);
+  for (auto& stream: span_streams) {
+    if (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+      if (streams == index) {
+        return this->newMediaStream(*stream);
+      } else {
+        streams++;
+      }
+    }
   }
-  return nullptr;
+  return {};
 }
 
-MediaStreamMap FFMpegSource::visualStreams() const
+
+MediaStreamMap FFMpegSource::audioStreams()
 {
-  return visual_streams_;
+  int streams = 0;
+  MediaStreamMap a_m;
+  gsl::span<AVStream*> span_streams(format_ctx_->streams, format_ctx_->nb_streams);
+  for (auto& stream: span_streams) {
+    if (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+      a_m[streams++] = this->newMediaStream(*stream);
+    }
+  }
+  return a_m;
+}
+
+
+MediaStreamPtr FFMpegSource::visualStream(const int index)
+{
+  if (format_ctx_ == nullptr) {
+    return {};
+  }
+  int streams = 0;
+  gsl::span<AVStream*> span_streams(format_ctx_->streams, format_ctx_->nb_streams);
+  for (auto& stream: span_streams) {
+    if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+      if (streams == index) {
+        auto f_s = this->newMediaStream(*stream);
+        bool is_okay;
+        const auto frate = this->property(MediaProperty::FRAME_RATE, is_okay);
+        assert(is_okay);
+        f_s->setProperty(MediaProperty::FRAME_RATE, frate);
+        return f_s;
+      } else {
+        streams++;
+      }
+    }
+  }
+  return {};
+}
+
+MediaStreamMap FFMpegSource::visualStreams()
+{
+  int streams = 0;
+  MediaStreamMap a_m;
+  gsl::span<AVStream*> span_streams(format_ctx_->streams, format_ctx_->nb_streams);
+  for (auto& stream: span_streams) {
+    if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+      auto f_s = this->newMediaStream(*stream);
+      bool is_okay;
+      const auto frate = this->property(MediaProperty::FRAME_RATE, is_okay);
+      assert(is_okay);
+      f_s->setProperty(MediaProperty::FRAME_RATE, frate);
+      a_m[streams++] = f_s;
+    }
+  }
+  return a_m;
 }
 
 MediaStreamPtr FFMpegSource::newMediaStream(AVStream& stream)
@@ -207,37 +251,37 @@ media_handling::types::AVPacketPtr FFMpegSource::nextPacket(const int stream_ind
 {
   // prevent unnecessary read of demuxed packets
   auto read_packet = [&] () -> media_handling::types::AVPacketPtr {
-    while (true) {
-      AVPacket* pkt = av_packet_alloc();
-      assert(format_ctx_ && pkt);
-      const auto ret = av_read_frame(format_ctx_.get(), pkt);
-      if (ret < 0) {
-        av_strerror(ret, err.data(), ERR_LEN);
-        std::cerr << "Failed to read frame: " << err.data() << std::endl;
-        break;
-      }
-      auto pkt_sp = std::shared_ptr<AVPacket>(pkt, types::avPacketDeleter);
-      if (pkt->stream_index == stream_index) {
-        return pkt_sp;
-      } else if ( (packeting_.indexes_.count(stream_index) == 1) && (packeting_.indexes_.at(stream_index) > 0)) {
-        // only queue packets for needed streams
-        packeting_.queue_[pkt->stream_index].push(pkt_sp);
-      }
-    }
-    return {};
-  };
+                     while (true) {
+                     AVPacket* pkt = av_packet_alloc();
+                     assert(format_ctx_ && pkt);
+                     const auto ret = av_read_frame(format_ctx_.get(), pkt);
+                     if (ret < 0) {
+                     av_strerror(ret, err.data(), ERR_LEN);
+                     std::cerr << "Failed to read frame: " << err.data() << std::endl;
+                     break;
+}
+                     auto pkt_sp = std::shared_ptr<AVPacket>(pkt, types::avPacketDeleter);
+                     if (pkt->stream_index == stream_index) {
+                     return pkt_sp;
+} else if ( (packeting_.indexes_.count(stream_index) == 1) && (packeting_.indexes_.at(stream_index) > 0)) {
+                     // only queue packets for needed streams
+                     packeting_.queue_[pkt->stream_index].push(pkt_sp);
+}
+}
+                     return {};
+};
 
-  if (packeting_.queue_.count(stream_index) == 1) {
-    if (!packeting_.queue_.at(stream_index).empty()) {
-      auto pkt = packeting_.queue_.at(stream_index).front();
-      packeting_.queue_.at(stream_index).pop();
-      return pkt;
-    } else {
-      return read_packet();
-    }
+if (packeting_.queue_.count(stream_index) == 1) {
+  if (!packeting_.queue_.at(stream_index).empty()) {
+    auto pkt = packeting_.queue_.at(stream_index).front();
+    packeting_.queue_.at(stream_index).pop();
+    return pkt;
   } else {
     return read_packet();
   }
+} else {
+return read_packet();
+}
 }
 
 void FFMpegSource::resetPacketQueue()
@@ -275,18 +319,9 @@ void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t st
     assert(stream);
     switch (stream->codecpar->codec_type) {
       case AVMEDIA_TYPE_VIDEO:
-      {
-        visual_streams_[visual_count] = FFMpegSource::newMediaStream(*stream);
-        assert(visual_streams_[visual_count]);
-        bool is_okay;
-        const auto frate = this->property(MediaProperty::FRAME_RATE, is_okay);
-        assert(is_okay);
-        visual_streams_[visual_count]->setProperty(MediaProperty::FRAME_RATE, frate);
         visual_count++;
-      }
         break;
       case AVMEDIA_TYPE_AUDIO:
-        audio_streams_[audio_count] = FFMpegSource::newMediaStream(*stream);
         audio_count++;
         break;
       default:
@@ -327,7 +362,5 @@ void FFMpegSource::reset()
 {
   format_ctx_.reset();
   format_ctx_ = nullptr;
-  audio_streams_.clear();
-  visual_streams_.clear();
 }
 
