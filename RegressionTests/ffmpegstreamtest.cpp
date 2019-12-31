@@ -531,6 +531,19 @@ TEST (FFMpegStreamTest, SetOutputFormatAudio)
   ASSERT_TRUE(stream->setOutputFormat(SampleFormat::SIGNED_32));
 }
 
+TEST(FFMpegStreamTest, SetOutputFormatAudioFrequency)
+{
+  auto fname = "./ReferenceMedia/Audio/ac3/5_1.ac3";
+  media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
+
+  auto stream = src->audioStream(0);
+  ASSERT_TRUE(stream->setOutputFormat(SampleFormat::SIGNED_32, 48000));
+  auto frame = stream->frame();
+  ASSERT_TRUE(frame);
+  auto data = frame->data();
+  ASSERT_TRUE(data.data_);
+}
+
 TEST (FFMpegStreamTest, PlayAudio)
 {
   auto fname = "./ReferenceMedia/Audio/ac3/5_1.ac3";

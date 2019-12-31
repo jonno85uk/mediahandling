@@ -92,9 +92,10 @@ namespace media_handling
        * @brief         Automatically convert the stream's output format type
        * @note          This is for audio only
        * @param format  sample format to change source file to
+       * @param rate    sample-rate to change source file to
        * @return        true==output format set
        */
-      virtual bool setOutputFormat(const SampleFormat format) = 0;
+      virtual bool setOutputFormat(const SampleFormat format, std::optional<int32_t> rate = {}) = 0;
   };
 
   using MediaStreamPtr = std::shared_ptr<IMediaStream>;

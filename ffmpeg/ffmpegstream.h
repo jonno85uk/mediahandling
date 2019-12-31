@@ -61,7 +61,7 @@ namespace media_handling::ffmpeg
       bool setOutputFormat(const PixelFormat format,
                            const Dimensions& dims = {0, 0},
                            InterpolationMethod interp = InterpolationMethod::NEAREST) final;
-      bool setOutputFormat(const SampleFormat format) final;
+      bool setOutputFormat(const SampleFormat format, std::optional<int32_t> rate = {}) final;
 
     private:
       FFMpegSource* parent_;

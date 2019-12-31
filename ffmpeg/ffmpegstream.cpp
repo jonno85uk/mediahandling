@@ -205,7 +205,7 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
   return output_format_.sws_context_ != nullptr;
 }
 
-bool FFMpegStream::setOutputFormat(const SampleFormat format)
+bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<int32_t> rate)
 {
   bool okay = false;
   const auto layout = property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
@@ -221,7 +221,7 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format)
   SwrContext* ctx = swr_alloc_set_opts(nullptr,
                                        static_cast<int64_t>(av_layout),
                                        av_format,
-                                       sample_rate,
+                                       rate.has_value() ? rate.value() : sample_rate,
                                        static_cast<int64_t>(av_layout),
                                        av_src_fmt,
                                        sample_rate,
@@ -238,7 +238,7 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format)
   assert(ctx);
   output_format_.sample_fmt_ = format;
   output_format_.layout_ = layout;
-  output_format_.sample_rate_ = sample_rate;
+  output_format_.sample_rate_ = rate.has_value() ? rate.value() : sample_rate;
   output_format_.swr_context_ = std::shared_ptr<SwrContext>(ctx, types::swrContextDeleter);
   return true;
 }
