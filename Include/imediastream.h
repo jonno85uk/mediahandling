@@ -44,55 +44,57 @@ namespace media_handling
    */
   class IMediaStream : public MediaPropertyObject
   {
-  public:
-    ~IMediaStream() override = default;
+    public:
+      ~IMediaStream() override = default;
 
-    /**
-     * @brief frame       Retrieve a frame-sample from the stream
-     * @param timestamp   The position in the stream for retrieval
-     * @return            Frame sample on success or null
-     */
-    virtual MediaFramePtr frame(const int64_t timestamp=-1) = 0;
+      virtual int64_t timestamp() const = 0;
 
-    /**
-     * @brief setFrame    Set the frame-sample for the stream
-     * @param timestamp   Position in the stream
-     * @param sample      Frame sample
-     * @return            true==success
-     */
-    virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) = 0;
+      /**
+       * @brief frame       Retrieve a frame-sample from the stream
+       * @param timestamp   The position in the stream for retrieval
+       * @return            Frame sample on success or null
+       */
+      virtual MediaFramePtr frame(const int64_t timestamp=-1) = 0;
 
-    /**
-     * @brief   Obtain the type of this stream
-     * @return  type if known, otherwise UNKNOWN
-     */
-    virtual StreamType type() const = 0;
+      /**
+       * @brief setFrame    Set the frame-sample for the stream
+       * @param timestamp   Position in the stream
+       * @param sample      Frame sample
+       * @return            true==success
+       */
+      virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) = 0;
 
-    /**
-     * @brief   Obtain the index of this stream within the source
-     * @return  >=0 valid values
-     */
-    virtual int32_t sourceIndex() const noexcept = 0;
+      /**
+       * @brief   Obtain the type of this stream
+       * @return  type if known, otherwise UNKNOWN
+       */
+      virtual StreamType type() const = 0;
 
-    /**
-     * @brief         Automatically convert the stream's output format type
-     * @note          This is for video only
-     * @param format  pixel format to change source file to i.e yuv420 -> rgb24
-     * @param dims    The desired output dimensions
-     * @param interp  The interpolation method to use for scaling
-     * @return        true==output format set
-     */
-    virtual bool setOutputFormat(const PixelFormat format,
-                                 const Dimensions& dims = {0, 0},
-                                 InterpolationMethod interp = InterpolationMethod::NEAREST) = 0;
+      /**
+       * @brief   Obtain the index of this stream within the source
+       * @return  >=0 valid values
+       */
+      virtual int32_t sourceIndex() const noexcept = 0;
 
-    /**
-     * @brief         Automatically convert the stream's output format type
-     * @note          This is for audio only
-     * @param format  sample format to change source file to
-     * @return        true==output format set
-     */
-    virtual bool setOutputFormat(const SampleFormat format) = 0;
+      /**
+       * @brief         Automatically convert the stream's output format type
+       * @note          This is for video only
+       * @param format  pixel format to change source file to i.e yuv420 -> rgb24
+       * @param dims    The desired output dimensions
+       * @param interp  The interpolation method to use for scaling
+       * @return        true==output format set
+       */
+      virtual bool setOutputFormat(const PixelFormat format,
+                                   const Dimensions& dims = {0, 0},
+                                   InterpolationMethod interp = InterpolationMethod::NEAREST) = 0;
+
+      /**
+       * @brief         Automatically convert the stream's output format type
+       * @note          This is for audio only
+       * @param format  sample format to change source file to
+       * @return        true==output format set
+       */
+      virtual bool setOutputFormat(const SampleFormat format) = 0;
   };
 
   using MediaStreamPtr = std::shared_ptr<IMediaStream>;

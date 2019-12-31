@@ -35,19 +35,15 @@
 using namespace media_handling;
 using namespace media_handling::ffmpeg;
 
-#ifdef PNG_OUT
-#include <fstream>
-#include <iostream>
-#include <TinyPngOut/TinyPngOut.hpp>
-#endif
+
+//#define PRINTOUT_VALS
 
 
 TEST (FFMpegStreamTest, NullInst)
 {
-  AVFormatContext ctx;
   AVStream strm;
   EXPECT_THROW(FFMpegStream(nullptr, nullptr), std::exception);
-  EXPECT_THROW(FFMpegStream(&ctx, nullptr), std::exception);
+  EXPECT_THROW(FFMpegStream(nullptr, nullptr), std::exception);
   EXPECT_THROW(FFMpegStream(nullptr, &strm), std::exception);
 }
 
@@ -256,7 +252,7 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadFrame)
   auto stream = src->visualStream(0);
   auto frame = stream->frame(0);
   ASSERT_TRUE(frame != nullptr);
-  ASSERT_EQ(frame->timestamp(), 0);
+  ASSERT_EQ(frame->timestamp(), 256);
 }
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadTenthFrame)
@@ -279,7 +275,7 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadNextFrame)
   auto stream = src->visualStream(0);
   MediaFramePtr frame = stream->frame(0);
   frame = stream->frame();
-  ASSERT_EQ(frame->timestamp(), 256); // timebase/fps
+  ASSERT_EQ(frame->timestamp(), 512); // timebase/fps
 }
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadToEOS)
@@ -324,22 +320,6 @@ TEST (FFMpegStreamTest, SetOutputFormatVideo)
   ASSERT_TRUE(data.data_size_ == 3110400);
   ASSERT_TRUE(data.line_size_ == 1920);
   ASSERT_TRUE(data.pix_fmt_ == PixelFormat::YUV420);
-#ifdef PNG_OUT
-  bool is_valid = false;
-  auto dims = stream->property<Dimensions>(MediaProperty::DIMENSIONS, is_valid);
-  if (is_valid) {
-//    for (auto i = 0; i < dims.width * dims.height * 3; ++i)
-//    {
-//      uint8_t val = data[i];
-//      auto thing = val * 2;
-//    }
-    std::ofstream out("test.png", std::ios::binary);
-    TinyPngOut pngout(dims.width, dims.height, out);
-    pngout.write(*data, dims.width * dims.height);
-    out.close();
-
-  }
-#endif
 }
 
 TEST (FFMpegStreamTest, SetOutputFormatVideoScaled)
@@ -461,7 +441,7 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrame)
   ASSERT_TRUE(frame != nullptr);
   auto data = frame->data();
   ASSERT_EQ(data.timestamp_, 1024);
-  ASSERT_EQ(data.data_size_, 2048);
+  ASSERT_EQ(data.data_size_, 8192);
 }
 
 TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadConvertedFrame)
@@ -474,7 +454,7 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadConvertedFrame)
   ASSERT_TRUE(frame != nullptr);
   auto data = frame->data();
   ASSERT_EQ(data.timestamp_, 7168);
-  ASSERT_EQ(data.data_size_, 2048);
+  ASSERT_EQ(data.data_size_, 8192);
 }
 
 
@@ -548,8 +528,8 @@ TEST (FFMpegStreamTest, SetOutputFormatAudio)
 
 TEST (FFMpegStreamTest, PlayAudio)
 {
-//  auto fname = "./ReferenceMedia/Audio/ac3/5_1.ac3";
-  auto fname = "./ReferenceMedia/Audio/ogg/monotone.ogg";
+  auto fname = "./ReferenceMedia/Audio/ac3/5_1.ac3";
+//  auto fname = "./ReferenceMedia/Audio/ogg/monotone.ogg";
 //  auto fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   auto stream = src->audioStream(0);
@@ -561,19 +541,24 @@ TEST (FFMpegStreamTest, PlayAudio)
   ASSERT_TRUE(okay);
 
 #ifdef PRINTOUT_VALS
-  auto print_data = [](uint8_t** bytes, size_t data_size) {
+  auto print_data = [](uint8_t** bytes, size_t data_size, int channels) {
     gsl::span<uint8_t> s_d(*bytes, data_size);
-    for (auto i = 0; i < data_size; i+=2) {
-      int16_t val = s_d[i] | s_d[i+1] << 8;
-      std::cout << val << std::endl;
+    int cnt = 0;
+    for (auto i = 0; i < data_size; i+=(2*channels)) {
+      std::cout << cnt++ << ',';
+      for (auto c = 0; c < channels; ++c) {
+        int16_t val = s_d[i*c] | s_d[(i*c)+1] << 8;
+        std::cout << val << ',';
+      }
+      std::cout << std::endl;
     }
   };
 
 
-  for (auto i = 0; i < 8 ; ++i) {
+  for (auto i = 0; i < 1 ; ++i) {
     const auto frame = stream->frame();
     const auto f_d = frame->data();
-    print_data(f_d.data_, f_d.data_size_);
+    print_data(f_d.data_, f_d.data_size_, channels);
   }
 #else
   ao_initialize();

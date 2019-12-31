@@ -41,19 +41,19 @@ extern "C" {
 
 namespace media_handling::ffmpeg
 {
-
+  class FFMpegSource;
   /**
    * @brief The FFMpegStream class
-   * read -> decode -> filter/effects
    */
   class FFMpegStream : public IMediaStream
   {
     public:
       FFMpegStream() = default;
-      FFMpegStream(AVFormatContext* parent, AVStream* const stream);
+      FFMpegStream(FFMpegSource* parent, AVStream* const stream);
       ~FFMpegStream() override;
 
       /* IMediaStream override*/
+      int64_t timestamp() const override;
       MediaFramePtr frame(const int64_t timestamp=-1) final;
       bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
       StreamType type() const final;
@@ -64,21 +64,16 @@ namespace media_handling::ffmpeg
       bool setOutputFormat(const SampleFormat format) final;
 
     private:
-      AVFormatContext* parent_ {nullptr};
+      FFMpegSource* parent_;
       AVStream* stream_ {nullptr};
       AVCodec* codec_ {nullptr};
       AVCodecContext* codec_ctx_ {nullptr};
       AVPacket* pkt_ {nullptr};
       AVDictionary* opts_ {nullptr};
-//      AVFilterGraph* filter_graph_ {nullptr};
-      struct Buffers {
-          AVFilterContext* sink_ {nullptr};
-          AVFilterContext* source_ {nullptr};
-      } buffer_ctx_;
       int pixel_format_{};
       FFMpegMediaFrame::OutputFormat output_format_;
 
-      int64_t last_timestamp_ {-1};
+      mutable int64_t last_timestamp_ {-1};
       StreamType type_{StreamType::UNKNOWN};
       bool deinterlacer_setup_ {false};
       int32_t source_index_ {-1};
@@ -87,9 +82,6 @@ namespace media_handling::ffmpeg
       void extractVisualProperties(const AVStream& stream, const AVCodecContext& context);
       void extractAudioProperties(const AVStream& stream, const AVCodecContext& context);
       bool seek(const int64_t timestamp);
-
-      void setupForVideo(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, int& pix_fmt) const;
-      void setupForAudio(const AVStream& strm, Buffers& bufs, AVFilterGraph& graph, AVCodecContext& codec_context) const;
       void setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const;
 
       /**
@@ -98,7 +90,7 @@ namespace media_handling::ffmpeg
        */
       void extractFrameProperties();
 
-      MediaFramePtr frame(AVFormatContext& format_ctx, AVCodecContext& codec_ctx, AVPacket& pkt, const int stream_idx) const;
+      MediaFramePtr frame(AVCodecContext& codec_ctx, const int stream_idx) const;
   };
 
 }

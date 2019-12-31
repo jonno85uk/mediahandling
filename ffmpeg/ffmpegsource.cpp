@@ -113,26 +113,26 @@ bool FFMpegSource::initialise()
 
   const auto p = path.c_str(); //only because path is unavailable when in debug
   // Open the file
-  int err_code = avformat_open_input(&format_ctx_, p, nullptr, nullptr);
+  AVFormatContext* ctx = nullptr;
+  int err_code = avformat_open_input(&ctx, p, nullptr, nullptr);
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
     logMessage("Failed to open file, code=" + err + "fileName=" + p);
     return false;
   }
-
+  format_ctx_.reset(ctx);
+  assert(format_ctx_);
   // Read info about the file
-  err_code = avformat_find_stream_info(format_ctx_, nullptr);
+  err_code = avformat_find_stream_info(format_ctx_.get(), nullptr);
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
     logMessage("Failed to read file info, code=" + err);
     return false;
   }
 
-  assert(format_ctx_);
   findFrameRate();
   // Extract properties
   extractProperties(*format_ctx_);
-
 
 #ifdef VERBOSE_FFMPEG
   av_dump_format(format_ctx_, 0, file_path_.c_str(), 0);
@@ -149,8 +149,9 @@ void FFMpegSource::setFilePath(const std::string& file_path)
 
 MediaStreamPtr FFMpegSource::audioStream(const int index) const
 {
-  if (audio_streams_.count(index) > 0)
+  if (audio_streams_.count(index) == 1)
   {
+    queueStream(audio_streams_.at(index)->sourceIndex());
     return audio_streams_.at(index);
   }
   return nullptr;
@@ -165,8 +166,9 @@ MediaStreamMap FFMpegSource::audioStreams() const
 
 MediaStreamPtr FFMpegSource::visualStream(const int index) const
 {
-  if (visual_streams_.count(index) > 0)
+  if (visual_streams_.count(index) == 1)
   {
+    queueStream(visual_streams_.at(index)->sourceIndex());
     return visual_streams_.at(index);
   }
   return nullptr;
@@ -179,9 +181,74 @@ MediaStreamMap FFMpegSource::visualStreams() const
 
 MediaStreamPtr FFMpegSource::newMediaStream(AVStream& stream)
 {
-  assert(format_ctx_);
-  assert(format_ctx_->streams);
-  return std::make_shared<FFMpegStream>(format_ctx_, &stream);
+  return std::make_shared<FFMpegStream>(this, &stream);
+}
+
+
+void FFMpegSource::queueStream(const int stream_index) const
+{
+  if (packeting_.indexes_.count(stream_index) == 1) {
+    packeting_.indexes_[stream_index]++;
+  } else {
+    packeting_.indexes_[stream_index] = 1;
+  }
+}
+
+void FFMpegSource::unqueueStream(const int stream_index)
+{
+  if (packeting_.indexes_.count(stream_index) == 1) {
+    packeting_.indexes_[stream_index]--;
+  } else {
+    logMessage("Stream was already unqueued");
+  }
+}
+
+media_handling::types::AVPacketPtr FFMpegSource::nextPacket(const int stream_index)
+{
+  // prevent unnecessary read of demuxed packets
+  auto read_packet = [&] () -> media_handling::types::AVPacketPtr {
+    while (true) {
+      AVPacket* pkt = av_packet_alloc();
+      assert(format_ctx_ && pkt);
+      const auto ret = av_read_frame(format_ctx_.get(), pkt);
+      if (ret < 0) {
+        av_strerror(ret, err.data(), ERR_LEN);
+        std::cerr << "Failed to read frame: " << err.data() << std::endl;
+        break;
+      }
+      auto pkt_sp = std::shared_ptr<AVPacket>(pkt, types::avPacketDeleter);
+      if (pkt->stream_index == stream_index) {
+        return pkt_sp;
+      } else if ( (packeting_.indexes_.count(stream_index) == 1) && (packeting_.indexes_.at(stream_index) > 0)) {
+        // only queue packets for needed streams
+        packeting_.queue_[pkt->stream_index].push(pkt_sp);
+      }
+    }
+    return {};
+  };
+
+  if (packeting_.queue_.count(stream_index) == 1) {
+    if (!packeting_.queue_.at(stream_index).empty()) {
+      auto pkt = packeting_.queue_.at(stream_index).front();
+      packeting_.queue_.at(stream_index).pop();
+      return pkt;
+    } else {
+      return read_packet();
+    }
+  } else {
+    return read_packet();
+  }
+}
+
+void FFMpegSource::resetPacketQueue()
+{
+  packeting_.queue_.clear();
+}
+
+
+AVFormatContext* FFMpegSource::context() const noexcept
+{
+  return format_ctx_.get();
 }
 
 void FFMpegSource::extractProperties(const AVFormatContext& ctx)
@@ -202,6 +269,7 @@ void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t st
   int32_t visual_count = 0;
   int32_t audio_count = 0;
 
+  // TODO: create the FFMpegStreams on-demand, e.g. via audioStream() or visualStream()
   gsl::span<AVStream*> span_streams(streams, stream_count);
   for (auto& stream: span_streams) {
     assert(stream);
@@ -249,7 +317,7 @@ void FFMpegSource::findFrameRate()
     return;
   }
 
-  const auto avrate = av_guess_frame_rate(format_ctx_, ref_stream, nullptr);
+  const auto avrate = av_guess_frame_rate(format_ctx_.get(), ref_stream, nullptr);
   const Rational frate {avrate.num, avrate.den};
   this->setProperty(MediaProperty::FRAME_RATE, frate);
 }
@@ -257,7 +325,7 @@ void FFMpegSource::findFrameRate()
 
 void FFMpegSource::reset()
 {
-  avformat_free_context(format_ctx_);
+  format_ctx_.reset();
   format_ctx_ = nullptr;
   audio_streams_.clear();
   visual_streams_.clear();

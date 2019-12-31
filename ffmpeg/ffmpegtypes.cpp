@@ -30,6 +30,16 @@
 using media_handling::InterpolationMethod;
 
 
+void media_handling::types::avFormatContextDeleter(AVFormatContext* context)
+{
+  avformat_free_context(context);
+}
+
+void media_handling::types::avPacketDeleter(AVPacket* packet)
+{
+  av_packet_free(&packet);
+}
+
 void media_handling::types::avframeDeleter(AVFrame* frame)
 {
   av_frame_free(&frame);

@@ -28,26 +28,24 @@
 #ifndef FFMpegSource_H
 #define FFMpegSource_H
 
+#include <queue>
+#include <map>
+
 #include "imediasource.h"
 #include "ffmpegstream.h"
+#include "ffmpegtypes.h"
 #include "types.h"
 #include "gsl-lite.hpp"
 
 
 extern "C" {
 #include <libavformat/avformat.h>
-//#include <libavfilter/avfilter.h>
-//#include <libavfilter/buffersink.h>
-//#include <libavfilter/buffersrc.h>
-//#include <libavutil/opt.h>
-//#include <libavutil/pixdesc.h>
 }
 
 namespace media_handling::ffmpeg
 {
-
   /**
-   * @brief The FFMpegSource class
+   * @brief The FFMpeg implemtation of IMediaSource
    */
   class FFMpegSource : public IMediaSource
   {
@@ -55,47 +53,69 @@ namespace media_handling::ffmpeg
       FFMpegSource() = default;
       explicit FFMpegSource(std::string file_path);
       ~FFMpegSource() override;
-
       FFMpegSource(const FFMpegSource& cpy) = delete;
       FFMpegSource& operator=(const FFMpegSource& rhs) = delete;
-
+    public: /* IMediaSource overrides */
       bool initialise() override;
       void setFilePath(const std::string& file_path) override;
-
       MediaStreamPtr audioStream(const int index) const final;
-
       MediaStreamMap audioStreams() const final;
-
       MediaStreamPtr visualStream(const int index) const final;
-
       MediaStreamMap visualStreams() const final;
-
     protected:
       virtual MediaStreamPtr newMediaStream(AVStream& stream);
-
     private:
       friend class FFMpegSourceTestable;
+      friend class FFMpegStream;
       std::string file_path_;
       uint64_t calculated_length_ {0};
-
-      AVFormatContext* format_ctx_ {nullptr};
-
+      types::AVFormatContextUPtr format_ctx_ {nullptr};
       MediaStreamMap audio_streams_;
       MediaStreamMap visual_streams_;
-
-      bool configureStream(const int value);
+      /**
+       * @brief structure holding packets for a stream which was retrieved when retrieving packet for another stream
+       * @note  By doing this, unnecessary seeks and av_read_frame are prevented
+       */
+      struct {
+        mutable std::map<int32_t, int32_t> indexes_;
+        std::map<int32_t, std::queue<types::AVPacketPtr>> queue_;
+      } packeting_;
+    private:
+      /**
+       * @brief Add a stream for packet queueing
+       * @param stream_index  FFMpeg stream index
+       */
+      void queueStream(const int stream_index) const;
+      /**
+       * @brief Remove a stream from packet queueing
+       * @param stream_index  FFMpeg stream index
+       */
+      void unqueueStream(const int stream_index);
+      /**
+       * @brief Retrieve the next packet from the source for a particular stream
+       * @note  If another stream previously read the packet , it will be retrieved from the queue
+       * @param stream_index  FFMpeg stream index
+       * @return packet or null
+       */
+      types::AVPacketPtr nextPacket(const int stream_index);
+      /**
+       * @brief Clear all data from the packet queue
+       */
+      void resetPacketQueue();
+      /**
+       * @brief Retrieve the format context of the source
+       * @return  context or null
+       */
+      AVFormatContext* context() const noexcept;
+    private:
       void extractProperties(const AVFormatContext& ctx);
       void extractStreamProperties(AVStream** streams, const uint32_t stream_count);
       void findFrameRate();
-
       /**
        * @brief Reset the instance to before it was initialised (minus properties)
        * @note  Allows re-initialise with different starting values
        */
       void reset();
-
-
-
   };
 }
 

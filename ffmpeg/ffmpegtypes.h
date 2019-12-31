@@ -36,10 +36,13 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
+#include <libavformat/avformat.h>
 }
 
 namespace media_handling::types
 {
+  void avFormatContextDeleter(AVFormatContext* context);
+  void avPacketDeleter(AVPacket* packet);
   void avframeDeleter(AVFrame* frame);
   void swsContextDeleter(SwsContext* context);
   void swrContextDeleter(SwrContext* context);
@@ -51,6 +54,8 @@ namespace media_handling::types
   using SWSContextPtr = std::shared_ptr<SwsContext>;
   using SWRContextUPtr = std::unique_ptr<SwrContext, deleter_from_fn<swrContextDeleter>>;
   using SWRContextPtr = std::shared_ptr<SwrContext>;
+  using AVPacketPtr = std::shared_ptr<AVPacket>;
+  using AVFormatContextUPtr = std::unique_ptr<AVFormatContext, deleter_from_fn<avFormatContextDeleter>>;
 
 
   ColourPrimaries convertColourPrimary(const AVColorPrimaries primary) noexcept;
