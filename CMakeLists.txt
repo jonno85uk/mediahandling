@@ -12,11 +12,6 @@ add_library(mediaHandling SHARED ${SOURCES})
 
 find_package(ffmpeg REQUIRED)
 
-find_package(Boost 1.71.0)
-if(Boost_FOUND)
-  include_directories(${Boost_INCLUDE_DIRS})
-endif()
-
 target_compile_features(mediaHandling PRIVATE cxx_std_17)
 
 target_include_directories(mediaHandling
