@@ -67,6 +67,11 @@ namespace media_handling
        */
       void setTimestamp(const int64_t time_stamp) noexcept;
       /**
+       * @brief           Setup this timecode with a string representation
+       * @param timecode  formats are "hh:mm:ss:ff" or "hh:mm:ss;ff" for drop-frame
+       */
+      bool setTimeCode(const std::string& timecode);
+      /**
        * @brief Retrieve this time's scale
        * @return
        */

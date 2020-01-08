@@ -29,6 +29,7 @@
 
 #include <fmt/core.h>
 #include <cmath>
+#include <string>
 
 using media_handling::TimeCode;
 
@@ -81,6 +82,49 @@ int64_t TimeCode::toFrames() const
 void TimeCode::setTimestamp(const int64_t time_stamp) noexcept
 {
   time_stamp_ = time_stamp;
+}
+
+bool TimeCode::setTimeCode(const std::string& timecode)
+{
+  if (timecode.empty() || (timecode.length() != 11) ) {
+    return false;
+  }
+  const auto hours = std::stoi(timecode.substr(0, 2));
+  if (hours >= 24) {
+    return false;
+  }
+  if (timecode.at(2) != ':') {
+    return false;
+  }
+  const auto minutes = std::stoi(timecode.substr(3, 2));
+  if (minutes >= 60) {
+    return false;
+  }
+  if (timecode.at(2) != ':') {
+    return false;
+  }
+  const auto tc_seconds = std::stoi(timecode.substr(6, 2));
+  if (tc_seconds >= 60) {
+    return false;
+  }
+  if ((timecode.at(8) != ':') && (timecode.at(8) != ';') ) {
+    return false;
+  }
+  if ( ( (frame_rate_ != NTSC_30) && (frame_rate_ != NTSC_60)) && (timecode.at(8) == ';') ) {
+    return false;
+  }
+  const auto tc_frames = std::stoi(timecode.substr(9, 2));
+  if (tc_frames > std::round(frame_rate_.toDouble())) {
+    return false;
+  }
+  const auto whole = std::ceil(frame_rate_.toDouble());
+  if (tc_frames > whole) {
+    return false;
+  }
+
+  const auto seconds = tc_seconds + (hours * SECONDS_IN_HOUR) + (minutes * SECONDS_IN_MIN);
+  time_stamp_ = static_cast<int64_t>(std::ceil(((seconds / time_scale_) + ((tc_frames / frame_rate_) / time_scale_)).toDouble()));
+  return true;
 }
 
 media_handling::Rational TimeCode::timeScale() const noexcept

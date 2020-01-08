@@ -241,4 +241,27 @@ TEST(TimeCodeTests, InitNTSC60)
   ASSERT_EQ(tc.toString(false), "00:09:59:25");
 }
 
+TEST(TimeCodeTests, TCFromString)
+{
+  Rational time_scale{1, 1000};
+  Rational frame_rate{30, 1};
+  TimeCode tc(time_scale, frame_rate);
+  ASSERT_FALSE(tc.setTimeCode(""));
+  ASSERT_FALSE(tc.setTimeCode("12345678"));
+  ASSERT_FALSE(tc.setTimeCode("12.34.56.78"));
+  ASSERT_FALSE(tc.setTimeCode("12:34:56.78"));
+  ASSERT_FALSE(tc.setTimeCode("12;34;56;78"));
+  ASSERT_FALSE(tc.setTimeCode("12:34:56:78"));
+  ASSERT_FALSE(tc.setTimeCode("12:34:56;00"));
+  ASSERT_TRUE(tc.setTimeCode("12:34:56:00"));
+  ASSERT_EQ(tc.toFrames(), 1358880);
+  ASSERT_TRUE(tc.setTimeCode("12:34:56:01"));
+  ASSERT_EQ(tc.toFrames(), 1358881);
+  ASSERT_TRUE(tc.setTimeCode("00:00:00:01"));
+  ASSERT_EQ(tc.toFrames(), 1);
+  ASSERT_TRUE(tc.setTimeCode("00:00:00:00"));
+  ASSERT_EQ(tc.toFrames(), 0);
+  ASSERT_TRUE(tc.setTimeCode("23:59:59:29"));
+  ASSERT_EQ(tc.toFrames(), 2591999);
+}
 
