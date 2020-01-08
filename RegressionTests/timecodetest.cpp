@@ -254,14 +254,40 @@ TEST(TimeCodeTests, TCFromString)
   ASSERT_FALSE(tc.setTimeCode("12:34:56:78"));
   ASSERT_FALSE(tc.setTimeCode("12:34:56;00"));
   ASSERT_TRUE(tc.setTimeCode("12:34:56:00"));
-  ASSERT_EQ(tc.toFrames(), 1358880);
+  ASSERT_EQ(tc.toFrames(), 1'358'880);
   ASSERT_TRUE(tc.setTimeCode("12:34:56:01"));
-  ASSERT_EQ(tc.toFrames(), 1358881);
+  ASSERT_EQ(tc.toFrames(), 1'358'881);
   ASSERT_TRUE(tc.setTimeCode("00:00:00:01"));
   ASSERT_EQ(tc.toFrames(), 1);
   ASSERT_TRUE(tc.setTimeCode("00:00:00:00"));
   ASSERT_EQ(tc.toFrames(), 0);
   ASSERT_TRUE(tc.setTimeCode("23:59:59:29"));
-  ASSERT_EQ(tc.toFrames(), 2591999);
+  ASSERT_EQ(tc.toFrames(), 2'591'999);
 }
 
+TEST(TimeCodeTests, DropTCFromString)
+{
+  Rational time_scale{1, 1000};
+  Rational frame_rate{30000, 1001};
+  TimeCode tc(time_scale, frame_rate);
+  ASSERT_TRUE(tc.setTimeCode("12:34:56:00"));
+  ASSERT_EQ(tc.toFrames(), 1'358'880);
+  ASSERT_TRUE(tc.setTimeCode("12:34:56;00"));
+  ASSERT_EQ(tc.toFrames(), 1'357'522);
+  ASSERT_TRUE(tc.setTimeCode("00:00:00;00"));
+  ASSERT_EQ(tc.toFrames(), 0);
+  ASSERT_TRUE(tc.setTimeCode("00:01:00;02"));
+  ASSERT_EQ(tc.toFrames(), 1'800);
+  ASSERT_TRUE(tc.setTimeCode("00:01:00:00"));
+  ASSERT_EQ(tc.toFrames(), 1'800);
+  ASSERT_TRUE(tc.setTimeCode("00:01:00;00"));
+  ASSERT_EQ(tc.toFrames(), 1'798);
+  ASSERT_TRUE(tc.setTimeCode("00:10:00:00"));
+  ASSERT_EQ(tc.toFrames(), 18'000);
+  ASSERT_TRUE(tc.setTimeCode("00:09:59;29"));
+  ASSERT_EQ(tc.toFrames(), 17'981);
+  ASSERT_TRUE(tc.setTimeCode("00:10:00;00"));
+  ASSERT_EQ(tc.toFrames(), 17'982);
+  ASSERT_TRUE(tc.setTimeCode("00:10:00;01"));
+  ASSERT_EQ(tc.toFrames(), 17'983);
+}

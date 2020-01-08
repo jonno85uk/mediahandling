@@ -31,6 +31,8 @@
 #include <cmath>
 #include <string>
 
+#include "mediahandling.h"
+
 using media_handling::TimeCode;
 
 constexpr auto DROP_FMT = "{:02d}:{:02d}:{:02d}{}{:02d}";
@@ -87,43 +89,63 @@ void TimeCode::setTimestamp(const int64_t time_stamp) noexcept
 bool TimeCode::setTimeCode(const std::string& timecode)
 {
   if (timecode.empty() || (timecode.length() != 11) ) {
+    logMessage(LogType::CRITICAL, "Timecode empty or of incorrect length");
     return false;
   }
   const auto hours = std::stoi(timecode.substr(0, 2));
   if (hours >= 24) {
+    logMessage(LogType::CRITICAL, "Timecode has greater than 23hours");
     return false;
   }
   if (timecode.at(2) != ':') {
+    logMessage(LogType::CRITICAL, "Timecode has incorrect hour/minute separator");
     return false;
   }
   const auto minutes = std::stoi(timecode.substr(3, 2));
   if (minutes >= 60) {
+    logMessage(LogType::CRITICAL, "Timecode has greater than 59 minutes");
     return false;
   }
   if (timecode.at(2) != ':') {
+    logMessage(LogType::CRITICAL, "Timecode has incorrect minute/second separator");
     return false;
   }
   const auto tc_seconds = std::stoi(timecode.substr(6, 2));
   if (tc_seconds >= 60) {
+    logMessage(LogType::CRITICAL, "Timecode has greater than 59 seconds");
     return false;
   }
   if ((timecode.at(8) != ':') && (timecode.at(8) != ';') ) {
+    logMessage(LogType::CRITICAL, "Timecode has incorrect second/frame separator");
     return false;
   }
+
   if ( ( (frame_rate_ != NTSC_30) && (frame_rate_ != NTSC_60)) && (timecode.at(8) == ';') ) {
+    logMessage(LogType::CRITICAL, "Timecode has incorrect second/frame separator for NTSC frame-rate");
     return false;
   }
   const auto tc_frames = std::stoi(timecode.substr(9, 2));
-  if (tc_frames > std::round(frame_rate_.toDouble())) {
-    return false;
-  }
-  const auto whole = std::ceil(frame_rate_.toDouble());
-  if (tc_frames > whole) {
+  if (tc_frames >= std::round(frame_rate_.toDouble())) {
+    logMessage(LogType::CRITICAL, fmt::format("Timecode has greater than {} frames",
+                                              static_cast<int>(std::round(frame_rate_.toDouble())) - 1));
     return false;
   }
 
   const auto seconds = tc_seconds + (hours * SECONDS_IN_HOUR) + (minutes * SECONDS_IN_MIN);
-  time_stamp_ = static_cast<int64_t>(std::ceil(((seconds / time_scale_) + ((tc_frames / frame_rate_) / time_scale_)).toDouble()));
+  if ( (frame_rate_ == NTSC_30) || (frame_rate_ == NTSC_60) )   {
+    if (timecode.at(8) == ';') {
+      time_stamp_ = static_cast<int64_t>(std::ceil(((seconds / time_scale_)
+                                                    + ((tc_frames / frame_rate_) / time_scale_)).toDouble()));
+    } else {
+      const auto full_rate = static_cast<int32_t>(std::ceil(frame_rate_.toDouble()));
+      const auto all_frames = (full_rate * seconds) + tc_frames;
+      const auto scaled = all_frames / frame_rate_ / time_scale_;
+      time_stamp_ = llround(scaled.toDouble());
+    }
+  } else {
+    time_stamp_ = static_cast<int64_t>(std::ceil(((seconds / time_scale_)
+                                                  + ((tc_frames / frame_rate_) / time_scale_)).toDouble()));
+  }
   return true;
 }
 
