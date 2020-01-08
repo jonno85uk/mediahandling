@@ -119,6 +119,7 @@ bool FFMpegSource::initialise()
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
     logMessage(LogType::CRITICAL, "Failed to open file, code=" + err + "fileName=" + p);
+    avformat_free_context(ctx);
     return false;
   }
   format_ctx_.reset(ctx);
@@ -251,26 +252,28 @@ void FFMpegSource::unqueueStream(const int stream_index)
 media_handling::types::AVPacketPtr FFMpegSource::nextPacket(const int stream_index)
 {
   // prevent unnecessary read of demuxed packets
-  auto read_packet = [&] () -> media_handling::types::AVPacketPtr {
-                     while (true) {
-                      AVPacket* pkt = av_packet_alloc();
-                      assert(format_ctx_ && pkt);
-                      const auto ret = av_read_frame(format_ctx_.get(), pkt);
-                      if (ret < 0) {
-                        av_strerror(ret, err.data(), ERR_LEN);
-                        logMessage(LogType::CRITICAL, fmt::format("Failed to read frame: {}", err.data()));
-                        break;
-                      }
-                      auto pkt_sp = std::shared_ptr<AVPacket>(pkt, types::avPacketDeleter);
-                      if (pkt->stream_index == stream_index) {
-                        return pkt_sp;
-                      } else if ( (packeting_.indexes_.count(stream_index) == 1)
-                                  && (packeting_.indexes_.at(stream_index) > 0)) {
-                        // only queue packets for needed streams
-                        packeting_.queue_[pkt->stream_index].push(pkt_sp);
-                      }
-                    }
-                    return {};};
+  auto read_packet = [&] () -> media_handling::types::AVPacketPtr
+  {
+    while (true) {
+      auto pkt = std::shared_ptr<AVPacket>(av_packet_alloc(), types::avPacketDeleter);
+      assert(format_ctx_ && pkt);
+      const auto ret = av_read_frame(format_ctx_.get(), pkt.get());
+      if (ret < 0) {
+        av_strerror(ret, err.data(), ERR_LEN);
+        logMessage(LogType::INFO, fmt::format("Failed to read frame: {}", err.data()));
+        break;
+      }
+      if (pkt->stream_index == stream_index) {
+        return pkt;
+      }
+      if ( (packeting_.indexes_.count(stream_index) == 1)
+           && (packeting_.indexes_.at(stream_index) > 0)) {
+        // only queue packets for needed streams
+        packeting_.queue_[pkt->stream_index].push(pkt);
+      }
+    }
+    return {};
+  };
 
   if (packeting_.queue_.count(stream_index) == 1) {
     if (!packeting_.queue_.at(stream_index).empty()) {

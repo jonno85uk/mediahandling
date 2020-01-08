@@ -29,6 +29,7 @@
 #define FFMPEGSINK_H
 
 #include "imediasink.h"
+#include "ffmpegtypes.h"
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -54,8 +55,7 @@ namespace media_handling::ffmpeg
 
   private:
     bool ready_ {false};
-
-    AVFormatContext* fmt_ctx_ {nullptr};
+    types::AVFormatContextUPtr fmt_ctx_ {nullptr};
 
     bool initialise(const std::string& path);
   };

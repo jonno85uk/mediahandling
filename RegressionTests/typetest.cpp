@@ -28,6 +28,7 @@
 #include <gtest/gtest.h>
 
 #include "types.h"
+#include "rational.h"
 
 using namespace media_handling;
 

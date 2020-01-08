@@ -28,9 +28,9 @@
 #ifndef MEDIAHANDLING_H
 #define MEDIAHANDLING_H
 
-#include "imediasource.h"
 #include <atomic>
-
+#include "imediasource.h"
+#include "rational.h"
 
 
 namespace media_handling

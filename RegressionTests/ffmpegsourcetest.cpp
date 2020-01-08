@@ -28,6 +28,7 @@
 #include <gtest/gtest.h>
 
 #include "ffmpegsource.h"
+#include "mediahandling.h"
 
 using namespace media_handling;
 using namespace media_handling::ffmpeg;

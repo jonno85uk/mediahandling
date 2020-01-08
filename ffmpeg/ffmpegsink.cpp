@@ -78,14 +78,17 @@ bool FFMpegSink::initialise(const std::string& path)
 
   MediaPropertyObject::setProperty(media_handling::MediaProperty::FILENAME, path);
 
-  int ret = avformat_alloc_output_context2(&fmt_ctx_, nullptr, nullptr, path.c_str());
-  if ( (ret < 0) || (fmt_ctx_ == nullptr)) {
+  AVFormatContext* ctx = nullptr;
+  auto ret = avformat_alloc_output_context2(&ctx, nullptr, nullptr, path.c_str());
+  if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     logMessage(LogType::CRITICAL, "Could not create output context, code=" + err);
     return false;
   }
+  assert(ctx);
+  fmt_ctx_.reset(ctx);
 
-  ret = avio_open(&fmt_ctx_->pb,  path.c_str(), AVIO_FLAG_WRITE);
+  ret = avio_open(&fmt_ctx_.get()->pb,  path.c_str(), AVIO_FLAG_WRITE);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     logMessage(LogType::CRITICAL, "Could not open output file, code=" + err);

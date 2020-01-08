@@ -31,6 +31,7 @@
 #include <string>
 
 #include "types.h"
+#include "rational.h"
 
 namespace media_handling
 {

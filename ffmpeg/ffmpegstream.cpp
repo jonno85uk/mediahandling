@@ -215,7 +215,6 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<int3
   const auto src_fmt = property<SampleFormat>(MediaProperty::AUDIO_FORMAT, okay);
   assert(okay);
   const auto av_layout = types::convertChannelLayout(layout);
-  assert(av_layout != 0);
   const auto av_src_fmt = types::convertSampleFormat(src_fmt);
   const auto av_format = types::convertSampleFormat(format);
   SwrContext* ctx = swr_alloc_set_opts(nullptr,
