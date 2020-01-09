@@ -219,7 +219,7 @@ INSTANTIATE_TEST_CASE_P(
                       std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", Codec::DNXHD)
 ));
 
-class ColourInfoTests : public testing::TestWithParam<std::tuple<std::string, ColourPrimaries>>
+class ColourInfoTests : public testing::TestWithParam<std::tuple<std::string, ColourSpace>>
 {
   public:
     std::unique_ptr<FFMpegSource> source_;
@@ -227,22 +227,28 @@ class ColourInfoTests : public testing::TestWithParam<std::tuple<std::string, Co
 
 TEST_P (ColourInfoTests, CheckIsEqual)
 {
-  auto [path, src_prim] = this->GetParam();
+  auto [path, src_space] = this->GetParam();
   source_ = std::make_unique<FFMpegSource>(path);
   auto stream = source_->visualStream(0);
   bool is_valid;
-  auto prim = stream->property<ColourPrimaries>(MediaProperty::COLOUR_PRIMARIES, is_valid);
+  auto space = stream->property<ColourSpace>(MediaProperty::COLOUR_SPACE, is_valid);
   ASSERT_TRUE(is_valid);
-  ASSERT_EQ(prim, src_prim);
+  ASSERT_EQ(space, src_space);
 }
-
 INSTANTIATE_TEST_CASE_P(
       FFMpegStreamTest,
       ColourInfoTests,
-      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4", ColourPrimaries::UNKNOWN),
-                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", ColourPrimaries::UNKNOWN),
-                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", ColourPrimaries::UNKNOWN),
-                      std::make_tuple("./ReferenceMedia/Video/h264/_20111231T141252_5.MP4", ColourPrimaries::BT_709)
+      testing::Values(std::make_tuple("./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4",
+                                      ColourSpace(ColourPrimaries::UNKNOWN, TransferCharacteristics::UNKNOWN, MatrixCoefficients::UNKNOWN, ColourRange::UNKNOWN)),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS",
+                                      ColourSpace(ColourPrimaries::UNKNOWN, TransferCharacteristics::UNKNOWN, MatrixCoefficients::UNKNOWN, ColourRange::UNKNOWN)),
+                      std::make_tuple("./ReferenceMedia/Video/mpeg2/proxympeg2.mov",
+                                      ColourSpace(ColourPrimaries::BT_601, TransferCharacteristics::BT_601, MatrixCoefficients::BT_601_6, ColourRange::TV)),
+                      std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov",
+                                      ColourSpace(ColourPrimaries::UNKNOWN, TransferCharacteristics::UNKNOWN, MatrixCoefficients::BT_709, ColourRange::TV)),
+                      std::make_tuple("./ReferenceMedia/Video/h264/_20111231T141252_5.MP4",
+                                      ColourSpace(ColourPrimaries::BT_709, TransferCharacteristics::BT_709, MatrixCoefficients::BT_709, ColourRange::UNKNOWN))
+
 ));
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadFrame)

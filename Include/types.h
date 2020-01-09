@@ -70,10 +70,7 @@ namespace media_handling
     TIMESTAMP,            // int64_t
     FRAME_RATE,           // Rational
     SEQUENCE_PATTERN,     // std::string
-    COLOUR_SPACE,                       // TODO:
-    COLOUR_PRIMARIES,                   // ColorPrimaries
-    COLOUR_TRANSFER_CHARACTERISTICS,    // TODO:
-    COLOR_MATRIX_COEFFICIENTS           // TODO:
+    COLOUR_SPACE,         // ColourSpace
   };
 
   enum class Codec
@@ -196,6 +193,74 @@ namespace media_handling
     BT_2100,
     SMPTE_240M,
     SMPTE_428
+  };
+
+  enum class TransferCharacteristics
+  {
+    UNKNOWN,
+    ARIB_STD_B67,
+    BT_470M,
+    BT_470BG,
+    BT_601,
+    BT_709,
+    BT_1361,
+    BT_2020_10,
+    BT_2020_12,
+    BT_2100,
+    IEC_61966_2_1,
+    IEC_61966_2_4,
+    LINEAR,
+    SMPTE_240M,
+    SMPTE_428,
+    SMPTE_2084
+  };
+
+  enum class MatrixCoefficients
+  {
+    UNKNOWN,
+    BT_470BG,
+    BT_601_6,
+    BT_709,
+    BT_2020_CL,
+    BT_2020_NCL,
+    BT_2100_0,
+    FCC,
+    IEC_61966_2_1,
+    SMPTE_2085,
+    SMPTE_240M,
+    SMPTE_428,
+  };
+
+  enum class ColourRange
+  {
+    UNKNOWN,
+    TV,
+    FULL
+  };
+
+  struct ColourSpace
+  {
+      ColourSpace() = default;
+      ColourSpace(const ColourPrimaries primaries,
+                  const TransferCharacteristics transfer,
+                  const MatrixCoefficients matrix,
+                  const ColourRange range)
+        : colour_primaries_(primaries),
+          transfer_characteristics_(transfer),
+          matrix_coefficients_(matrix),
+          range_(range)
+      {}
+      bool operator==(const ColourSpace& rhs) const noexcept
+      {
+        return (rhs.colour_primaries_ == colour_primaries_) &&
+            (rhs.transfer_characteristics_ == transfer_characteristics_) &&
+            (rhs.matrix_coefficients_ == matrix_coefficients_) &&
+            (rhs.range_ == range_);
+      }
+      ColourPrimaries         colour_primaries_ {ColourPrimaries::UNKNOWN};
+      TransferCharacteristics transfer_characteristics_ {TransferCharacteristics::UNKNOWN};
+      MatrixCoefficients      matrix_coefficients_ {MatrixCoefficients::UNKNOWN};
+      ColourRange             range_ {ColourRange::UNKNOWN};
   };
 
 }

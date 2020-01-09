@@ -59,6 +59,9 @@ namespace media_handling::types
 
 
   ColourPrimaries convertColourPrimary(const AVColorPrimaries primary) noexcept;
+  TransferCharacteristics convertTransferCharacteristics(const AVColorTransferCharacteristic transfer) noexcept;
+  MatrixCoefficients convertMatrixCoefficients(const AVColorSpace matrix) noexcept;
+  ColourRange convertColourRange(const AVColorRange range) noexcept;
   int convertInterpolationMethod(const InterpolationMethod interpolation) noexcept;
   AVPixelFormat convertPixelFormat(const PixelFormat format) noexcept;
   PixelFormat convertPixelFormat(const AVPixelFormat format) noexcept;

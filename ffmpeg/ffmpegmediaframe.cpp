@@ -39,6 +39,8 @@ extern "C" {
 using media_handling::FFMpegMediaFrame;
 using media_handling::MediaProperty;
 
+namespace mh = media_handling;
+
 constexpr auto ERR_LEN = 1024;
 
 namespace
@@ -191,13 +193,18 @@ void FFMpegMediaFrame::extractVisualProperties()
 
   // PAR
   Rational par {ff_frame_->sample_aspect_ratio.num, ff_frame_->sample_aspect_ratio.den};
-  if (par != Rational{0,1}) {
+  if (par != Rational{0, 1}) {
     this->setProperty(MediaProperty::PIXEL_ASPECT_RATIO, par);
   }
 
   // Colour info
-  const media_handling::ColourPrimaries primary = media_handling::types::convertColourPrimary(ff_frame_->color_primaries);
-  this->setProperty(MediaProperty::COLOUR_PRIMARIES, primary);
+  const mh::ColourPrimaries primary = mh::types::convertColourPrimary(ff_frame_->color_primaries);
+  const mh::TransferCharacteristics transfer = mh::types::convertTransferCharacteristics(ff_frame_->color_trc);
+  const mh::MatrixCoefficients matrix = mh::types::convertMatrixCoefficients(ff_frame_->colorspace);
+  const mh::ColourRange range = mh::types::convertColourRange(ff_frame_->color_range);
+
+  const ColourSpace space {primary, transfer, matrix, range};
+  this->setProperty(MediaProperty::COLOUR_SPACE, space);
 }
 
 
