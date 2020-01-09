@@ -156,6 +156,21 @@ TEST (TypeTest, RationalString)
   ASSERT_EQ(c.toString(), "60000/1001");
 }
 
+TEST (TypeTest, RationalFromDouble)
+{
+  Rational a(0.1);
+  ASSERT_EQ(a, Rational(1, 10));
+  Rational b(100.00031);
+  ASSERT_EQ(b, Rational(10000031, 100000));
+  Rational c(29.97);
+  ASSERT_EQ(c, Rational(2997, 100));
+  Rational d(60'000, 1001);
+  double e = d;
+  Rational f(e);
+  double g = f;
+  ASSERT_FLOAT_EQ(g, e);
+}
+
 //TEST (TypeTest, RationalGCD)
 //{
 //  Rational a {10,20};

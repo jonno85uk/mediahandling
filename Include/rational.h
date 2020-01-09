@@ -35,7 +35,9 @@
 #include <stdexcept>
 #include <ostream>
 #include <fmt/core.h>
+#include <math.h>
 
+constexpr auto DOUBLE_FUDGER = 1'000'000;
 
 namespace media_handling
 {
@@ -50,6 +52,30 @@ namespace media_handling
       {
 
       }
+      explicit Rational(const int32_t num)
+        : numerator_(num),
+          denominator_(1LL)
+      {
+
+      }
+      explicit Rational(const double num)
+        : Rational((llround(num * DOUBLE_FUDGER)),DOUBLE_FUDGER)
+      {
+        // FIXME: this is poor. do this properly
+      }
+
+      Rational(const int64_t num, const int64_t denom)
+        : numerator_(num), denominator_(denom)
+      {
+        if (denom == 0LL) {
+          throw std::runtime_error("Denominator of Rational is zero");
+        }
+        const auto div = gcd();
+        if (div > 1LL) {
+          numerator_ /= div;
+          denominator_ /= div;
+        }
+      }
 
       Rational& operator=(const Rational& rhs) noexcept
       {
@@ -58,6 +84,30 @@ namespace media_handling
           denominator_ = rhs.denominator_;
         }
         return *this;
+      }
+      template<typename T>
+      Rational& operator=(const T value) noexcept
+      {
+        const auto tmp = Rational(value);
+        numerator_ = tmp.numerator_;
+        denominator_ = tmp.denominator_;
+        return *this;
+      }
+
+    public:
+      operator double() const noexcept
+      {
+        return toDouble();
+      }
+
+      operator int32_t() const noexcept
+      {
+        return static_cast<int32_t>(lround(toDouble()));
+      }
+
+      operator int64_t() const noexcept
+      {
+        return static_cast<int64_t>(llround(toDouble()));
       }
 
       Rational& operator*=(const Rational& rhs) noexcept
@@ -71,7 +121,8 @@ namespace media_handling
         return *this;
       }
 
-      Rational& operator*=(const int32_t rhs) noexcept
+      template<typename T>
+      Rational& operator*=(const T rhs) noexcept
       {
         return operator*=(Rational(rhs));
       }
@@ -87,7 +138,8 @@ namespace media_handling
         return *this;
       }
 
-      Rational& operator/=(const int32_t rhs) noexcept
+      template<typename T>
+      Rational& operator/=(const T rhs) noexcept
       {
         return operator/=(Rational(rhs));
       }
@@ -112,22 +164,11 @@ namespace media_handling
       {
         return !operator==(rhs);
       }
-      Rational(const int64_t num, const int64_t denom)
-        : numerator_(num), denominator_(denom)
-      {
-        if (denom == 0LL) {
-          throw std::runtime_error("Denominator of Rational is zero");
-        }
-        const auto div = gcd();
-        if (div > 1LL) {
-          numerator_ /= div;
-          denominator_ /= div;
-        }
-      }
+
       Rational invert() const noexcept
       {
-        if (numerator_ == 0) {
-          return Rational(0LL);
+        if (numerator_ == 0LL) {
+          return Rational(0);
         }
         return {denominator_, numerator_};
       }
@@ -155,25 +196,30 @@ namespace media_handling
       {
         return {lhs.numerator_ * rhs.numerator_, lhs.denominator_ * rhs.denominator_};
       }
-      friend Rational operator*(const Rational& lhs, const int32_t value) noexcept
+
+      template<typename T>
+      friend Rational operator*(const Rational& lhs, const T value) noexcept
       {
-        return {lhs.numerator_ * value, lhs.denominator_};
+        return lhs * Rational(value);
       }
-      friend Rational operator*(const int32_t value, const Rational& rhs) noexcept
+      template<typename T>
+      friend Rational operator*(const T value, const Rational& rhs) noexcept
       {
-        return rhs * value;
+        return rhs * Rational(value);
       }
       friend Rational operator/(const Rational& lhs, const Rational& rhs) noexcept
       {
         return lhs * rhs.invert();
       }
-      friend Rational operator/(const Rational& lhs, const int32_t value) noexcept
+      template<typename T>
+      friend Rational operator/(const Rational& lhs, const T value) noexcept
       {
-        return lhs * Rational(1LL, value);
+        return lhs / Rational(value);
       }
-      friend Rational operator/(const int32_t value, const Rational& rhs) noexcept
+      template<typename T>
+      friend Rational operator/(const T value, const Rational& rhs) noexcept
       {
-        return Rational(value) * rhs.invert();
+        return Rational(value) / rhs;
       }
       friend Rational operator+(const Rational& lhs, const Rational& rhs) noexcept
       {
@@ -181,11 +227,13 @@ namespace media_handling
         const auto d = lhs.denominator_ * rhs.denominator_;
         return {n, d};
       }
-      friend Rational operator+(const Rational& lhs, const int32_t value) noexcept
+      template<typename T>
+      friend Rational operator+(const Rational& lhs, const T value) noexcept
       {
         return lhs + Rational(value);
       }
-      friend Rational operator+(const int32_t value, const Rational& rhs) noexcept
+      template<typename T>
+      friend Rational operator+(const T value, const Rational& rhs) noexcept
       {
         return Rational(value) + rhs;
       }
@@ -195,27 +243,33 @@ namespace media_handling
         const auto d = lhs.denominator_ * rhs.denominator_;
         return {n, d};
       }
-      friend Rational operator-(const Rational& lhs, const int32_t value) noexcept
+      template<typename T>
+      friend Rational operator-(const Rational& lhs, const T value) noexcept
       {
         return lhs - Rational(value);
       }
-      friend Rational operator-(const int32_t value, const Rational& rhs) noexcept
+      template<typename T>
+      friend Rational operator-(const T value, const Rational& rhs) noexcept
       {
         return Rational(value) - rhs;
       }
-      friend bool operator>(const Rational& lhs, const int32_t value) noexcept
+      template<typename T>
+      friend bool operator>(const Rational& lhs, const T value) noexcept
       {
         return lhs > Rational(value);
       }
-      friend bool operator<(const Rational& lhs, const int32_t value) noexcept
+      template<typename T>
+      friend bool operator<(const Rational& lhs, const T value) noexcept
       {
         return lhs < Rational(value);
       }
-      friend bool operator==(const Rational& lhs, const int32_t value) noexcept
+      template<typename T>
+      friend bool operator==(const Rational& lhs, const T value) noexcept
       {
         return lhs == Rational(value);
       }
-      friend bool operator!=(const Rational& lhs, const int32_t value) noexcept
+      template<typename T>
+      friend bool operator!=(const Rational& lhs, const T value) noexcept
       {
         return lhs != Rational(value);
       }
