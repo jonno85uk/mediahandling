@@ -62,6 +62,12 @@ namespace media_handling
        */
       int64_t toFrames() const;
       /**
+       * @brief       Set the timecode based on amount of frames
+       * @param count >= 0
+       * @return      true == successful
+       */
+      bool setFrames(const int64_t count);
+      /**
        * @brief             Set the time in units of time-scale
        * @param time_stamp  Value to set
        */

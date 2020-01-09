@@ -291,3 +291,33 @@ TEST(TimeCodeTests, DropTCFromString)
   ASSERT_TRUE(tc.setTimeCode("00:10:00;01"));
   ASSERT_EQ(tc.toFrames(), 17'983);
 }
+
+TEST(TimeCodeTests, TCFromFrames)
+{
+  Rational time_scale{1, 1000};
+  Rational frame_rate{30, 1};
+  TimeCode tc(time_scale, frame_rate);
+  ASSERT_FALSE(tc.setFrames(-1'358'880));
+  ASSERT_TRUE(tc.setFrames(1'358'880));
+  ASSERT_EQ(tc.toString(),"12:34:56:00");
+  ASSERT_TRUE(tc.setFrames(0));
+  ASSERT_EQ(tc.timestamp(), 0);
+}
+
+TEST(TimeCodeTests, DropTCFromFrames)
+{
+  Rational time_scale{1, 1000};
+  Rational frame_rate{30'000, 1001};
+  TimeCode tc(time_scale, frame_rate);
+  ASSERT_FALSE(tc.setFrames(-1'357'522));
+  ASSERT_TRUE(tc.setFrames(1'357'522));
+  ASSERT_EQ(tc.toString(),"12:34:56;00");
+  ASSERT_TRUE(tc.setFrames(1'800));
+  ASSERT_EQ(tc.toString(),"00:01:00;02");
+  ASSERT_TRUE(tc.setFrames(1'799));
+  ASSERT_EQ(tc.toString(),"00:00:59;29");
+  ASSERT_TRUE(tc.setFrames(17'982));
+  ASSERT_EQ(tc.toString(),"00:10:00;00");
+  ASSERT_TRUE(tc.setFrames(0));
+  ASSERT_EQ(tc.timestamp(), 0);
+}

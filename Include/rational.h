@@ -38,6 +38,7 @@
 
 namespace media_handling
 {
+  //TODO: perhaps template the types of numerator + denominator
   class Rational
   {
     public:

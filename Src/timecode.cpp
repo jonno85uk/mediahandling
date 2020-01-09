@@ -81,6 +81,17 @@ int64_t TimeCode::toFrames() const
   return floor(((time_stamp_ * time_scale_) * frame_rate_).toDouble());
 }
 
+
+bool TimeCode::setFrames(const int64_t count)
+{
+  if (count < 0) {
+    return false;
+  }
+  // TODO: check for >23:59::59:ff
+  time_stamp_ = static_cast<int64_t>(std::ceil((count / frame_rate_ / time_scale_).toDouble()));
+  return true;
+}
+
 void TimeCode::setTimestamp(const int64_t time_stamp) noexcept
 {
   time_stamp_ = time_stamp;
