@@ -135,6 +135,27 @@ TEST (TypeTest, RationalDivision)
 
 }
 
+TEST (TypeTest, RationalIntComp)
+{
+  Rational a {1, 2};
+  ASSERT_NE(a, 1);
+  Rational b {30, 10};
+  ASSERT_EQ(b, 3);
+  ASSERT_TRUE(a < 3);
+  ASSERT_TRUE(b < 4);
+  ASSERT_TRUE(b > 2);
+}
+
+TEST (TypeTest, RationalString)
+{
+  Rational a {1, 2};
+  ASSERT_EQ(a.toString(), "1/2");
+  Rational b {30, 10};
+  ASSERT_EQ(b.toString(), "3");
+  Rational c {60'000, 1'001};
+  ASSERT_EQ(c.toString(), "60000/1001");
+}
+
 //TEST (TypeTest, RationalGCD)
 //{
 //  Rational a {10,20};

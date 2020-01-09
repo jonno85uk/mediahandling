@@ -34,6 +34,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <ostream>
+#include <fmt/core.h>
 
 
 namespace media_handling
@@ -43,6 +44,12 @@ namespace media_handling
   {
     public:
       Rational() = default;
+      explicit Rational(const int64_t num)
+        : numerator_(num),
+          denominator_(1LL)
+      {
+
+      }
 
       Rational& operator=(const Rational& rhs) noexcept
       {
@@ -57,7 +64,7 @@ namespace media_handling
       {
         *this = *this * rhs;
         const auto div = gcd();
-        if (div > 1) {
+        if (div > 1LL) {
           numerator_ /= div;
           denominator_ /= div;
         }
@@ -66,7 +73,7 @@ namespace media_handling
 
       Rational& operator*=(const int32_t rhs) noexcept
       {
-        return operator*=(Rational(rhs, 1));
+        return operator*=(Rational(rhs));
       }
 
       Rational& operator/=(const Rational& rhs) noexcept
@@ -82,7 +89,7 @@ namespace media_handling
 
       Rational& operator/=(const int32_t rhs) noexcept
       {
-        return operator/=(Rational(rhs, 1));
+        return operator/=(Rational(rhs));
       }
 
       bool operator>(const Rational& rhs) const noexcept
@@ -108,11 +115,11 @@ namespace media_handling
       Rational(const int64_t num, const int64_t denom)
         : numerator_(num), denominator_(denom)
       {
-        if (denom == 0) {
+        if (denom == 0LL) {
           throw std::runtime_error("Denominator of Rational is zero");
         }
         const auto div = gcd();
-        if (div > 1) {
+        if (div > 1LL) {
           numerator_ /= div;
           denominator_ /= div;
         }
@@ -120,9 +127,16 @@ namespace media_handling
       Rational invert() const noexcept
       {
         if (numerator_ == 0) {
-          return {0, 1};
+          return Rational(0LL);
         }
         return {denominator_, numerator_};
+      }
+      std::string toString()
+      {
+        if (denominator_ == 1) {
+          return std::to_string(numerator_);
+        }
+        return fmt::format("{}/{}", numerator_, denominator_);
       }
       constexpr int64_t numerator() const noexcept {return numerator_;}
       constexpr int64_t denominator() const noexcept {return denominator_;}
@@ -155,11 +169,11 @@ namespace media_handling
       }
       friend Rational operator/(const Rational& lhs, const int32_t value) noexcept
       {
-        return lhs * Rational(1, value);
+        return lhs * Rational(1LL, value);
       }
       friend Rational operator/(const int32_t value, const Rational& rhs) noexcept
       {
-        return Rational(value, 1) * rhs.invert();
+        return Rational(value) * rhs.invert();
       }
       friend Rational operator+(const Rational& lhs, const Rational& rhs) noexcept
       {
@@ -169,11 +183,11 @@ namespace media_handling
       }
       friend Rational operator+(const Rational& lhs, const int32_t value) noexcept
       {
-        return lhs + Rational(value, 1);
+        return lhs + Rational(value);
       }
       friend Rational operator+(const int32_t value, const Rational& rhs) noexcept
       {
-        return Rational(value, 1) + rhs;
+        return Rational(value) + rhs;
       }
       friend Rational operator-(const Rational& lhs, const Rational& rhs) noexcept
       {
@@ -183,11 +197,27 @@ namespace media_handling
       }
       friend Rational operator-(const Rational& lhs, const int32_t value) noexcept
       {
-        return lhs - Rational(value, 1);
+        return lhs - Rational(value);
       }
       friend Rational operator-(const int32_t value, const Rational& rhs) noexcept
       {
-        return Rational(value, 1) - rhs;
+        return Rational(value) - rhs;
+      }
+      friend bool operator>(const Rational& lhs, const int32_t value) noexcept
+      {
+        return lhs > Rational(value);
+      }
+      friend bool operator<(const Rational& lhs, const int32_t value) noexcept
+      {
+        return lhs < Rational(value);
+      }
+      friend bool operator==(const Rational& lhs, const int32_t value) noexcept
+      {
+        return lhs == Rational(value);
+      }
+      friend bool operator!=(const Rational& lhs, const int32_t value) noexcept
+      {
+        return lhs != Rational(value);
       }
 
     private:
