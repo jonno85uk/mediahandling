@@ -26,11 +26,53 @@
 */
 
 #include "ffmpegtypes.h"
+#include <map>
 
 namespace mh = media_handling;
 
 using media_handling::InterpolationMethod;
 
+namespace
+{
+  const std::map<mh::Codec, AVCodecID> CODEC_MAP
+  {
+    {mh::Codec::AAC, AV_CODEC_ID_AAC},
+    {mh::Codec::DNXHD, AV_CODEC_ID_DNXHD},
+    {mh::Codec::DPX, AV_CODEC_ID_DPX},
+    {mh::Codec::H264, AV_CODEC_ID_H264},
+    {mh::Codec::JPEG2000, AV_CODEC_ID_JPEG2000},
+    {mh::Codec::JPEG, AV_CODEC_ID_MJPEG},
+    {mh::Codec::MPEG2_VIDEO, AV_CODEC_ID_MPEG2VIDEO},
+    {mh::Codec::PNG, AV_CODEC_ID_PNG},
+    {mh::Codec::RAW, AV_CODEC_ID_RAWVIDEO},
+    {mh::Codec::TIFF, AV_CODEC_ID_TIFF}
+  };
+
+  const std::map<mh::ColourPrimaries, AVColorPrimaries> PRIMARIES_MAP
+  {
+
+  };
+}
+
+template <typename T_K, typename T_V>
+T_K convertFromFFMpegType(const T_V ff_key, const std::map<T_K, T_V>& mapping, const T_K default_value)
+{
+  for (const auto& [key, value] : mapping) {
+    if (value == ff_key) {
+      return key;
+    }
+  }
+  return default_value;
+}
+
+template <typename T_K, typename T_V>
+T_V convertToFFMpegType(const T_K mh_key, const std::map<T_K, T_V>& mapping, const T_V default_value)
+{
+  if (mapping.count(mh_key) == 1) {
+    return mapping.at(mh_key);
+  }
+  return default_value;
+}
 
 void media_handling::types::avFormatContextDeleter(AVFormatContext* context)
 {
@@ -57,6 +99,21 @@ void media_handling::types::swrContextDeleter(SwrContext* context)
   swr_free(&context);
 }
 
+
+void media_handling::types::avCodecContextDeleter(AVCodecContext* context)
+{
+  avcodec_close(context);
+  avcodec_free_context(&context);
+}
+void media_handling::types::avCodecDeleter(AVCodec* codec)
+{
+  // None
+}
+
+void media_handling::types::avStreamDeleter(AVStream* stream)
+{
+  // None. Should be freed by avformat
+}
 
 media_handling::ColourPrimaries media_handling::types::convertColourPrimary(const AVColorPrimaries primary) noexcept
 {
@@ -143,15 +200,15 @@ mh::MatrixCoefficients mh::types::convertMatrixCoefficients(const AVColorSpace m
       return MatrixCoefficients::BT_601_6;
     case AVCOL_SPC_SMPTE240M:
       return MatrixCoefficients::SMPTE_240M;
-//  AVCOL_SPC_YCGCO       = 8,  ///< Used by Dirac / VC-2 and H.264 FRext, see ITU-T SG16
+      //  AVCOL_SPC_YCGCO       = 8,  ///< Used by Dirac / VC-2 and H.264 FRext, see ITU-T SG16
     case AVCOL_SPC_BT2020_NCL:
       return MatrixCoefficients::BT_2020_NCL;
     case AVCOL_SPC_BT2020_CL:
       return MatrixCoefficients::BT_2020_CL;
     case AVCOL_SPC_SMPTE2085:
       return MatrixCoefficients::SMPTE_2085;
-//  AVCOL_SPC_CHROMA_DERIVED_NCL = 12, ///< Chromaticity-derived non-constant luminance system
-//  AVCOL_SPC_CHROMA_DERIVED_CL = 13, ///< Chromaticity-derived constant luminance system
+      //  AVCOL_SPC_CHROMA_DERIVED_NCL = 12, ///< Chromaticity-derived non-constant luminance system
+      //  AVCOL_SPC_CHROMA_DERIVED_CL = 13, ///< Chromaticity-derived constant luminance system
     case AVCOL_SPC_ICTCP:
       return MatrixCoefficients::BT_2100_0;
     default:
@@ -473,49 +530,13 @@ uint64_t media_handling::types::convertChannelLayout(const ChannelLayout layout)
 
 media_handling::Codec media_handling::types::convertCodecID(const AVCodecID id) noexcept
 {
-  media_handling::Codec cdc = media_handling::Codec::UNKNOWN;
+  return convertFromFFMpegType(id, CODEC_MAP, Codec::UNKNOWN);
+}
 
-  switch (id)
-  {
-    case AV_CODEC_ID_AAC:
-      cdc = media_handling::Codec::AAC;
-      break;
-    case AV_CODEC_ID_DNXHD:
-      cdc = media_handling::Codec::DNXHD;
-      break;
-    case AV_CODEC_ID_DPX:
-      cdc = media_handling::Codec::DPX;
-      break;
-    case AV_CODEC_ID_H264:
-      cdc = media_handling::Codec::H264;
-      break;
-    case AV_CODEC_ID_JPEG2000:
-      cdc = media_handling::Codec::JPEG2000;
-      break;
-    case AV_CODEC_ID_MJPEG:
-      cdc = media_handling::Codec::JPEG;
-      break;
-    case AV_CODEC_ID_MPEG2VIDEO:
-      cdc = media_handling::Codec::MPEG2_VIDEO;
-      break;
-    case AV_CODEC_ID_MPEG4:
-      cdc = media_handling::Codec::MPEG4;
-      break;
-    case AV_CODEC_ID_PNG:
-      cdc = media_handling::Codec::PNG;
-      break;
-    case AV_CODEC_ID_RAWVIDEO:
-      cdc = media_handling::Codec::RAW;
-      break;
-    case AV_CODEC_ID_TIFF:
-      cdc = media_handling::Codec::TIFF;
-      break;
-    default:
-      cdc = media_handling::Codec::UNKNOWN;
-      break;
-  }
 
-  return cdc;
+AVCodecID mh::types::convertCodecID(const Codec id) noexcept
+{
+  return convertToFFMpegType(id, CODEC_MAP, AV_CODEC_ID_NONE);
 }
 
 media_handling::SampleFormat media_handling::types::convert(enum AVSampleFormat av_format) noexcept
@@ -568,3 +589,4 @@ media_handling::SampleFormat media_handling::types::convert(enum AVSampleFormat 
   }
   return format;
 }
+

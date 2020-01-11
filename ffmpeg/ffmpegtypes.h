@@ -46,6 +46,9 @@ namespace media_handling::types
   void avframeDeleter(AVFrame* frame);
   void swsContextDeleter(SwsContext* context);
   void swrContextDeleter(SwrContext* context);
+  void avCodecContextDeleter(AVCodecContext* context);
+  void avCodecDeleter(AVCodec* codec);
+  void avStreamDeleter(AVStream* stream);
 
   template <auto fn>
   using deleter_from_fn = std::integral_constant<decltype(fn), fn>;
@@ -56,6 +59,8 @@ namespace media_handling::types
   using SWRContextPtr = std::shared_ptr<SwrContext>;
   using AVPacketPtr = std::shared_ptr<AVPacket>;
   using AVFormatContextUPtr = std::unique_ptr<AVFormatContext, deleter_from_fn<avFormatContextDeleter>>;
+  using AVCodecContextUPtr = std::unique_ptr<AVCodecContext, deleter_from_fn<avCodecContextDeleter>>;
+  using AVStreamUPtr = std::unique_ptr<AVStream, deleter_from_fn<avStreamDeleter>>;
 
 
   ColourPrimaries convertColourPrimary(const AVColorPrimaries primary) noexcept;
@@ -70,6 +75,7 @@ namespace media_handling::types
   ChannelLayout convertChannelLayout(const uint64_t layout) noexcept;
   uint64_t convertChannelLayout(const ChannelLayout layout) noexcept;
   Codec convertCodecID(const AVCodecID id) noexcept;
+  AVCodecID convertCodecID(const Codec id) noexcept;
   /**
    * @brief Convert from FFMpeg type to media_handling type
    * @param format FFMpeg sample format
