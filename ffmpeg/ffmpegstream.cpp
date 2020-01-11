@@ -104,10 +104,19 @@ FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
   extractProperties(*stream, *codec_ctx_);
 }
 
+
+FFMpegStream::FFMpegStream(FFMpegSink* sink, AVStream* const stream)
+  : sink_(sink),
+    stream_(stream)
+{
+
+}
+
 FFMpegStream::~FFMpegStream()
 {
-  assert(parent_);
-  parent_->unqueueStream(source_index_);
+  if (parent_!= nullptr) {
+    parent_->unqueueStream(source_index_);
+  }
   stream_ = nullptr; //TODO: check this
   av_packet_free(&pkt_);
   avcodec_close(codec_ctx_);

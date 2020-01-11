@@ -30,6 +30,7 @@
 
 #include <any>
 #include <memory>
+#include <vector>
 
 #include "types.h"
 #include "imediastream.h"
@@ -40,6 +41,8 @@ namespace media_handling
     {
     public:
         ~IMediaSink() override = default;
+
+        virtual bool initialise() = 0;
 
         /**
          * @brief         Encode a frame-sample with the sink's configured codec
@@ -54,12 +57,43 @@ namespace media_handling
          * @return  true==success
          */
         virtual bool setInputFormat(const PixelFormat format) = 0;
+        /**
+         * @brief   Set the sample format that the sink should expect
+         * @param   format  The SampleFormat
+         * @return  true==success
+         */
+        virtual bool setInputFormat(const SampleFormat format) = 0;
 
         /**
          * @brief     Identify if sink is correctly setup for encoding
          * @return    true==is ready
          */
         virtual bool isReady() = 0;
+        /**
+         * @brief         Retrieve an audio stream
+         * @param index   Index from the available audio-streams (not index of all streams)
+         * @return        Stream on success or nullptr
+         */
+        virtual MediaStreamPtr audioStream(const size_t index) = 0;
+
+        /**
+         * @brief   Get all the audio streams
+         * @return  list of audio streams
+         */
+        virtual std::vector<MediaStreamPtr> audioStreams() = 0;
+
+        /**
+         * @brief         Obtain a visual (video/image) stream
+         * @param index   Index from the available visual-streams (not index of all streams)
+         * @return        Stream on success or nullptr
+         */
+        virtual MediaStreamPtr visualStream(const size_t index) = 0;
+
+        /**
+         * @brief   Get all the visual streams
+         * @return  list of visual streams
+         */
+        virtual std::vector<MediaStreamPtr> visualStreams() = 0;
     };
 }
 

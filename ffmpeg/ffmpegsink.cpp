@@ -30,6 +30,7 @@
 #include <filesystem>
 
 #include "mediahandling.h"
+#include "ffmpegstream.h"
 
 using media_handling::ffmpeg::FFMpegSink;
 
@@ -40,10 +41,13 @@ namespace
   std::string err(ERR_LEN, '\0');
 }
 
-FFMpegSink::FFMpegSink(const std::string& file_path)
+FFMpegSink::FFMpegSink(std::string file_path, std::vector<Codec> video_codecs, std::vector<Codec> audio_codecs)
+  : file_path_(std::move(file_path)),
+    codecs_({std::move(video_codecs), std::move(audio_codecs)})
 {
-  if (!initialise(file_path)) {
-    std::throw_with_nested(std::runtime_error("FFMpegSink::initialise failed, filepath=" + file_path) );
+  std::filesystem::path tmp_path(file_path_);
+  if (file_path_.empty() || !std::filesystem::exists(tmp_path.parent_path())) {
+    throw std::runtime_error("FFMpegSink::initialise failed, filepath=" + file_path_);
   }
 }
 
@@ -52,9 +56,76 @@ FFMpegSink::~FFMpegSink()
 
 }
 
+
+bool FFMpegSink::initialise()
+{
+  MediaPropertyObject::setProperty(media_handling::MediaProperty::FILENAME, file_path_);
+
+  // Configure container
+  AVFormatContext* ctx = nullptr;
+  auto ret = avformat_alloc_output_context2(&ctx, nullptr, nullptr, file_path_.c_str());
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    logMessage(LogType::CRITICAL, "Could not create output context, code=" + err);
+    return false;
+  }
+  assert(ctx);
+  fmt_ctx_.reset(ctx);
+
+  ret = avio_open(&fmt_ctx_.get()->pb,  file_path_.c_str(), AVIO_FLAG_WRITE);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    logMessage(LogType::CRITICAL, "Could not open output file, code=" + err);
+    return false;
+  }
+
+  // Configure Streams
+  for (const auto& codec : codecs_.video_) {
+    const auto ffv = types::convertCodecID(codec);
+    if (AVCodec* av_codec = avcodec_find_encoder(ffv)) {
+      if (av_codec->type != AVMEDIA_TYPE_VIDEO) {
+        logMessage(LogType::CRITICAL, "An audio codec chosen for video encoding");
+        return false;
+      } else {
+        contexts_.video_.emplace_back(std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec),
+                                                                      types::avCodecContextDeleter));
+        AVStream* stream = avformat_new_stream(fmt_ctx_.get(), av_codec); // Freed by FormatContext
+        streams_.video_.emplace_back(std::make_shared<FFMpegStream>(this, stream));
+      }
+    }
+  }
+
+  for (const auto& codec : codecs_.audio_) {
+    const auto ffa = types::convertCodecID(codec);
+    if (AVCodec* av_codec = avcodec_find_encoder(ffa)) {
+      if (av_codec->type != AVMEDIA_TYPE_AUDIO) {
+        logMessage(LogType::CRITICAL, "An audio codec chosen for video encoding");
+        return false;
+      } else {
+        contexts_.audio_.emplace_back(std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec),
+                                                                      types::avCodecContextDeleter));
+        AVStream* stream = avformat_new_stream(fmt_ctx_.get(), av_codec); // Freed by FormatContext
+        streams_.audio_.emplace_back(std::make_shared<FFMpegStream>(this, stream));
+      }
+    }
+  }
+
+  if (streams_.audio_.empty() && streams_.video_.empty()) {
+    logMessage(LogType::CRITICAL, "Failed to setup any streams");
+    return false;
+  }
+  return true;
+}
+
 bool FFMpegSink::setInputFormat(const PixelFormat format)
 {
 	return false;
+}
+
+
+bool FFMpegSink::setInputFormat(const SampleFormat format)
+{
+  return false;
 }
 
 bool FFMpegSink::encode(std::shared_ptr<MediaFramePtr> sample)
@@ -73,32 +144,36 @@ bool FFMpegSink::isReady()
   return ready_;
 }
 
-
-bool FFMpegSink::initialise(const std::string& path)
+media_handling::MediaStreamPtr FFMpegSink::audioStream(const size_t index)
 {
-  std::filesystem::path tmp_path(path);
-  if (path.empty() || !std::filesystem::exists(tmp_path.parent_path())) {
-    return false;
+  if (streams_.audio_.empty()) {
+    return {};
   }
-
-  MediaPropertyObject::setProperty(media_handling::MediaProperty::FILENAME, path);
-
-  AVFormatContext* ctx = nullptr;
-  auto ret = avformat_alloc_output_context2(&ctx, nullptr, nullptr, path.c_str());
-  if (ret < 0) {
-    av_strerror(ret, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, "Could not create output context, code=" + err);
-    return false;
+  if ( (streams_.audio_.size() - 1) >= index) {
+    return streams_.audio_.at(index);
   }
-  assert(ctx);
-  fmt_ctx_.reset(ctx);
-
-  ret = avio_open(&fmt_ctx_.get()->pb,  path.c_str(), AVIO_FLAG_WRITE);
-  if (ret < 0) {
-    av_strerror(ret, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, "Could not open output file, code=" + err);
-    return false;
-  }
-
-  return true;
+  return {};
 }
+
+std::vector<media_handling::MediaStreamPtr> FFMpegSink::audioStreams()
+{
+  return streams_.audio_;
+}
+
+media_handling::MediaStreamPtr FFMpegSink::visualStream(const size_t index)
+{
+  if (streams_.video_.empty()) {
+    return {};
+  }
+  if ( (streams_.video_.size() - 1) >= index) {
+    return streams_.video_.at(index);
+  }
+  return {};
+}
+
+std::vector<media_handling::MediaStreamPtr> FFMpegSink::visualStreams()
+{
+  return streams_.video_;
+}
+
+

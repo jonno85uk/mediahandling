@@ -32,6 +32,7 @@
 #include <optional>
 
 #include "ffmpegmediaframe.h"
+#include "ffmpegsink.h"
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -50,6 +51,7 @@ namespace media_handling::ffmpeg
     public:
       FFMpegStream() = default;
       FFMpegStream(FFMpegSource* parent, AVStream* const stream);
+      FFMpegStream(FFMpegSink* sink, AVStream* const stream);
       ~FFMpegStream() override;
 
       /* IMediaStream override*/
@@ -64,7 +66,8 @@ namespace media_handling::ffmpeg
       bool setOutputFormat(const SampleFormat format, std::optional<int32_t> rate = {}) final;
 
     private:
-      FFMpegSource* parent_;
+      FFMpegSource* parent_ {nullptr};
+      FFMpegSink* sink_ {nullptr};
       AVStream* stream_ {nullptr};
       AVCodec* codec_ {nullptr};
       AVCodecContext* codec_ctx_ {nullptr};

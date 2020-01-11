@@ -42,9 +42,9 @@ using namespace media_handling::ffmpeg;
 TEST (FFMpegStreamTest, NullInst)
 {
   AVStream strm;
-  EXPECT_THROW(FFMpegStream(nullptr, nullptr), std::exception);
-  EXPECT_THROW(FFMpegStream(nullptr, nullptr), std::exception);
-  EXPECT_THROW(FFMpegStream(nullptr, &strm), std::exception);
+  EXPECT_THROW(FFMpegStream((FFMpegSource*)nullptr, nullptr), std::exception);
+  EXPECT_THROW(FFMpegStream((FFMpegSource*)nullptr, nullptr), std::exception);
+  EXPECT_THROW(FFMpegStream((FFMpegSource*)nullptr, &strm), std::exception);
 }
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStream)

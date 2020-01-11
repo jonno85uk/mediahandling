@@ -28,7 +28,10 @@
 #ifndef FFMPEGSINK_H
 #define FFMPEGSINK_H
 
+#include <vector>
+
 #include "imediasink.h"
+#include "imediastream.h"
 #include "ffmpegtypes.h"
 
 extern "C" {
@@ -39,26 +42,44 @@ namespace media_handling::ffmpeg
 {
   class FFMpegSink : public IMediaSink
   {
-  public:
-    FFMpegSink() = delete;
-    /**
-     * @brief FFMpegSink
-     * @param file_path   Absolute or relative path to file to be created
-     */
-    explicit FFMpegSink(const std::string& file_path);
+    public:
+      FFMpegSink() = delete;
+      // TODO: setup a codec per stream. Currently max of 2 streams, 1 per type
+      /**
+       * @brief FFMpegSink
+       * @param file_path   Absolute or relative path to file to be created
+       */
+      FFMpegSink(std::string file_path, std::vector<Codec> video_codecs, std::vector<Codec> audio_codecs);
 
-    ~FFMpegSink() override;
+    public: // IMediaSink Overrides
+      ~FFMpegSink() override;
+      bool initialise() override;
+      bool setInputFormat(const PixelFormat format) override;
+      bool setInputFormat(const SampleFormat format) override;
+      bool encode(std::shared_ptr<MediaFramePtr> sample) override;
+      bool isReady() override;
+      MediaStreamPtr audioStream(const size_t index) override;
+      std::vector<MediaStreamPtr> audioStreams() override;
+      MediaStreamPtr visualStream(const size_t index) override;
+      std::vector<MediaStreamPtr> visualStreams() override;
 
-	bool setInputFormat(const PixelFormat format) override;
-    bool encode(std::shared_ptr<MediaFramePtr> sample) override;
+    private:
+      std::string file_path_;
+      struct {
+          std::vector<Codec> video_;
+          std::vector<Codec> audio_;
+      } codecs_;
+      struct {
+          std::vector<std::shared_ptr<AVCodecContext>> video_;
+          std::vector<std::shared_ptr<AVCodecContext>> audio_;
+      } contexts_;
+      struct {
+          std::vector<MediaStreamPtr> video_;
+          std::vector<MediaStreamPtr> audio_;
+      } streams_;
+      types::AVFormatContextUPtr fmt_ctx_ {nullptr};
+      bool ready_ {false};
 
-    bool isReady() override;
-
-  private:
-    bool ready_ {false};
-    types::AVFormatContextUPtr fmt_ctx_ {nullptr};
-
-    bool initialise(const std::string& path);
   };
 }
 

@@ -36,10 +36,62 @@ using namespace media_handling::ffmpeg;
 
 TEST (FFMpegSinkTest, AllocateNonExistent)
 {
-  EXPECT_ANY_THROW(FFMpegSink thing("null"));
+  EXPECT_ANY_THROW(FFMpegSink thing("null", {}, {}));
 }
 
 TEST (FFMpegSinkTest, AllocateOkPath)
 {
-  EXPECT_NO_THROW(FFMpegSink thing("./test.mp4"));
+  EXPECT_NO_THROW(FFMpegSink thing("./test.mp4", {}, {}));
+}
+
+
+TEST (FFMpegSinkTest, InitialiseFailNoCodec)
+{
+  FFMpegSink thing("./test.mp4", {}, {});
+  ASSERT_FALSE(thing.initialise());
+}
+
+TEST (FFMpegSinkTest, InitialiseFailAudioAsVideoCodec)
+{
+  FFMpegSink thing("./test.mp4", {Codec::AAC}, {});
+  ASSERT_FALSE(thing.initialise());
+}
+
+TEST (FFMpegSinkTest, InitialiseFailVideoAsAudioCodec)
+{
+  FFMpegSink thing("./test.mp4", {}, {Codec::H264});
+  ASSERT_FALSE(thing.initialise());
+}
+
+TEST (FFMpegSinkTest, InitialiseSuccessVideoCodec)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  ASSERT_TRUE(thing.visualStream(0) != nullptr);
+  ASSERT_TRUE(!thing.visualStreams().empty());
+  ASSERT_TRUE(thing.visualStreams().size() == 1);
+}
+
+TEST (FFMpegSinkTest, InitialiseSuccessAudioCodec)
+{
+  FFMpegSink thing("./test.mp4", {}, {Codec::AAC});
+  ASSERT_TRUE(thing.initialise());
+  ASSERT_TRUE(thing.audioStream(0) != nullptr);
+  ASSERT_TRUE(!thing.audioStreams().empty());
+  ASSERT_TRUE(thing.audioStreams().size() == 1);
+  ASSERT_TRUE(thing.audioStream(0) != nullptr);
+  ASSERT_TRUE(!thing.audioStreams().empty());
+  ASSERT_TRUE(thing.audioStreams().size() == 1);
+}
+
+TEST (FFMpegSinkTest, InitialiseSuccessCodecs)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {Codec::AAC});
+  ASSERT_TRUE(thing.initialise());
+  ASSERT_TRUE(thing.visualStream(0) != nullptr);
+  ASSERT_TRUE(!thing.visualStreams().empty());
+  ASSERT_TRUE(thing.visualStreams().size() == 1);
+  ASSERT_TRUE(thing.audioStream(0) != nullptr);
+  ASSERT_TRUE(!thing.audioStreams().empty());
+  ASSERT_TRUE(thing.audioStreams().size() == 1);
 }
