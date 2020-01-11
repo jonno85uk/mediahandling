@@ -49,6 +49,7 @@ namespace media_handling::ffmpeg
 
     ~FFMpegSink() override;
 
+	bool setInputFormat(const PixelFormat format) override;
     bool encode(std::shared_ptr<MediaFramePtr> sample) override;
 
     bool isReady() override;

@@ -49,6 +49,13 @@ namespace media_handling
         virtual bool encode(std::shared_ptr<MediaFramePtr> sample) = 0;
 
         /**
+         * @brief   Set the pixel format that the sink should expect
+         * @param   format  The PixelFormat
+         * @return  true==success
+         */
+        virtual bool setInputFormat(const PixelFormat format) = 0;
+
+        /**
          * @brief     Identify if sink is correctly setup for encoding
          * @return    true==is ready
          */
