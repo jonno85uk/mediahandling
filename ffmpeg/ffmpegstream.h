@@ -35,7 +35,6 @@
 
 extern "C" {
 #include <libavformat/avformat.h>
-#include <libavfilter/avfilter.h>
 #include <libavutil/frame.h>
 }
 

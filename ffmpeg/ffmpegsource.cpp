@@ -80,7 +80,7 @@ bool FFMpegSource::initialise()
   // Ensure resources freed on a re-initialise
   reset();
 
-  const std::string path(std::invoke([&] {
+  const std::string path([&] {
     std::string result;
     if (media_handling::global::auto_detect_img_sequence == false) {
       return file_path_;
@@ -110,7 +110,7 @@ bool FFMpegSource::initialise()
       return file_path_;
     }
     return result;
-  }));
+  }());
 
   const auto p = path.c_str(); //only because path is unavailable when in debug
   // Open the file
