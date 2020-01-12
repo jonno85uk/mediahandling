@@ -36,6 +36,7 @@
 #include "types.h"
 #include "imediaframe.h"
 #include "mediapropertyobject.h"
+#include "rational.h"
 
 namespace media_handling
 {
