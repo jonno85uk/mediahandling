@@ -50,7 +50,36 @@ namespace
 
   const std::map<mh::ColourPrimaries, AVColorPrimaries> PRIMARIES_MAP
   {
+    {mh::ColourPrimaries::BT_709, AVCOL_PRI_BT709},
+    {mh::ColourPrimaries::BT_470M, AVCOL_PRI_BT470M},
+    {mh::ColourPrimaries::BT_709, AVCOL_PRI_BT709},
+    {mh::ColourPrimaries::BT_601, AVCOL_PRI_SMPTE170M},
+    {mh::ColourPrimaries::BT_2020, AVCOL_PRI_BT2020},
+    {mh::ColourPrimaries::BT470BG, AVCOL_PRI_BT470BG},
+    {mh::ColourPrimaries::SMPTE_240M, AVCOL_PRI_SMPTE240M},
+    {mh::ColourPrimaries::SMPTE_428, AVCOL_PRI_SMPTE428}
+  };
 
+  const std::map<mh::TransferCharacteristics, AVColorTransferCharacteristic> TRANSFERS_MAP
+  {
+    {mh::TransferCharacteristics::BT_709, AVCOL_TRC_BT709},
+    {mh::TransferCharacteristics::BT_470M, AVCOL_TRC_GAMMA22},
+    {mh::TransferCharacteristics::BT_470BG, AVCOL_TRC_GAMMA28},
+    {mh::TransferCharacteristics::BT_601, AVCOL_TRC_SMPTE170M},
+    {mh::TransferCharacteristics::SMPTE_240M, AVCOL_TRC_SMPTE240M},
+    {mh::TransferCharacteristics::LINEAR, AVCOL_TRC_LINEAR},
+    {mh::TransferCharacteristics::IEC_61966_2_4, AVCOL_TRC_IEC61966_2_4},
+    {mh::TransferCharacteristics::BT_1361, AVCOL_TRC_BT1361_ECG},
+    {mh::TransferCharacteristics::IEC_61966_2_1, AVCOL_TRC_IEC61966_2_1},
+    {mh::TransferCharacteristics::BT_2020_10, AVCOL_TRC_BT2020_10},
+    {mh::TransferCharacteristics::BT_2020_12, AVCOL_TRC_BT2020_12},
+    {mh::TransferCharacteristics::SMPTE_2084, AVCOL_TRC_SMPTE2084},
+    {mh::TransferCharacteristics::SMPTE_428, AVCOL_TRC_SMPTE428},
+    {mh::TransferCharacteristics::ARIB_STD_B67, AVCOL_TRC_ARIB_STD_B67}
+  };
+
+  const std::map<mh::MatrixCoefficients, AVColorSpace> MATRIX_MAP
+  {
   };
 }
 
@@ -117,71 +146,12 @@ void media_handling::types::avStreamDeleter(AVStream* stream)
 
 media_handling::ColourPrimaries media_handling::types::convertColourPrimary(const AVColorPrimaries primary) noexcept
 {
-  media_handling::ColourPrimaries val;
-  switch (primary) {
-    case AVCOL_PRI_BT709:
-      val = ColourPrimaries::BT_709;
-      break;
-    case AVCOL_PRI_BT470M:
-      val = ColourPrimaries::BT_470M;
-      break;
-    case AVCOL_PRI_BT470BG:
-      [[fallthrough]];
-    case AVCOL_PRI_SMPTE170M:
-      val = ColourPrimaries::BT_601;
-      break;
-    case AVCOL_PRI_BT2020:
-      val = ColourPrimaries::BT_2020;
-      break;
-    case AVCOL_PRI_SMPTE240M:
-      val = ColourPrimaries::SMPTE_240M;
-      break;
-    case AVCOL_PRI_SMPTE428:
-      val = ColourPrimaries::SMPTE_428;
-      break;
-    default:
-      val = ColourPrimaries::UNKNOWN;
-      break;
-  }
-  return val;
+  return convertFromFFMpegType(primary, PRIMARIES_MAP, mh::ColourPrimaries::UNKNOWN);
 }
 
 mh::TransferCharacteristics mh::types::convertTransferCharacteristics(const AVColorTransferCharacteristic transfer) noexcept
 {
-  switch (transfer) {
-    case AVCOL_TRC_BT709:
-      return TransferCharacteristics::BT_709;
-    case AVCOL_TRC_GAMMA22:
-      return TransferCharacteristics::BT_470M;
-    case AVCOL_TRC_GAMMA28:
-      return TransferCharacteristics::BT_470BG;
-    case AVCOL_TRC_SMPTE170M:
-      return TransferCharacteristics::BT_601;
-    case AVCOL_TRC_SMPTE240M:
-      return TransferCharacteristics::SMPTE_240M;
-    case AVCOL_TRC_LINEAR:
-      return TransferCharacteristics::LINEAR;
-      //    AVCOL_TRC_LOG          = 9,  ///< "Logarithmic transfer characteristic (100:1 range)"
-      //    AVCOL_TRC_LOG_SQRT     = 10, ///< "Logarithmic transfer characteristic (100 * Sqrt(10) : 1 range)"
-    case AVCOL_TRC_IEC61966_2_4:
-      return TransferCharacteristics::IEC_61966_2_4;
-    case AVCOL_TRC_BT1361_ECG:
-      return TransferCharacteristics::BT_1361;
-    case AVCOL_TRC_IEC61966_2_1:
-      return TransferCharacteristics::IEC_61966_2_1;
-    case AVCOL_TRC_BT2020_10:
-      return TransferCharacteristics::BT_2020_10;
-    case AVCOL_TRC_BT2020_12:
-      return TransferCharacteristics::BT_2020_12;
-    case AVCOL_TRC_SMPTE2084:
-      return TransferCharacteristics::SMPTE_2084;
-    case AVCOL_TRC_SMPTE428:
-      return TransferCharacteristics::SMPTE_428;
-    case AVCOL_TRC_ARIB_STD_B67:
-      return TransferCharacteristics::ARIB_STD_B67;
-    default:
-      return TransferCharacteristics::UNKNOWN;
-  }
+  return convertFromFFMpegType(transfer, TRANSFERS_MAP, TransferCharacteristics::UNKNOWN);
 }
 
 

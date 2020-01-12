@@ -191,6 +191,7 @@ namespace media_handling
     BT_709,
     BT_2020,
     BT_2100,
+    BT470BG,
     SMPTE_240M,
     SMPTE_428
   };
