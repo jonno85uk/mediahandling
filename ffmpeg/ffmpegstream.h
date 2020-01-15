@@ -30,6 +30,7 @@
 
 #include "imediastream.h"
 #include <optional>
+#include <mutex>
 
 #include "ffmpegmediaframe.h"
 #include "ffmpegsink.h"
@@ -51,7 +52,7 @@ namespace media_handling::ffmpeg
     public:
       FFMpegStream() = default;
       FFMpegStream(FFMpegSource* parent, AVStream* const stream);
-      FFMpegStream(FFMpegSink* sink, AVStream* const stream);
+      FFMpegStream(FFMpegSink* sink, const AVCodecID codec);
       ~FFMpegStream() override;
 
       /* IMediaStream override*/
@@ -71,6 +72,7 @@ namespace media_handling::ffmpeg
       AVStream* stream_ {nullptr};
       AVCodec* codec_ {nullptr};
       AVCodecContext* codec_ctx_ {nullptr};
+      std::shared_ptr<AVCodecContext> sink_codec_ctx_ {nullptr};
       AVPacket* pkt_ {nullptr};
       AVDictionary* opts_ {nullptr};
       int pixel_format_{};
@@ -80,12 +82,16 @@ namespace media_handling::ffmpeg
       StreamType type_{StreamType::UNKNOWN};
       bool deinterlacer_setup_ {false};
       int32_t source_index_ {-1};
+      std::once_flag setup_encoder_;
 
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
       void extractVisualProperties(const AVStream& stream, const AVCodecContext& context);
       void extractAudioProperties(const AVStream& stream, const AVCodecContext& context);
       bool seek(const int64_t timestamp);
       void setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const;
+      bool setupEncoder();
+      bool setupAudioEncoder(AVStream& stream, AVCodecContext& context) const;
+      bool setupVideoEncoder(AVStream& stream, AVCodecContext& context) const;
 
       /**
        * @brief Extract extra properties from a frame

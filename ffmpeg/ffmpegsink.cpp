@@ -87,11 +87,14 @@ bool FFMpegSink::initialise()
         logMessage(LogType::CRITICAL, "An audio codec chosen for video encoding");
         return false;
       } else {
-        contexts_.video_.emplace_back(std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec),
-                                                                      types::avCodecContextDeleter));
-        AVStream* stream = avformat_new_stream(fmt_ctx_.get(), av_codec); // Freed by FormatContext
-        streams_.video_.emplace_back(std::make_shared<FFMpegStream>(this, stream));
+        try {
+          streams_.video_.emplace_back(std::make_shared<FFMpegStream>(this, ffv));
+        } catch (const std::runtime_error& ex) {
+          logMessage(LogType::CRITICAL, ex.what());
+        }
       }
+    } else {
+      logMessage(LogType::WARNING, "Unsupported encoder codec");
     }
   }
 
@@ -102,11 +105,14 @@ bool FFMpegSink::initialise()
         logMessage(LogType::CRITICAL, "An audio codec chosen for video encoding");
         return false;
       } else {
-        contexts_.audio_.emplace_back(std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec),
-                                                                      types::avCodecContextDeleter));
-        AVStream* stream = avformat_new_stream(fmt_ctx_.get(), av_codec); // Freed by FormatContext
-        streams_.audio_.emplace_back(std::make_shared<FFMpegStream>(this, stream));
+        try {
+          streams_.audio_.emplace_back(std::make_shared<FFMpegStream>(this, ffa));
+        } catch (const std::runtime_error& ex) {
+          logMessage(LogType::CRITICAL, ex.what());
+        }
       }
+    } else {
+      logMessage(LogType::WARNING, "Unsupported encoder codec");
     }
   }
 
@@ -177,3 +183,8 @@ std::vector<media_handling::MediaStreamPtr> FFMpegSink::visualStreams()
 }
 
 
+AVFormatContext& FFMpegSink::formatContext() const
+{
+  assert(fmt_ctx_ != nullptr);
+  return *fmt_ctx_;
+}

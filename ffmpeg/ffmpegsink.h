@@ -63,16 +63,14 @@ namespace media_handling::ffmpeg
       MediaStreamPtr visualStream(const size_t index) override;
       std::vector<MediaStreamPtr> visualStreams() override;
 
+    public:
+      AVFormatContext& formatContext() const;
     private:
       std::string file_path_;
       struct {
           std::vector<Codec> video_;
           std::vector<Codec> audio_;
       } codecs_;
-      struct {
-          std::vector<std::shared_ptr<AVCodecContext>> video_;
-          std::vector<std::shared_ptr<AVCodecContext>> audio_;
-      } contexts_;
       struct {
           std::vector<MediaStreamPtr> video_;
           std::vector<MediaStreamPtr> audio_;

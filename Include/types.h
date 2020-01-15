@@ -77,7 +77,6 @@ namespace media_handling
   {
     //TODO: use fourccs
     UNKNOWN,
-    AAC,
     DNXHD,
     DPX,
     H264,
@@ -87,7 +86,13 @@ namespace media_handling
     MPEG4,
     PNG,
     RAW,
-    TIFF
+    TIFF,
+    AAC,
+    AC3,
+    ALAC,
+    FLAC,
+    MP3,
+    WAV
   };
 
   enum class StreamType

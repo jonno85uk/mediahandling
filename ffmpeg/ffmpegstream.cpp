@@ -30,6 +30,7 @@
 #include <sstream>
 #include <thread>
 #include <fmt/core.h>
+#include <set>
 
 #include "mediahandling.h"
 #include "ffmpegsource.h"
@@ -51,6 +52,7 @@ using media_handling::MediaFramePtr;
 
 namespace  {
   std::array<char, ERR_LEN> err;
+  std::set<AVCodecID> NOBITRATE_CODECS {AV_CODEC_ID_WAVPACK};
 }
 
 
@@ -105,11 +107,15 @@ FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
 }
 
 
-FFMpegStream::FFMpegStream(FFMpegSink* sink, AVStream* const stream)
-  : sink_(sink),
-    stream_(stream)
+FFMpegStream::FFMpegStream(FFMpegSink* sink, const AVCodecID codec)
+  : sink_(sink)
 {
-
+    if (AVCodec* av_codec = avcodec_find_encoder(codec)) {
+        sink_codec_ctx_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec), types::avCodecContextDeleter);
+        stream_ = avformat_new_stream(&sink_->formatContext(), av_codec); // Freed by FormatContext
+    } else {
+      throw std::runtime_error("Codec is not supported as encoder");
+    }
 }
 
 FFMpegStream::~FFMpegStream()
@@ -148,8 +154,15 @@ MediaFramePtr FFMpegStream::frame(const int64_t timestamp)
 
 bool FFMpegStream::setFrame(const int64_t timestamp, MediaFramePtr sample)
 {
+  assert(sink_);
+  bool okay = true;
+  std::call_once(setup_encoder_, [&] { okay = setupEncoder(); });
+  if (!okay) {
+    logMessage(LogType::CRITICAL, "Failed to setup encoder");
+    return false;
+  }
   // TODO:
-  return false;
+  return true;
 }
 
 
@@ -169,6 +182,10 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
                                    media_handling::InterpolationMethod interp)
 {
   assert(codec_);
+  if ((parent_ == nullptr) && (sink_ != nullptr) ) {
+    logMessage(LogType::WARNING, "Stream is setup for encoding");
+    return false;
+  }
   const AVPixelFormat output_av_fmt = types::convertPixelFormat(format);
   if (output_av_fmt == AV_PIX_FMT_NONE) {
     logMessage(LogType::CRITICAL, "FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
@@ -216,6 +233,10 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
 
 bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<int32_t> rate)
 {
+  if ((parent_ == nullptr) && (sink_ != nullptr) ) {
+    logMessage(LogType::WARNING, "Stream is setup for encoding");
+    return false;
+  }
   bool okay = false;
   const auto layout = property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
   assert(okay);
@@ -337,6 +358,83 @@ void FFMpegStream::setupDecoder(const AVCodecID codec_id, AVDictionary* dict) co
   }
 }
 
+
+bool FFMpegStream::setupEncoder()
+{
+  assert(stream_);
+  assert(sink_codec_ctx_);
+
+  switch (sink_codec_ctx_->codec_type) {
+    case AVMEDIA_TYPE_AUDIO:
+    {
+      bool okay = setupAudioEncoder(*stream_, *sink_codec_ctx_);
+      if (!okay) {
+        logMessage(LogType::CRITICAL, "Failed to setup audio encoder");
+      }
+      return okay;
+    }
+    case AVMEDIA_TYPE_VIDEO:
+    {
+      bool okay = setupVideoEncoder(*stream_, *sink_codec_ctx_);
+      if (!okay) {
+        logMessage(LogType::CRITICAL, "Failed to setup video encoder");
+      }
+      return okay;
+    }
+    default:
+      break;
+  }
+
+  logMessage(LogType::CRITICAL, "Unable to setup encoder for this codec type");
+  return false;
+}
+
+
+bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context) const
+{
+  bool okay;
+  auto sample_rate = this->property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
+  if (!okay) {
+    logMessage(LogType::CRITICAL, "Audio sample rate property not set");
+    return false;
+  }
+  auto layout = this->property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
+  if (!okay) {
+    logMessage(LogType::CRITICAL, "Audio Layout property not set");
+    return false;
+  }
+  int64_t bitrate = 0;
+  if (NOBITRATE_CODECS.find(context.codec_id) == NOBITRATE_CODECS.end()) {
+    // A bitrate is required for lossless codecs
+    bitrate = this->property<int64_t>(MediaProperty::BITRATE, okay);
+    if (!okay) {
+      logMessage(LogType::CRITICAL, "Audio Bitrate property not set");
+      return false;
+    }
+  }
+  context.sample_rate = sample_rate;
+  context.channel_layout = types::convertChannelLayout(layout);
+
+//  acodec_ctx->sample_rate = audio_params_.sampling_rate;
+//  acodec_ctx->channel_layout = AV_CH_LAYOUT_STEREO;  // change this to support surround/mono sound in the future (this is what the user sets the output audio to)
+//  acodec_ctx->channels = av_get_channel_layout_nb_channels(acodec_ctx->channel_layout);
+//  acodec_ctx->sample_fmt = acodec->sample_fmts[0];
+//  acodec_ctx->bit_rate = audio_params_.bitrate * 1000;
+
+//  acodec_ctx->time_base.num = 1;
+//  acodec_ctx->time_base.den = audio_params_.sampling_rate;
+//  audio_stream->time_base = acodec_ctx->time_base;
+
+//  if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
+//    acodec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+//  }
+  return true;
+}
+
+bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context) const
+{
+  return false;
+}
 
 void FFMpegStream::extractFrameProperties()
 {
