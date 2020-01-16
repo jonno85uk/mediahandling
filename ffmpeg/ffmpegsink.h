@@ -54,8 +54,6 @@ namespace media_handling::ffmpeg
     public: // IMediaSink Overrides
       ~FFMpegSink() override;
       bool initialise() override;
-      bool setInputFormat(const PixelFormat format) override;
-      bool setInputFormat(const SampleFormat format) override;
       bool encode(std::shared_ptr<MediaFramePtr> sample) override;
       bool isReady() override;
       MediaStreamPtr audioStream(const size_t index) override;

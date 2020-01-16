@@ -55,7 +55,7 @@ namespace media_handling
     AUDIO_STREAMS,        // int32_t
     VIDEO_STREAMS,        // int32_t
     VIDEO_FORMAT,         // int32_t
-    BITRATE,              // int64_t
+    BITRATE,              // int32_t
     DURATION,             // int64_t
     TIMESCALE,            // Rational
     FILENAME,             // std::string

@@ -469,7 +469,7 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadConvertedFrame)
 }
 
 
-class AudioPropertiesTests : public testing::TestWithParam<std::tuple<std::string, ChannelLayout, SampleFormat, int64_t>>
+class AudioPropertiesTests : public testing::TestWithParam<std::tuple<std::string, ChannelLayout, SampleFormat, int32_t>>
 {
   public:
     std::unique_ptr<FFMpegSource> source_;
@@ -487,7 +487,7 @@ TEST_P (AudioPropertiesTests, CheckEqual)
   auto prop_format = stream->property<SampleFormat>(MediaProperty::AUDIO_FORMAT, is_valid);
   ASSERT_TRUE(is_valid);
   ASSERT_EQ(prop_format, format);
-  auto prop_bitrate = stream->property<int64_t>(MediaProperty::BITRATE, is_valid);
+  auto prop_bitrate = stream->property<int32_t>(MediaProperty::BITRATE, is_valid);
   ASSERT_TRUE(is_valid);
   ASSERT_EQ(prop_bitrate, bitrate);
 }

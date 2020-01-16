@@ -111,8 +111,9 @@ FFMpegStream::FFMpegStream(FFMpegSink* sink, const AVCodecID codec)
   : sink_(sink)
 {
     if (AVCodec* av_codec = avcodec_find_encoder(codec)) {
-        sink_codec_ctx_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec), types::avCodecContextDeleter);
-        stream_ = avformat_new_stream(&sink_->formatContext(), av_codec); // Freed by FormatContext
+      codec_ = av_codec;
+      sink_codec_ctx_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec), types::avCodecContextDeleter);
+      stream_ = avformat_new_stream(&sink_->formatContext(), av_codec); // Freed by FormatContext
     } else {
       throw std::runtime_error("Codec is not supported as encoder");
     }
@@ -272,6 +273,44 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<int3
   return true;
 }
 
+
+bool FFMpegStream::setInputFormat(const PixelFormat format)
+{
+  // TODO:
+  return false;
+}
+
+bool FFMpegStream::setInputFormat(const SampleFormat format)
+{
+  assert(codec_);
+  assert(sink_codec_ctx_);
+  auto ff_format = types::convertSampleFormat(format);
+  std::set<AVSampleFormat> formats;
+  AVSampleFormat fmt;
+  auto ix = 0;
+  bool okay = false;
+  do {
+    fmt = codec_->sample_fmts[ix++];
+    formats.insert(fmt);
+    if (fmt == ff_format) {
+      okay = true;
+      sink_codec_ctx_->sample_fmt = fmt;
+    }
+  } while ((!okay) && (fmt != AV_SAMPLE_FMT_NONE));
+
+  if (!okay) {
+    std::string msg = "Invalid sample format set as input. Valid types are:\n";
+    for (const auto& f : formats) {
+      if (f == AV_SAMPLE_FMT_NONE) {
+        continue;
+      }
+      msg.append(fmt::format("\t {}\n", types::convertSampleFormat(f))); //TODO: maybe show as string repr
+    }
+    logMessage(LogType::WARNING, msg);
+  }
+  return okay;
+}
+
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {
   assert(context.codec);
@@ -284,7 +323,7 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
     Rational timescale(base.num, base.den);
     this->setProperty(MediaProperty::TIMESCALE, timescale);
   }
-  this->setProperty(MediaProperty::BITRATE, context.bit_rate);
+  this->setProperty(MediaProperty::BITRATE, static_cast<int32_t>(context.bit_rate));
 
   // TODO: stream durations
   if ( (type_ == StreamType::VIDEO) || (type_ == StreamType::IMAGE) ) {
@@ -363,11 +402,12 @@ bool FFMpegStream::setupEncoder()
 {
   assert(stream_);
   assert(sink_codec_ctx_);
+  assert(codec_);
 
   switch (sink_codec_ctx_->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
     {
-      bool okay = setupAudioEncoder(*stream_, *sink_codec_ctx_);
+      bool okay = setupAudioEncoder(*stream_, *sink_codec_ctx_, *codec_);
       if (!okay) {
         logMessage(LogType::CRITICAL, "Failed to setup audio encoder");
       }
@@ -390,7 +430,7 @@ bool FFMpegStream::setupEncoder()
 }
 
 
-bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context) const
+bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const
 {
   bool okay;
   auto sample_rate = this->property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
@@ -406,28 +446,23 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context) 
   int64_t bitrate = 0;
   if (NOBITRATE_CODECS.find(context.codec_id) == NOBITRATE_CODECS.end()) {
     // A bitrate is required for lossless codecs
-    bitrate = this->property<int64_t>(MediaProperty::BITRATE, okay);
+    bitrate = this->property<int32_t>(MediaProperty::BITRATE, okay);
     if (!okay) {
       logMessage(LogType::CRITICAL, "Audio Bitrate property not set");
       return false;
     }
+    context.bit_rate = bitrate;
   }
   context.sample_rate = sample_rate;
   context.channel_layout = types::convertChannelLayout(layout);
-
-//  acodec_ctx->sample_rate = audio_params_.sampling_rate;
-//  acodec_ctx->channel_layout = AV_CH_LAYOUT_STEREO;  // change this to support surround/mono sound in the future (this is what the user sets the output audio to)
-//  acodec_ctx->channels = av_get_channel_layout_nb_channels(acodec_ctx->channel_layout);
-//  acodec_ctx->sample_fmt = acodec->sample_fmts[0];
-//  acodec_ctx->bit_rate = audio_params_.bitrate * 1000;
-
-//  acodec_ctx->time_base.num = 1;
-//  acodec_ctx->time_base.den = audio_params_.sampling_rate;
-//  audio_stream->time_base = acodec_ctx->time_base;
-
-//  if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
-//    acodec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-//  }
+  context.channels = av_get_channel_layout_nb_channels(context.channel_layout);
+  context.time_base.num = 1;
+  context.time_base.den = sample_rate;
+  stream.time_base = context.time_base;
+  if (context.sample_fmt == AV_SAMPLE_FMT_NONE) {
+    logMessage(LogType::CRITICAL, "Input sample format has not been specified");
+    return false;
+  }
   return true;
 }
 

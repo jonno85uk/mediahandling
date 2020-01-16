@@ -268,7 +268,7 @@ TEST_P (BitrateParameterTests, CheckEqual)
   auto [path, bitrate] = this->GetParam();
   source_ = std::make_unique<FFMpegSource>(path);
   bool is_valid;
-  auto prop_rate = source_->property<int64_t>(MediaProperty::BITRATE, is_valid);
+  auto prop_rate = source_->property<int32_t>(MediaProperty::BITRATE, is_valid);
   ASSERT_TRUE(is_valid);
   ASSERT_EQ(prop_rate, bitrate);
 }

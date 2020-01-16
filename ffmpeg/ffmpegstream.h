@@ -55,7 +55,7 @@ namespace media_handling::ffmpeg
       FFMpegStream(FFMpegSink* sink, const AVCodecID codec);
       ~FFMpegStream() override;
 
-      /* IMediaStream override*/
+    public: // IMediaStream override
       int64_t timestamp() const override;
       MediaFramePtr frame(const int64_t timestamp=-1) final;
       bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
@@ -65,10 +65,13 @@ namespace media_handling::ffmpeg
                            const Dimensions& dims = {0, 0},
                            InterpolationMethod interp = InterpolationMethod::NEAREST) final;
       bool setOutputFormat(const SampleFormat format, std::optional<int32_t> rate = {}) final;
+      bool setInputFormat(const PixelFormat format) final;
+      bool setInputFormat(const SampleFormat format) final;
 
     private:
       FFMpegSource* parent_ {nullptr};
       FFMpegSink* sink_ {nullptr};
+      // TODO: use smart ptrs from ffmpegtypes.h
       AVStream* stream_ {nullptr};
       AVCodec* codec_ {nullptr};
       AVCodecContext* codec_ctx_ {nullptr};
@@ -84,13 +87,14 @@ namespace media_handling::ffmpeg
       int32_t source_index_ {-1};
       std::once_flag setup_encoder_;
 
+    private:
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
       void extractVisualProperties(const AVStream& stream, const AVCodecContext& context);
       void extractAudioProperties(const AVStream& stream, const AVCodecContext& context);
       bool seek(const int64_t timestamp);
       void setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const;
       bool setupEncoder();
-      bool setupAudioEncoder(AVStream& stream, AVCodecContext& context) const;
+      bool setupAudioEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const;
       bool setupVideoEncoder(AVStream& stream, AVCodecContext& context) const;
 
       /**

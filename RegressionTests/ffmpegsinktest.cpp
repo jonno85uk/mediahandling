@@ -128,16 +128,6 @@ TEST (FFMpegSinkTest, SetupAudioEncoderFailNoBitrate)
   ASSERT_FALSE(stream->setFrame(0, {}));
 }
 
-TEST (FFMpegSinkTest, SetupAudioEncoderSuccessNoBitrateWAV)
-{
-  FFMpegSink thing("./test.mp4", {}, {Codec::WAV});
-  thing.initialise();
-  auto stream = thing.audioStream(0);
-  ASSERT_TRUE(stream != nullptr);
-  stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
-  stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22'000);
-  ASSERT_TRUE(stream->setFrame(0, {}));
-}
 
 TEST (FFMpegSinkTest, SetupAudioEncoderFailNoLayout)
 {
@@ -150,7 +140,18 @@ TEST (FFMpegSinkTest, SetupAudioEncoderFailNoLayout)
   ASSERT_FALSE(stream->setFrame(0, {}));
 }
 
-TEST (FFMpegSinkTest, SetupAudioEncoderSuccess)
+TEST(FFMpegSinkTest, SetAudioEncoderInputFormat)
+{
+
+  FFMpegSink thing("./test.mp4", {}, {Codec::WAV});
+  thing.initialise();
+  auto stream = thing.audioStream(0);
+  ASSERT_TRUE(stream != nullptr);
+  ASSERT_TRUE(stream->setInputFormat(SampleFormat::SIGNED_16P));
+  ASSERT_FALSE(stream->setInputFormat(SampleFormat::DOUBLE));
+}
+
+TEST (FFMpegSinkTest, SetupAudioEncoderNoInput)
 {
   FFMpegSink thing("./test.mp4", {}, {Codec::WAV});
   thing.initialise();
@@ -159,7 +160,32 @@ TEST (FFMpegSinkTest, SetupAudioEncoderSuccess)
 
   stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
   stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22'000);
+  ASSERT_FALSE(stream->setFrame(0, {}));
+}
+
+TEST (FFMpegSinkTest, SetupAudioEncoderSuccess)
+{
+  FFMpegSink thing("./test.mp4", {}, {Codec::MP3});
+  thing.initialise();
+  auto stream = thing.audioStream(0);
+  ASSERT_TRUE(stream != nullptr);
+
+  stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
+  stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22'000);
   stream->setProperty(MediaProperty::BITRATE, 128'000);
+  ASSERT_TRUE(stream->setInputFormat(SampleFormat::SIGNED_16P));
+  ASSERT_TRUE(stream->setFrame(0, {}));
+}
+
+TEST (FFMpegSinkTest, SetupAudioEncoderSuccessNoBitrateWAV)
+{
+  FFMpegSink thing("./test.mp4", {}, {Codec::WAV});
+  thing.initialise();
+  auto stream = thing.audioStream(0);
+  ASSERT_TRUE(stream != nullptr);
+  stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
+  stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22'000);
+  stream->setInputFormat(SampleFormat::SIGNED_16P);
   ASSERT_TRUE(stream->setFrame(0, {}));
 }
 

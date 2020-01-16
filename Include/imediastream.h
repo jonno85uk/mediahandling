@@ -96,6 +96,20 @@ namespace media_handling
        * @return        true==output format set
        */
       virtual bool setOutputFormat(const SampleFormat format, std::optional<int32_t> rate = {}) = 0;
+
+      /**
+       * @brief   Set the pixel format that the stream should expect for encoding
+       * @param   format  The PixelFormat
+       * @return  true==success
+       */
+      virtual bool setInputFormat(const PixelFormat format) = 0;
+
+      /**
+       * @brief   Set the sample format that the stream should expect for encoding
+       * @param   format  The SampleFormat
+       * @return  true==success
+       */
+      virtual bool setInputFormat(const SampleFormat format) = 0;
   };
 
   using MediaStreamPtr = std::shared_ptr<IMediaStream>;

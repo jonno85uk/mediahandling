@@ -123,17 +123,6 @@ bool FFMpegSink::initialise()
   return true;
 }
 
-bool FFMpegSink::setInputFormat(const PixelFormat format)
-{
-	return false;
-}
-
-
-bool FFMpegSink::setInputFormat(const SampleFormat format)
-{
-  return false;
-}
-
 bool FFMpegSink::encode(std::shared_ptr<MediaFramePtr> sample)
 {
   // TODO:
