@@ -30,6 +30,7 @@
 #include <gtest/gtest.h>
 
 #include "ffmpegsink.h"
+#include "rational.h"
 
 using namespace media_handling;
 using namespace media_handling::ffmpeg;
@@ -186,6 +187,82 @@ TEST (FFMpegSinkTest, SetupAudioEncoderSuccessNoBitrateWAV)
   stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
   stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22'000);
   stream->setInputFormat(SampleFormat::SIGNED_16P);
+  ASSERT_TRUE(stream->setFrame(0, {}));
+}
+
+TEST (FFMpegSinkTest, SetupVideoEncoderFailNoProperties)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  auto stream = thing.visualStream(0);
+  ASSERT_TRUE(stream != nullptr);
+  ASSERT_FALSE(stream->setFrame(0, {}));
+}
+
+TEST (FFMpegSinkTest, SetupVideoEncoderFailNoBitrate)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  auto stream = thing.visualStream(0);
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setInputFormat(PixelFormat::YUV420);
+  ASSERT_TRUE(stream != nullptr);
+  ASSERT_FALSE(stream->setFrame(0, {}));
+}
+
+
+TEST (FFMpegSinkTest, SetupVideoEncoderFailNoInputFormat)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  auto stream = thing.visualStream(0);
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  ASSERT_TRUE(stream != nullptr);
+  ASSERT_FALSE(stream->setFrame(0, {}));
+}
+
+TEST (FFMpegSinkTest, SetupVideoEncoderFailNoDimensions)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  auto stream = thing.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  stream->setInputFormat(PixelFormat::YUV420);
+  ASSERT_TRUE(stream != nullptr);
+  ASSERT_FALSE(stream->setFrame(0, {}));
+}
+
+TEST (FFMpegSinkTest, SetupVideoEncoderFailNoFrameRate)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  auto stream = thing.visualStream(0);
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  stream->setInputFormat(PixelFormat::YUV420);
+  ASSERT_TRUE(stream != nullptr);
+  ASSERT_FALSE(stream->setFrame(0, {}));
+}
+
+TEST (FFMpegSinkTest, SetupVideoEncoderSuccess)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  auto stream = thing.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  stream->setInputFormat(PixelFormat::YUV420);
+  ASSERT_TRUE(stream != nullptr);
   ASSERT_TRUE(stream->setFrame(0, {}));
 }
 

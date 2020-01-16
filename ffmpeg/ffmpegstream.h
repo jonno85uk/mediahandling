@@ -95,7 +95,7 @@ namespace media_handling::ffmpeg
       void setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const;
       bool setupEncoder();
       bool setupAudioEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const;
-      bool setupVideoEncoder(AVStream& stream, AVCodecContext& context) const;
+      bool setupVideoEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const;
 
       /**
        * @brief Extract extra properties from a frame

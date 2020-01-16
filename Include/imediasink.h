@@ -31,6 +31,7 @@
 #include <any>
 #include <memory>
 #include <vector>
+#include <stdlib.h>
 
 #include "types.h"
 #include "imediastream.h"

@@ -44,6 +44,8 @@ namespace media_handling
   // TODO: maybe turn into a mapping
   enum class MediaProperty
   {
+    THREADS,              // int32_t
+    COMPRESSION,          // CompressionStrategy
     PROFILE,              //TODO: for mpeg2/4, aac, dnxhd, etc encoded profile
     CODEC,                // Codec
     CODEC_NAME,           // std::string
@@ -55,6 +57,8 @@ namespace media_handling
     AUDIO_STREAMS,        // int32_t
     VIDEO_STREAMS,        // int32_t
     VIDEO_FORMAT,         // int32_t
+    MIN_BITRATE,          // int32_t
+    MAX_BITRATE,          // int32_t
     BITRATE,              // int32_t
     DURATION,             // int64_t
     TIMESCALE,            // Rational
@@ -71,6 +75,7 @@ namespace media_handling
     FRAME_RATE,           // Rational
     SEQUENCE_PATTERN,     // std::string
     COLOUR_SPACE,         // ColourSpace
+    GOP,                  // GOP
   };
 
   enum class Codec
@@ -132,11 +137,6 @@ namespace media_handling
     SIGNED_64P
   };
 
-  struct Dimensions
-  {
-      int width {-1};
-      int height {-1};
-  };
 
   enum class InterpolationMethod
   {
@@ -148,9 +148,9 @@ namespace media_handling
   };
 
   /**
- * @brief The PixelFormat enum
- * @note only 8bit per channel
- */
+   * @brief The PixelFormat enum
+   * @note only 8bit per channel
+   */
   enum class PixelFormat
   {
     // TODO: use fourccs
@@ -244,29 +244,49 @@ namespace media_handling
     FULL
   };
 
+  enum class CompressionStrategy {
+    CBR,
+    CRF,
+    TARGETSIZE,
+    TARGETBITRATE,
+    UNKNOWN
+  };
+
+  struct Dimensions
+  {
+    int width {-1};
+    int height {-1};
+  };
+
   struct ColourSpace
   {
-      ColourSpace() = default;
-      ColourSpace(const ColourPrimaries primaries,
-                  const TransferCharacteristics transfer,
-                  const MatrixCoefficients matrix,
-                  const ColourRange range)
-        : colour_primaries_(primaries),
-          transfer_characteristics_(transfer),
-          matrix_coefficients_(matrix),
-          range_(range)
-      {}
-      bool operator==(const ColourSpace& rhs) const noexcept
-      {
-        return (rhs.colour_primaries_ == colour_primaries_) &&
-            (rhs.transfer_characteristics_ == transfer_characteristics_) &&
-            (rhs.matrix_coefficients_ == matrix_coefficients_) &&
-            (rhs.range_ == range_);
-      }
-      ColourPrimaries         colour_primaries_ {ColourPrimaries::UNKNOWN};
-      TransferCharacteristics transfer_characteristics_ {TransferCharacteristics::UNKNOWN};
-      MatrixCoefficients      matrix_coefficients_ {MatrixCoefficients::UNKNOWN};
-      ColourRange             range_ {ColourRange::UNKNOWN};
+    ColourSpace() = default;
+    ColourSpace(const ColourPrimaries primaries,
+                const TransferCharacteristics transfer,
+                const MatrixCoefficients matrix,
+                const ColourRange range)
+      : colour_primaries_(primaries),
+        transfer_characteristics_(transfer),
+        matrix_coefficients_(matrix),
+        range_(range)
+    {}
+    bool operator==(const ColourSpace& rhs) const noexcept
+    {
+      return (rhs.colour_primaries_ == colour_primaries_) &&
+          (rhs.transfer_characteristics_ == transfer_characteristics_) &&
+          (rhs.matrix_coefficients_ == matrix_coefficients_) &&
+          (rhs.range_ == range_);
+    }
+    ColourPrimaries         colour_primaries_ {ColourPrimaries::UNKNOWN};
+    TransferCharacteristics transfer_characteristics_ {TransferCharacteristics::UNKNOWN};
+    MatrixCoefficients      matrix_coefficients_ {MatrixCoefficients::UNKNOWN};
+    ColourRange             range_ {ColourRange::UNKNOWN};
+  };
+
+  struct GOP
+  {
+    int32_t m_;
+    int32_t n_;
   };
 
 }

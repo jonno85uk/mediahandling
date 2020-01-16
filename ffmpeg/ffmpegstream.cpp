@@ -113,6 +113,9 @@ FFMpegStream::FFMpegStream(FFMpegSink* sink, const AVCodecID codec)
     if (AVCodec* av_codec = avcodec_find_encoder(codec)) {
       codec_ = av_codec;
       sink_codec_ctx_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec), types::avCodecContextDeleter);
+      // ensure formats are set to none so user has to explicitly set value
+      sink_codec_ctx_->pix_fmt = AV_PIX_FMT_NONE;
+      sink_codec_ctx_->sample_fmt = AV_SAMPLE_FMT_NONE;
       stream_ = avformat_new_stream(&sink_->formatContext(), av_codec); // Freed by FormatContext
     } else {
       throw std::runtime_error("Codec is not supported as encoder");
@@ -276,15 +279,38 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<int3
 
 bool FFMpegStream::setInputFormat(const PixelFormat format)
 {
-  // TODO:
-  return false;
+  const auto ff_format = types::convertPixelFormat(format);
+  std::set<AVPixelFormat> formats;
+  AVPixelFormat fmt;
+  auto ix = 0;
+  bool okay = false;
+  do {
+    fmt = codec_->pix_fmts[ix++];
+    formats.insert(fmt);
+    if (fmt == ff_format) {
+      okay = true;
+      sink_codec_ctx_->pix_fmt = fmt;
+    }
+  } while ((!okay) && (fmt != AV_PIX_FMT_NONE));
+
+  if (!okay) {
+    std::string msg = "Invalid pixel format set as input. Valid types are:\n";
+    for (const auto& f : formats) {
+      if (f == AV_PIX_FMT_NONE) {
+        continue;
+      }
+      msg.append(fmt::format("\t {}\n", types::convertPixelFormat(f))); //TODO: maybe show as string repr
+    }
+    logMessage(LogType::WARNING, msg);
+  }
+  return okay;
 }
 
 bool FFMpegStream::setInputFormat(const SampleFormat format)
 {
   assert(codec_);
   assert(sink_codec_ctx_);
-  auto ff_format = types::convertSampleFormat(format);
+  const auto ff_format = types::convertSampleFormat(format);
   std::set<AVSampleFormat> formats;
   AVSampleFormat fmt;
   auto ix = 0;
@@ -415,7 +441,7 @@ bool FFMpegStream::setupEncoder()
     }
     case AVMEDIA_TYPE_VIDEO:
     {
-      bool okay = setupVideoEncoder(*stream_, *sink_codec_ctx_);
+      bool okay = setupVideoEncoder(*stream_, *sink_codec_ctx_, *codec_);
       if (!okay) {
         logMessage(LogType::CRITICAL, "Failed to setup video encoder");
       }
@@ -466,9 +492,81 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
   return true;
 }
 
-bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context) const
+bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const
 {
-  return false;
+  auto okay = false;
+  const auto dimensions = this->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+  if (!okay) {
+    logMessage(LogType::CRITICAL, "Video dimensions property not set");
+    return false;
+  }
+  const auto frame_rate = this->property<Rational>(MediaProperty::FRAME_RATE, okay);
+  if (!okay) {
+    logMessage(LogType::CRITICAL, "Video frame-rate property not set");
+    return false;
+  }
+  const auto compression = this->property<CompressionStrategy>(MediaProperty::COMPRESSION, okay);
+  if (!okay) {
+    logMessage(LogType::CRITICAL, "Video compression method propert not set");
+    return false;
+  }
+  if (compression == CompressionStrategy::CBR) {
+    const auto min_bitrate = this->property<int32_t>(MediaProperty::MIN_BITRATE, okay);
+    if (!okay) {
+      logMessage(LogType::CRITICAL, "Video min-bitrate property not set");
+      return false;
+    }
+    const auto max_bitrate = this->property<int32_t>(MediaProperty::MAX_BITRATE, okay);
+    if (!okay) {
+      logMessage(LogType::CRITICAL, "Video max-bitrate property not set");
+      return false;
+    }
+    const auto bitrate = this->property<int32_t>(MediaProperty::BITRATE, okay);
+    if (!okay) {
+      logMessage(LogType::CRITICAL, "Video bitrate property not set");
+      return false;
+    }
+    context.bit_rate = bitrate;
+    context.rc_max_rate = max_bitrate;
+    context.rc_min_rate = min_bitrate;
+  } else if (compression == CompressionStrategy::TARGETBITRATE) {
+    const auto bitrate = this->property<int32_t>(MediaProperty::BITRATE, okay);
+    if (!okay) {
+      logMessage(LogType::CRITICAL, "Video bitrate property not set");
+      return false;
+    }
+    context.bit_rate = bitrate;
+  } else {
+    // TODO:
+  }
+
+  context.width = dimensions.width;
+  context.height = dimensions.height;
+  context.framerate.den = static_cast<int>(frame_rate.denominator());
+  context.framerate.num = static_cast<int>(frame_rate.numerator());
+  context.time_base = av_inv_q(context.framerate);
+
+  const auto gop_struct = this->property<GOP>(MediaProperty::GOP, okay);
+  if (okay) {
+    context.gop_size = gop_struct.n_;
+    context.max_b_frames = gop_struct.m_;
+  }
+
+  const auto threads = this->property<int32_t>(MediaProperty::THREADS, okay);
+  if (okay) {
+    context.thread_count = threads;
+  } else {
+    context.thread_count = static_cast<int>(std::thread::hardware_concurrency());
+    logMessage(LogType::INFO, fmt::format("Automatically setting thread count to {} threads", context.thread_count));
+  }
+  context.thread_type = FF_THREAD_SLICE;
+
+  if (context.pix_fmt == AV_PIX_FMT_NONE) {
+    logMessage(LogType::CRITICAL, "Input pixel format has not been specified");
+    return false;
+  }
+
+  return true;
 }
 
 void FFMpegStream::extractFrameProperties()
