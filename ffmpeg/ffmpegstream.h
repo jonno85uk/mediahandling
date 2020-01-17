@@ -34,6 +34,7 @@
 
 #include "ffmpegmediaframe.h"
 #include "ffmpegsink.h"
+#include "ffmpegtypes.h"
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -58,7 +59,7 @@ namespace media_handling::ffmpeg
     public: // IMediaStream override
       int64_t timestamp() const override;
       MediaFramePtr frame(const int64_t timestamp=-1) final;
-      bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
+      bool writeFrame(MediaFramePtr sample) final;
       StreamType type() const final;
       int32_t sourceIndex() const noexcept final;
       bool setOutputFormat(const PixelFormat format,
@@ -76,6 +77,7 @@ namespace media_handling::ffmpeg
       AVCodec* codec_ {nullptr};
       AVCodecContext* codec_ctx_ {nullptr};
       std::shared_ptr<AVCodecContext> sink_codec_ctx_ {nullptr};
+      types::AVFrameUPtr sink_frame_ {nullptr};
       AVPacket* pkt_ {nullptr};
       AVDictionary* opts_ {nullptr};
       int pixel_format_{};

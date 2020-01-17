@@ -92,7 +92,13 @@ namespace media_handling
     MPEG2_SIMPLE,       //  SP
     MPEG2_MAIN,         //  MP
     MPEG2_HIGH,         //  HP
-    MPEG2_422           //  422
+    MPEG2_422,           //  422
+    DNXHD,
+    DNXHR_LB,
+    DNXHR_SQ,
+    DNXHR_HQ,
+    DNXHR_HQX,
+    DNXHR_444
   };
 
   enum class Level

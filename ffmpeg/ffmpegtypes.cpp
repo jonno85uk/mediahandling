@@ -138,7 +138,13 @@ namespace
     {mh::Profile::MPEG2_SIMPLE, FF_PROFILE_MPEG2_SIMPLE},
     {mh::Profile::MPEG2_MAIN, FF_PROFILE_MPEG2_MAIN},
     {mh::Profile::MPEG2_HIGH, FF_PROFILE_MPEG2_HIGH},
-    {mh::Profile::MPEG2_422, FF_PROFILE_MPEG2_422}
+    {mh::Profile::MPEG2_422, FF_PROFILE_MPEG2_422},
+    {mh::Profile::DNXHD, FF_PROFILE_DNXHD},
+    {mh::Profile::DNXHR_LB, FF_PROFILE_DNXHR_LB},
+    {mh::Profile::DNXHR_SQ, FF_PROFILE_DNXHR_SQ},
+    {mh::Profile::DNXHR_HQ, FF_PROFILE_DNXHR_HQ},
+    {mh::Profile::DNXHR_HQX, FF_PROFILE_DNXHR_HQX},
+    {mh::Profile::DNXHR_444, FF_PROFILE_DNXHR_444},
   };
 
   const std::map<mh::Preset, std::string_view> PRESET_MAP

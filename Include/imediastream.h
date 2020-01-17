@@ -58,11 +58,10 @@ namespace media_handling
 
       /**
        * @brief setFrame    Set the frame-sample for the stream
-       * @param timestamp   Position in the stream
        * @param sample      Frame sample
        * @return            true==success
        */
-      virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) = 0;
+      virtual bool writeFrame(MediaFramePtr sample) = 0;
 
       /**
        * @brief   Obtain the type of this stream

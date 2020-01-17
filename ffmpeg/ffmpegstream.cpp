@@ -110,16 +110,17 @@ FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
 FFMpegStream::FFMpegStream(FFMpegSink* sink, const AVCodecID codec)
   : sink_(sink)
 {
-    if (AVCodec* av_codec = avcodec_find_encoder(codec)) {
-      codec_ = av_codec;
-      sink_codec_ctx_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec), types::avCodecContextDeleter);
-      // ensure formats are set to none so user has to explicitly set value
-      sink_codec_ctx_->pix_fmt = AV_PIX_FMT_NONE;
-      sink_codec_ctx_->sample_fmt = AV_SAMPLE_FMT_NONE;
-      stream_ = avformat_new_stream(&sink_->formatContext(), av_codec); // Freed by FormatContext
-    } else {
-      throw std::runtime_error("Codec is not supported as encoder");
-    }
+  if (AVCodec* av_codec = avcodec_find_encoder(codec)) {
+    codec_ = av_codec;
+    sink_codec_ctx_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(av_codec), types::avCodecContextDeleter);
+    // ensure formats are set to none so user has to explicitly set value
+    sink_codec_ctx_->pix_fmt = AV_PIX_FMT_NONE;
+    sink_codec_ctx_->sample_fmt = AV_SAMPLE_FMT_NONE;
+    stream_ = avformat_new_stream(&sink_->formatContext(), av_codec); // Freed by FormatContext
+    pkt_ = av_packet_alloc();
+  } else {
+    throw std::runtime_error("Codec is not supported as encoder");
+  }
 }
 
 FFMpegStream::~FFMpegStream()
@@ -156,16 +157,65 @@ MediaFramePtr FFMpegStream::frame(const int64_t timestamp)
 }
 
 
-bool FFMpegStream::setFrame(const int64_t timestamp, MediaFramePtr sample)
+bool FFMpegStream::writeFrame(MediaFramePtr sample)
 {
-  assert(sink_);
   bool okay = true;
   std::call_once(setup_encoder_, [&] { okay = setupEncoder(); });
   if (!okay) {
     logMessage(LogType::CRITICAL, "Failed to setup encoder");
     return false;
   }
-  // TODO:
+  if ( (sink_codec_ctx_ == nullptr) || (sink_frame_ == nullptr) ) {
+    logMessage(LogType::CRITICAL, "Stream has not been configured correctly for writing");
+    return false;
+  }
+
+  // send frame to encoder
+  if (sample) {
+    sink_frame_->data[0] = sample->data().data_[0];
+    auto ret = avcodec_send_frame(sink_codec_ctx_.get(), sink_frame_.get());
+    if (ret < 0) {
+      av_strerror(ret, err.data(), ERR_LEN);
+      const auto msg = fmt::format("Failed to send frame to encoder: {}", err.data());
+      logMessage(LogType::CRITICAL, msg);
+      return false;
+    }
+  } else {
+    auto ret = avcodec_send_frame(sink_codec_ctx_.get(), nullptr);
+    if (ret < 0) {
+      av_strerror(ret, err.data(), ERR_LEN);
+      const auto msg = fmt::format("Failed to send frame to encoder: {}", err.data());
+      logMessage(LogType::CRITICAL, msg);
+      return false;
+    }
+  }
+
+  // Retrieve packet from encoder
+  int ret = 0;
+  while (ret >= 0) {
+    ret = avcodec_receive_packet(sink_codec_ctx_.get(), pkt_);
+    if (ret == AVERROR(EAGAIN)) {
+      return true;
+    } else if (ret < 0) {
+      if (ret != AVERROR_EOF) {
+        av_strerror(ret, err.data(), ERR_LEN);
+        const auto msg = fmt::format("Failed to receive packet from encoder, msg={}", err.data());
+        logMessage(LogType::CRITICAL, msg);
+        return false;
+      }
+      return true;
+    }
+
+    pkt_->stream_index = stream_->index;
+//    if (rescale) {
+//      av_packet_rescale_ts(packet, codec_ctx->time_base, stream->time_base);
+//    }
+
+    // Send packet to container writer
+    // TODO: need to build a debug version of ffmpeg. This blows up somewhere inside ffmpeg
+    av_interleaved_write_frame(&sink_->formatContext(), pkt_);
+    av_packet_unref(pkt_);
+  }
   return true;
 }
 
@@ -430,6 +480,8 @@ bool FFMpegStream::setupEncoder()
   assert(sink_codec_ctx_);
   assert(codec_);
 
+  sink_frame_.reset(av_frame_alloc());
+
   switch (sink_codec_ctx_->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
     {
@@ -489,6 +541,22 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
     logMessage(LogType::CRITICAL, "Input sample format has not been specified");
     return false;
   }
+  assert(sink_frame_);
+  sink_frame_->sample_rate = sample_rate;
+  sink_frame_->nb_samples = context.frame_size != 0 ? context.frame_size : 256;
+  sink_frame_->format = context.sample_fmt;
+  sink_frame_->channel_layout = context.channel_layout;
+  sink_frame_->channels = context.channels;
+  av_frame_make_writable(sink_frame_.get());
+  const auto ret = av_frame_get_buffer(sink_frame_.get(), 0);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    const auto msg = fmt::format("Failed to allocate frame buffers, msg={}", err.data());
+    logMessage(LogType::CRITICAL, msg);
+    return false;
+  }
+  assert(pkt_);
+  av_init_packet(pkt_);
   return true;
 }
 
@@ -596,6 +664,22 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
     return false;
   }
 
+  assert(sink_frame_);
+  sink_frame_->width = dimensions.width;
+  sink_frame_->height = dimensions.height;
+  sink_frame_->format = context.pix_fmt;
+  ret = av_frame_get_buffer(sink_frame_.get(), 0);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    const auto msg = fmt::format("Failed to initialise buffers for video frame, msg={}", err.data());
+    logMessage(LogType::CRITICAL, msg);
+    return false;
+  }
+
+  assert(pkt_);
+  av_init_packet(pkt_);
+
+
   return okay;
 }
 
@@ -604,9 +688,9 @@ bool FFMpegStream::setupH264Encoder(AVCodecContext& ctx) const
   bool okay;
   const auto profile = this->property<Profile>(MediaProperty::PROFILE, okay);
   if (okay) {
-    const std::vector<Profile> valid = {Profile::H264_BASELINE, Profile::H264_MAIN, Profile::H264_HIGH,
-                                        Profile::H264_HIGH10, Profile::H264_HIGH422, Profile::H264_HIGH444};
-    if (std::find(valid.begin(), valid.end(), profile) != valid.end()) {
+    const std::set<Profile> valid = {Profile::H264_BASELINE, Profile::H264_MAIN, Profile::H264_HIGH,
+                                     Profile::H264_HIGH10, Profile::H264_HIGH422, Profile::H264_HIGH444};
+    if (valid.count(profile) == 1) {
       ctx.profile = types::convertProfile(profile);
     } else {
       logMessage(LogType::WARNING, "Incompatibile profile chosen for X264 encoder");
@@ -614,10 +698,10 @@ bool FFMpegStream::setupH264Encoder(AVCodecContext& ctx) const
   }
   const auto preset = this->property<Preset>(MediaProperty::PRESET, okay);
   if (okay) {
-    const std::vector<Preset> valid = { Preset::X264_VERYSLOW, Preset::X264_SLOWER, Preset::X264_SLOW, Preset::X264_MEDIUM,
-                                        Preset::X264_FAST, Preset::X264_FASTER, Preset::X264_VERYFAST,Preset::X264_SUPERFAST,
-                                        Preset::X264_ULTRAFAST};
-    if (std::find(valid.begin(), valid.end(), preset) != valid.end()) {
+    const std::set<Preset> valid = { Preset::X264_VERYSLOW, Preset::X264_SLOWER, Preset::X264_SLOW, Preset::X264_MEDIUM,
+                                     Preset::X264_FAST, Preset::X264_FASTER, Preset::X264_VERYFAST,Preset::X264_SUPERFAST,
+                                     Preset::X264_ULTRAFAST};
+    if (valid.count(preset) == 1) {
       auto ret = av_opt_set(ctx.priv_data, "preset", types::convertPreset(preset).data(), 0);
       if (ret < 0) {
         av_strerror(ret, err.data(), ERR_LEN);
@@ -632,14 +716,36 @@ bool FFMpegStream::setupH264Encoder(AVCodecContext& ctx) const
 }
 bool FFMpegStream::setupMPEG2Encoder(AVCodecContext& ctx) const
 {
+  bool okay;
+  const auto profile = this->property<Profile>(MediaProperty::PROFILE, okay);
+  if (okay) {
+    const std::set<Profile> valid = {Profile::MPEG2_SIMPLE, Profile::MPEG2_MAIN, Profile::MPEG2_HIGH, Profile::MPEG2_422};
+    if (valid.count(profile) == 1) {
+      ctx.profile = types::convertProfile(profile);
+    } else {
+      logMessage(LogType::WARNING, "Incompatibile profile chosen for MPEG2 encoder");
+    }
+  }
   return true;
 }
 bool FFMpegStream::setupMPEG4Encoder(AVCodecContext& ctx) const
 {
+  // TODO: low priority
   return true;
 }
 bool FFMpegStream::setupDNXHDEncoder(AVCodecContext& ctx) const
 {
+  bool okay;
+  const auto profile = this->property<Profile>(MediaProperty::PROFILE, okay);
+  if (okay) {
+    const std::set<Profile> valid = {Profile::DNXHD, Profile::DNXHR_LB, Profile::DNXHR_SQ, Profile::DNXHR_HQ,
+                                     Profile::DNXHR_HQX, Profile::DNXHR_444};
+    if (valid.count(profile) == 1) {
+      ctx.profile = types::convertProfile(profile);
+    } else {
+      logMessage(LogType::WARNING, "Incompatibile profile chosen for MPEG2 encoder");
+    }
+  }
   return true;
 }
 
