@@ -27,10 +27,13 @@
 
 #include "ffmpegtypes.h"
 #include <map>
+#include "mediahandling.h"
 
 namespace mh = media_handling;
 
 using media_handling::InterpolationMethod;
+
+constexpr auto EMPTY_STR = "";
 
 namespace
 {
@@ -123,24 +126,67 @@ namespace
     {mh::ChannelLayout::SEVEN, AV_CH_LAYOUT_7POINT0},
     {mh::ChannelLayout::SEVEN_LFE, AV_CH_LAYOUT_7POINT1}
   };
+
+  const std::map<mh::Profile, int> PROFILE_MAP
+  {
+    {mh::Profile::H264_BASELINE,FF_PROFILE_H264_BASELINE},
+    {mh::Profile::H264_MAIN,  FF_PROFILE_H264_MAIN},
+    {mh::Profile::H264_HIGH, FF_PROFILE_H264_HIGH},
+    {mh::Profile::H264_HIGH10, FF_PROFILE_H264_HIGH_10},
+    {mh::Profile::H264_HIGH422, FF_PROFILE_H264_HIGH_422},
+    {mh::Profile::H264_HIGH444, FF_PROFILE_H264_HIGH_444},
+    {mh::Profile::MPEG2_SIMPLE, FF_PROFILE_MPEG2_SIMPLE},
+    {mh::Profile::MPEG2_MAIN, FF_PROFILE_MPEG2_MAIN},
+    {mh::Profile::MPEG2_HIGH, FF_PROFILE_MPEG2_HIGH},
+    {mh::Profile::MPEG2_422, FF_PROFILE_MPEG2_422}
+  };
+
+  const std::map<mh::Preset, std::string_view> PRESET_MAP
+  {
+    {mh::Preset::X264_VERYSLOW, "veryslow"},
+    {mh::Preset::X264_SLOWER, "slower"},
+    {mh::Preset::X264_SLOW, "slow"},
+    {mh::Preset::X264_MEDIUM, "medium"},
+    {mh::Preset::X264_FAST, "fast"},
+    {mh::Preset::X264_FASTER, "faster"},
+    {mh::Preset::X264_VERYFAST, "veryfast"},
+    {mh::Preset::X264_SUPERFAST, "superfast"},
+    {mh::Preset::X264_ULTRAFAST, "ultrafast"}
+  };
 }
 
 template <typename T_K, typename T_V>
-T_K convertFromFFMpegType(const T_V ff_key, const std::map<T_K, T_V>& mapping, const T_K default_value)
+T_K convertFromFFMpegType(const T_V ff_key, const std::map<T_K, T_V>& mapping, const T_K default_value) noexcept
 {
-  for (const auto& [key, value] : mapping) {
-    if (value == ff_key) {
-      return key;
+  try {
+    for (const auto& [key, value] : mapping) {
+      if (value == ff_key) {
+        return key;
+      }
     }
+  } catch (const std::exception& ex) {
+    media_handling::logMessage(media_handling::LogType::WARNING,
+                               fmt::format("convertFromFFMpegType() -- Caught an exception, ex={}", ex.what()));
+  } catch (...) {
+    media_handling::logMessage(media_handling::LogType::WARNING,
+                               fmt::format("convertFromFFMpegType() -- Caught an unknown exception, ex={}"));
   }
   return default_value;
 }
 
 template <typename T_K, typename T_V>
-T_V convertToFFMpegType(const T_K mh_key, const std::map<T_K, T_V>& mapping, const T_V default_value)
+T_V convertToFFMpegType(const T_K mh_key, const std::map<T_K, T_V>& mapping, const T_V default_value) noexcept
 {
-  if (mapping.count(mh_key) == 1) {
-    return mapping.at(mh_key);
+  try {
+    if (mapping.count(mh_key) == 1) {
+      return mapping.at(mh_key);
+    }
+  } catch (const std::exception& ex) {
+    media_handling::logMessage(media_handling::LogType::WARNING,
+                               fmt::format("convertToFFMpegType() -- Caught an exception, ex={}", ex.what()));
+  } catch (...) {
+    media_handling::logMessage(media_handling::LogType::WARNING,
+                               fmt::format("convertToFFMpegType() -- Caught an unknown exception, ex={}"));
   }
   return default_value;
 }
@@ -416,6 +462,17 @@ media_handling::Codec media_handling::types::convertCodecID(const AVCodecID id) 
 AVCodecID mh::types::convertCodecID(const Codec id) noexcept
 {
   return convertToFFMpegType(id, CODEC_MAP, AV_CODEC_ID_NONE);
+}
+
+
+int mh::types::convertProfile(const Profile prof) noexcept
+{
+  return convertToFFMpegType(prof, PROFILE_MAP, FF_PROFILE_UNKNOWN);
+}
+
+std::string_view mh::types::convertPreset(const Preset pre) noexcept
+{
+  return convertToFFMpegType(pre, PRESET_MAP, std::string_view(EMPTY_STR));
 }
 
 media_handling::SampleFormat media_handling::types::convert(enum AVSampleFormat av_format) noexcept

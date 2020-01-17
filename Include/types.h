@@ -46,9 +46,11 @@ namespace media_handling
   {
     THREADS,              // int32_t
     COMPRESSION,          // CompressionStrategy
-    PROFILE,              //TODO: for mpeg2/4, aac, dnxhd, etc encoded profile
+    PROFILE,              // Profile
+    LEVEL,                // Level
     CODEC,                // Codec
     CODEC_NAME,           // std::string
+    PRESET,               // Preset
     AUDIO_FORMAT,         // SampleFormat
     AUDIO_LAYOUT,         // ChannelLayout
     AUDIO_SAMPLING_RATE,  // int32_t
@@ -76,6 +78,44 @@ namespace media_handling
     SEQUENCE_PATTERN,     // std::string
     COLOUR_SPACE,         // ColourSpace
     GOP,                  // GOP
+  };
+
+  enum class Profile
+  {
+    UNKNOWN,
+    H264_BASELINE,      //  BP
+    H264_MAIN,          //  MP
+    H264_HIGH,          //  HiP
+    H264_HIGH10,        //  Hi10P
+    H264_HIGH422,       //  Hi422P
+    H264_HIGH444,       //  Hi444PP
+    MPEG2_SIMPLE,       //  SP
+    MPEG2_MAIN,         //  MP
+    MPEG2_HIGH,         //  HP
+    MPEG2_422           //  422
+  };
+
+  enum class Level
+  {
+    UNKNOWN,
+    MPEG2_LOW,      // LL
+    MPEG2_MAIN,     // ML
+    MPEG2_HIGH1440, // H-14
+    MPEG2_HIGH      // HL
+  };
+
+  enum class Preset
+  {
+    UNKNOWN,
+    X264_VERYSLOW,
+    X264_SLOWER,
+    X264_SLOW,
+    X264_MEDIUM,
+    X264_FAST,
+    X264_FASTER,
+    X264_VERYFAST,
+    X264_SUPERFAST,
+    X264_ULTRAFAST
   };
 
   enum class Codec

@@ -266,3 +266,53 @@ TEST (FFMpegSinkTest, SetupVideoEncoderSuccess)
   ASSERT_TRUE(stream->setFrame(0, {}));
 }
 
+TEST (FFMpegSinkTest, SetupVideoH264EncoderOptionsWrongProfile)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  auto stream = thing.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 10'000'000);
+  stream->setProperty(MediaProperty::PROFILE, Profile::MPEG2_422);
+  stream->setProperty(MediaProperty::PRESET, Preset::X264_FAST);
+  stream->setInputFormat(PixelFormat::YUV420);
+  ASSERT_TRUE(stream != nullptr);
+  ASSERT_TRUE(stream->setFrame(0, {}));
+}
+
+TEST (FFMpegSinkTest, SetupVideoH264EncoderOptionsWrongPixelFormat)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  auto stream = thing.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  stream->setProperty(MediaProperty::PROFILE, Profile::H264_MAIN);
+  stream->setProperty(MediaProperty::PRESET, Preset::X264_FAST);
+  stream->setInputFormat(PixelFormat::YUV422); // 422 isn't possible with main
+  ASSERT_TRUE(stream != nullptr);
+  ASSERT_FALSE(stream->setFrame(0, {}));
+}
+
+TEST (FFMpegSinkTest, SetupVideoH264EncoderOptions)
+{
+  FFMpegSink thing("./test.mp4", {Codec::H264}, {});
+  ASSERT_TRUE(thing.initialise());
+  auto stream = thing.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  stream->setProperty(MediaProperty::PROFILE, Profile::H264_HIGH422);
+  stream->setProperty(MediaProperty::PRESET, Preset::X264_FAST);
+  stream->setInputFormat(PixelFormat::YUV422);
+  ASSERT_TRUE(stream != nullptr);
+  ASSERT_TRUE(stream->setFrame(0, {}));
+}
+
+
+

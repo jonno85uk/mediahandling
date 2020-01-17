@@ -566,8 +566,83 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
     return false;
   }
 
+  // Do bare minimum before avcodec_open2
+  switch (context.codec_id) {
+    case AV_CODEC_ID_H264:
+      okay = setupH264Encoder(context);
+      break;
+    case AV_CODEC_ID_MPEG2VIDEO:
+      okay = setupMPEG2Encoder(context);
+      break;
+    case AV_CODEC_ID_DNXHD:
+      okay = setupDNXHDEncoder(context);
+      break;
+    case AV_CODEC_ID_MPEG4:
+      okay = setupMPEG4Encoder(context);
+      break;
+    default:
+      // Nothing defined for these codecs yet
+      break;
+  }
+
+  if (!okay) {
+    logMessage(LogType::CRITICAL, "Failed to setup encoder");
+  }
+
+  auto ret = avcodec_open2(&context, &codec, nullptr);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    logMessage(LogType::CRITICAL, fmt::format("Could not open output video encoder. {}", err.data()));
+    return false;
+  }
+
+  return okay;
+}
+
+bool FFMpegStream::setupH264Encoder(AVCodecContext& ctx) const
+{
+  bool okay;
+  const auto profile = this->property<Profile>(MediaProperty::PROFILE, okay);
+  if (okay) {
+    const std::vector<Profile> valid = {Profile::H264_BASELINE, Profile::H264_MAIN, Profile::H264_HIGH,
+                                        Profile::H264_HIGH10, Profile::H264_HIGH422, Profile::H264_HIGH444};
+    if (std::find(valid.begin(), valid.end(), profile) != valid.end()) {
+      ctx.profile = types::convertProfile(profile);
+    } else {
+      logMessage(LogType::WARNING, "Incompatibile profile chosen for X264 encoder");
+    }
+  }
+  const auto preset = this->property<Preset>(MediaProperty::PRESET, okay);
+  if (okay) {
+    const std::vector<Preset> valid = { Preset::X264_VERYSLOW, Preset::X264_SLOWER, Preset::X264_SLOW, Preset::X264_MEDIUM,
+                                        Preset::X264_FAST, Preset::X264_FASTER, Preset::X264_VERYFAST,Preset::X264_SUPERFAST,
+                                        Preset::X264_ULTRAFAST};
+    if (std::find(valid.begin(), valid.end(), preset) != valid.end()) {
+      auto ret = av_opt_set(ctx.priv_data, "preset", types::convertPreset(preset).data(), 0);
+      if (ret < 0) {
+        av_strerror(ret, err.data(), ERR_LEN);
+        logMessage(LogType::CRITICAL, fmt::format("Failed to set preset, msg={}", err.data()));
+        return false;
+      }
+    } else {
+      logMessage(LogType::WARNING, "Incompatibile preset chosen for X264 encoder");
+    }
+  }
   return true;
 }
+bool FFMpegStream::setupMPEG2Encoder(AVCodecContext& ctx) const
+{
+  return true;
+}
+bool FFMpegStream::setupMPEG4Encoder(AVCodecContext& ctx) const
+{
+  return true;
+}
+bool FFMpegStream::setupDNXHDEncoder(AVCodecContext& ctx) const
+{
+  return true;
+}
+
 
 void FFMpegStream::extractFrameProperties()
 {

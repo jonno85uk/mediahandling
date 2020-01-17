@@ -96,6 +96,10 @@ namespace media_handling::ffmpeg
       bool setupEncoder();
       bool setupAudioEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const;
       bool setupVideoEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const;
+      bool setupH264Encoder(AVCodecContext& ctx) const;
+      bool setupMPEG2Encoder(AVCodecContext& ctx) const;
+      bool setupMPEG4Encoder(AVCodecContext& ctx) const;
+      bool setupDNXHDEncoder(AVCodecContext& ctx) const;
 
       /**
        * @brief Extract extra properties from a frame
