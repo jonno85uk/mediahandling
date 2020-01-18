@@ -193,6 +193,8 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
   // Retrieve packet from encoder
   int ret = 0;
   while (ret >= 0) {
+
+    av_init_packet(pkt_);
     ret = avcodec_receive_packet(sink_codec_ctx_.get(), pkt_);
     if (ret == AVERROR(EAGAIN)) {
       return true;
@@ -213,7 +215,14 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
 
     // Send packet to container writer
     // TODO: need to build a debug version of ffmpeg. This blows up somewhere inside ffmpeg
-    av_interleaved_write_frame(&sink_->formatContext(), pkt_);
+    ret = av_interleaved_write_frame(&sink_->formatContext(), pkt_);
+    av_packet_unref(pkt_);
+    if (ret < 0 ){
+      av_strerror(ret, err.data(), ERR_LEN);
+      const auto msg = fmt::format("Failed to write frame to container, msg={}", err.data());
+      logMessage(LogType::CRITICAL, msg);
+      return false;
+    }
     av_packet_unref(pkt_);
   }
   return true;
@@ -329,6 +338,10 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<int3
 
 bool FFMpegStream::setInputFormat(const PixelFormat format)
 {
+  if (codec_->pix_fmts == nullptr) {
+    logMessage(LogType::CRITICAL, "Encoder has no known supported pixel formats");
+    return false;
+  }
   const auto ff_format = types::convertPixelFormat(format);
   std::set<AVPixelFormat> formats;
   AVPixelFormat fmt;
@@ -489,7 +502,7 @@ bool FFMpegStream::setupEncoder()
       if (!okay) {
         logMessage(LogType::CRITICAL, "Failed to setup audio encoder");
       }
-      return okay;
+      return sink_->writeHeader();
     }
     case AVMEDIA_TYPE_VIDEO:
     {
@@ -497,7 +510,7 @@ bool FFMpegStream::setupEncoder()
       if (!okay) {
         logMessage(LogType::CRITICAL, "Failed to setup video encoder");
       }
-      return okay;
+      return sink_->writeHeader();
     }
     default:
       break;
@@ -556,7 +569,6 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
     return false;
   }
   assert(pkt_);
-  av_init_packet(pkt_);
   return true;
 }
 
@@ -613,6 +625,7 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
   context.framerate.den = static_cast<int>(frame_rate.denominator());
   context.framerate.num = static_cast<int>(frame_rate.numerator());
   context.time_base = av_inv_q(context.framerate);
+  stream.time_base = context.time_base;
 
   const auto gop_struct = this->property<GOP>(MediaProperty::GOP, okay);
   if (okay) {
@@ -678,6 +691,16 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
 
   assert(pkt_);
   av_init_packet(pkt_);
+
+  // Fill the AVCodecParameters based on the values from the codec context.
+  ret = avcodec_parameters_from_context(stream.codecpar, &context);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    const auto msg = fmt::format("Could not copy video encoder parameters to output stream, msg={}", err.data());
+    logMessage(LogType::CRITICAL, msg);
+    return false;
+  }
+
 
 
   return okay;

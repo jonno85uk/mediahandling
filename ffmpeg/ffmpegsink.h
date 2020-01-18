@@ -29,6 +29,7 @@
 #define FFMPEGSINK_H
 
 #include <vector>
+#include <mutex>
 
 #include "imediasink.h"
 #include "imediastream.h"
@@ -63,6 +64,8 @@ namespace media_handling::ffmpeg
 
     public:
       AVFormatContext& formatContext() const;
+      bool writeHeader();
+      bool writeTrailer();
     private:
       std::string file_path_;
       struct {
@@ -74,6 +77,8 @@ namespace media_handling::ffmpeg
           std::vector<MediaStreamPtr> audio_;
       } streams_;
       types::AVFormatContextUPtr fmt_ctx_ {nullptr};
+      bool header_written_;
+      std::once_flag trailer_written_;
       bool ready_ {false};
 
   };

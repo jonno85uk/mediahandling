@@ -53,7 +53,7 @@ FFMpegSink::FFMpegSink(std::string file_path, std::vector<Codec> video_codecs, s
 
 FFMpegSink::~FFMpegSink()
 {
-
+  writeTrailer();
 }
 
 
@@ -176,4 +176,38 @@ AVFormatContext& FFMpegSink::formatContext() const
 {
   assert(fmt_ctx_ != nullptr);
   return *fmt_ctx_;
+}
+
+bool FFMpegSink::writeHeader()
+{
+  bool okay = true;
+  if (!header_written_) {
+      auto ret = avformat_write_header(fmt_ctx_.get(), nullptr);
+      if (ret < 0) {
+        av_strerror(ret, err.data(), ERR_LEN);
+        const auto msg = fmt::format("Could not write output file header, msg=", err.data());
+        okay = false;
+      } else {
+        header_written_ = true;
+      }
+  }
+  return okay;
+}
+
+bool FFMpegSink::writeTrailer()
+{
+  if ((fmt_ctx_ == nullptr) || (!header_written_)) {
+    return false;
+  }
+  bool okay = true;
+  const auto func = [&] {
+      auto ret = av_write_trailer(fmt_ctx_.get());
+      if (ret < 0) {
+        av_strerror(ret, err.data(), ERR_LEN);
+        const auto msg = fmt::format("Could not write output file trailer, msg=", err.data());
+        okay = false;
+      }
+  };
+  std::call_once(trailer_written_, func);
+  return okay;
 }
