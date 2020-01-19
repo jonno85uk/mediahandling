@@ -31,6 +31,7 @@
 #include <regex>
 
 #include "ffmpegsource.h"
+#include "ffmpegsink.h"
 
 static std::atomic<media_handling::BackendType> media_backend = media_handling::BackendType::FFMPEG;
 
@@ -162,6 +163,23 @@ media_handling::MediaSourcePtr media_handling::createSource(std::string file_pat
   switch (media_backend) {
     case BackendType::FFMPEG:
       return std::make_shared<ffmpeg::FFMpegSource>(file_path);
+    case BackendType::GSTREAMER:
+    [[fallthrough]];
+    case BackendType::INTEL:
+    [[fallthrough]];
+    default:
+      return {};
+  }
+}
+
+
+media_handling::MediaSinkPtr media_handling::createSink(std::string file_path,
+                                                        std::vector<Codec> video_codecs,
+                                                        std::vector<Codec> audio_codecs)
+{
+  switch (media_backend) {
+    case BackendType::FFMPEG:
+      return std::make_shared<ffmpeg::FFMpegSink>(std::move(file_path), std::move(video_codecs), std::move(audio_codecs));
     case BackendType::GSTREAMER:
     [[fallthrough]];
     case BackendType::INTEL:

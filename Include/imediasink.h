@@ -77,6 +77,8 @@ namespace media_handling
          */
         virtual std::vector<MediaStreamPtr> visualStreams() = 0;
     };
+
+    using MediaSinkPtr = std::shared_ptr<IMediaSink>;
 }
 
 #endif // IMEDIASINK_H
