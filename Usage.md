@@ -70,10 +70,10 @@
     auto frame = stream->frame(); 
 
 ### Read first video frame from a file with specific pixel format and dimensions
-  auto source =  media_handling::createSource("somefile.mov");
-  auto stream = source->visualStream(0);
-  stream->setOutputFormat(PixelFormat::RGBA, {320, 240});
-  auto frame = stream->frame(); 
+    auto source =  media_handling::createSource("somefile.mov");
+    auto stream = source->visualStream(0);
+    stream->setOutputFormat(PixelFormat::RGBA, {320, 240});
+    auto frame = stream->frame(); 
 
 ### Read first video frame from a file with specific pixel format, dimensions and interpolation method
     auto source =  media_handling::createSource("somefile.mov");
