@@ -172,8 +172,11 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
 
   // send frame to encoder
   if (sample) {
-    sink_frame_->data[0] = sample->data().data_[0];
+    for (auto ix = 0; ix < AV_NUM_DATA_POINTERS; ++ix) {
+      sink_frame_->data[ix] = sample->data().data_[ix];
+    }
     auto ret = avcodec_send_frame(sink_codec_ctx_.get(), sink_frame_.get());
+    sink_frame_->pts++;
     if (ret < 0) {
       av_strerror(ret, err.data(), ERR_LEN);
       const auto msg = fmt::format("Failed to send frame to encoder: {}", err.data());
@@ -193,7 +196,6 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
   // Retrieve packet from encoder
   int ret = 0;
   while (ret >= 0) {
-
     av_init_packet(pkt_);
     ret = avcodec_receive_packet(sink_codec_ctx_.get(), pkt_);
     if (ret == AVERROR(EAGAIN)) {
@@ -208,13 +210,10 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
       return true;
     }
 
+    av_packet_rescale_ts(pkt_, sink_codec_ctx_->time_base, stream_->time_base);
     pkt_->stream_index = stream_->index;
-//    if (rescale) {
-//      av_packet_rescale_ts(packet, codec_ctx->time_base, stream->time_base);
-//    }
 
     // Send packet to container writer
-    // TODO: need to build a debug version of ffmpeg. This blows up somewhere inside ffmpeg
     ret = av_interleaved_write_frame(&sink_->formatContext(), pkt_);
     av_packet_unref(pkt_);
     if (ret < 0 ){
@@ -357,6 +356,22 @@ bool FFMpegStream::setInputFormat(const PixelFormat format)
   } while ((!okay) && (fmt != AV_PIX_FMT_NONE));
 
   if (!okay) {
+#ifdef AUTO_CONV_FMT
+    const auto dims = this->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+    if (okay) {
+      SwsContext* ctx = sws_getContext(dims.width, dims.height, ff_format,
+                                       dims.width, dims.height, codec_->pix_fmts[0],
+                                       0,
+                                       nullptr, nullptr, nullptr);
+      assert(ctx);
+      output_format_.sws_context_ = std::shared_ptr<SwsContext>(ctx, types::swsContextDeleter);
+      output_format_.pix_fmt_ = format;
+      output_format_.dims_ = dims;
+      sink_codec_ctx_->pix_fmt = codec_->pix_fmts[0];
+      logMessage(LogType::WARNING, fmt::format("Auto converting input format to {}", codec_->pix_fmts[0]));
+      return true;
+    }
+#endif
     std::string msg = "Invalid pixel format set as input. Valid types are:\n";
     for (const auto& f : formats) {
       if (f == AV_PIX_FMT_NONE) {
@@ -388,6 +403,7 @@ bool FFMpegStream::setInputFormat(const SampleFormat format)
   } while ((!okay) && (fmt != AV_SAMPLE_FMT_NONE));
 
   if (!okay) {
+    // TODO: create a swr
     std::string msg = "Invalid sample format set as input. Valid types are:\n";
     for (const auto& f : formats) {
       if (f == AV_SAMPLE_FMT_NONE) {
@@ -442,6 +458,9 @@ void FFMpegStream::extractVisualProperties(const AVStream& stream, const AVCodec
     this->setProperty(MediaProperty::DISPLAY_ASPECT_RATIO, dar);
   }
 
+  const Profile prof = types::convertProfile(context.profile);
+  this->setProperty(MediaProperty::PROFILE, prof);
+
   extractFrameProperties();
 }
 
@@ -494,6 +513,7 @@ bool FFMpegStream::setupEncoder()
   assert(codec_);
 
   sink_frame_.reset(av_frame_alloc());
+  sink_frame_->pts = 0;
 
   switch (sink_codec_ctx_->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
@@ -525,7 +545,25 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
 {
   bool okay;
   auto sample_rate = this->property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
-  if (!okay) {
+  if (okay) {
+    // check supported sample rates
+    if (codec.supported_samplerates == nullptr) {
+      logMessage(LogType::CRITICAL, "Unable to validify set sample rate");
+      return false;
+    }
+    int rate = -1;
+    auto ix = 0;
+    bool match = false;
+    do {
+      rate = codec.supported_samplerates[ix++];
+      match = (rate == sample_rate);
+    } while (rate != 0 && !match);
+
+    if (!match) {
+      logMessage(LogType::CRITICAL, "Invalid sample rate set for audio encoder");
+      return false;
+    }
+  } else {
     logMessage(LogType::CRITICAL, "Audio sample rate property not set");
     return false;
   }
@@ -554,6 +592,13 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
     logMessage(LogType::CRITICAL, "Input sample format has not been specified");
     return false;
   }
+  auto ret = avcodec_open2(&context, &codec, nullptr);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    logMessage(LogType::CRITICAL, fmt::format("Could not open output audio encoder. {}", err.data()));
+    return false;
+  }
+
   assert(sink_frame_);
   sink_frame_->sample_rate = sample_rate;
   sink_frame_->nb_samples = context.frame_size != 0 ? context.frame_size : 256;
@@ -561,7 +606,7 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
   sink_frame_->channel_layout = context.channel_layout;
   sink_frame_->channels = context.channels;
   av_frame_make_writable(sink_frame_.get());
-  const auto ret = av_frame_get_buffer(sink_frame_.get(), 0);
+  ret = av_frame_get_buffer(sink_frame_.get(), 0);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     const auto msg = fmt::format("Failed to allocate frame buffers, msg={}", err.data());
@@ -587,7 +632,7 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
   }
   const auto compression = this->property<CompressionStrategy>(MediaProperty::COMPRESSION, okay);
   if (!okay) {
-    logMessage(LogType::CRITICAL, "Video compression method propert not set");
+    logMessage(LogType::CRITICAL, "Video compression method property not set");
     return false;
   }
   if (compression == CompressionStrategy::CBR) {

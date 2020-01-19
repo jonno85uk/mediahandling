@@ -317,7 +317,6 @@ void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t st
   int32_t visual_count = 0;
   int32_t audio_count = 0;
 
-  // TODO: create the FFMpegStreams on-demand, e.g. via audioStream() or visualStream()
   gsl::span<AVStream*> span_streams(streams, stream_count);
   for (auto& stream: span_streams) {
     assert(stream);

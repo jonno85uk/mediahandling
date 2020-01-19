@@ -476,6 +476,12 @@ int mh::types::convertProfile(const Profile prof) noexcept
   return convertToFFMpegType(prof, PROFILE_MAP, FF_PROFILE_UNKNOWN);
 }
 
+
+mh::Profile mh::types::convertProfile(const int prof) noexcept
+{
+  return convertFromFFMpegType(prof, PROFILE_MAP, Profile::UNKNOWN);
+}
+
 std::string_view mh::types::convertPreset(const Preset pre) noexcept
 {
   return convertToFFMpegType(pre, PRESET_MAP, std::string_view(EMPTY_STR));

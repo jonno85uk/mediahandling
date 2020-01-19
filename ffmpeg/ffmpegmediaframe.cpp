@@ -51,19 +51,18 @@ namespace
 
 FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual)
   : ff_frame_(std::move(frame)),
-    is_visual_(visual),
-    is_audio_(!visual)
+    is_audio_(!visual),
+    is_visual_(visual)
 {
   assert(ff_frame_);
-  assert(ff_frame_->pts >= 0);
   timestamp_ = ff_frame_->pts;
 }
 
 
 FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, OutputFormat format)
   : ff_frame_(std::move(frame)),
-    is_visual_(visual),
     is_audio_(!visual),
+    is_visual_(visual),
     output_fmt_(std::move(format))
 {
 }

@@ -123,6 +123,19 @@ bool FFMpegSink::initialise()
   return true;
 }
 
+
+void FFMpegSink::finish()
+{
+  writeTrailer();
+  ready_ = false;
+  fmt_ctx_.reset();
+  codecs_.audio_.clear();
+  codecs_.video_.clear();
+  streams_.audio_.clear();
+  streams_.video_.clear();
+  file_path_.clear();
+}
+
 bool FFMpegSink::isReady()
 {
   if (!ready_)

@@ -165,6 +165,20 @@ TEST (FFMpegSinkTest, SetupAudioEncoderNoInput)
   ASSERT_FALSE(stream->writeFrame( {}));
 }
 
+TEST (FFMpegSinkTest, SetupAudioEncoderInvalidSamplerate)
+{
+  FFMpegSink thing("./test.mp4", {}, {Codec::MP3});
+  thing.initialise();
+  auto stream = thing.audioStream(0);
+  ASSERT_TRUE(stream != nullptr);
+  stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
+  stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 123456);
+  stream->setProperty(MediaProperty::BITRATE, 128'000);
+  ASSERT_TRUE(stream->setInputFormat(SampleFormat::SIGNED_16P));
+  ASSERT_FALSE(stream->writeFrame( {}));
+}
+
+
 TEST (FFMpegSinkTest, SetupAudioEncoderSuccess)
 {
   FFMpegSink thing("./test.mp4", {}, {Codec::MP3});
@@ -172,7 +186,7 @@ TEST (FFMpegSinkTest, SetupAudioEncoderSuccess)
   auto stream = thing.audioStream(0);
   ASSERT_TRUE(stream != nullptr);
   stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
-  stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22'000);
+  stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22'050);
   stream->setProperty(MediaProperty::BITRATE, 128'000);
   ASSERT_TRUE(stream->setInputFormat(SampleFormat::SIGNED_16P));
   ASSERT_TRUE(stream->writeFrame( {}));
@@ -408,21 +422,243 @@ TEST(FFMpegSinkTest, WriteH264)
   FFMpegSource source("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov");
   auto source_v_stream = source.visualStream(0);
   ASSERT_TRUE(source_v_stream != nullptr);
-  auto frame = source_v_stream->frame();
-
-  FFMpegSink sink("/tmp/test.mp4", {Codec::H264}, {});
+  source_v_stream->setOutputFormat(PixelFormat::YUV422, {1280, 720});
+  FFMpegSink sink("/tmp/h264.mp4", {Codec::H264}, {});
   ASSERT_TRUE(sink.initialise());
   auto stream = sink.visualStream(0);
   stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
-  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({1280,720}));
   stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
-  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
-  stream->setProperty(MediaProperty::PROFILE, Profile::H264_BASELINE);
+  stream->setProperty(MediaProperty::BITRATE, 10'000'000);
+  stream->setProperty(MediaProperty::PROFILE, Profile::H264_HIGH422);
   stream->setProperty(MediaProperty::PRESET, Preset::X264_FAST);
-  stream->setInputFormat(PixelFormat::YUV420);
-  ASSERT_TRUE(stream->writeFrame(frame));
+  stream->setInputFormat(PixelFormat::YUV422);
+
+  while (auto frame = source_v_stream->frame()) {
+    ASSERT_TRUE(stream->writeFrame(frame));
+  }
   ASSERT_TRUE(stream->writeFrame(nullptr));
+  sink.finish();
+
+  FFMpegSource written_file("/tmp/h264.mp4");
+  ASSERT_TRUE(written_file.visualStreams().size() == 1);
+  ASSERT_TRUE(written_file.audioStreams().empty());
+  auto v_s = written_file.visualStream(0);
+  bool okay;
+  auto dims = v_s->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(dims.width, 1280);
+  ASSERT_EQ(dims.height, 720);
+  auto profile = v_s->property<Profile>(MediaProperty::PROFILE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(profile, Profile::H264_HIGH422);
+  auto pix_fmt = v_s->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(pix_fmt, PixelFormat::YUV422);
+  auto bitrate = v_s->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate/1'000'000, 10);
 }
 
+TEST(FFMpegSinkTest, WriteMPEG2)
+{
+  FFMpegSource source("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov");
+  auto source_v_stream = source.visualStream(0);
+  ASSERT_TRUE(source_v_stream != nullptr);
+  source_v_stream->setOutputFormat(PixelFormat::YUV420, {426, 240});
+  FFMpegSink sink("/tmp/mpeg2.mp4", {Codec::MPEG2_VIDEO}, {});
+  ASSERT_TRUE(sink.initialise());
+  auto stream = sink.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({426, 240}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  stream->setProperty(MediaProperty::PROFILE, Profile::MPEG2_SIMPLE);
+  stream->setProperty(MediaProperty::LEVEL, Level::MPEG2_LOW);
+  stream->setInputFormat(PixelFormat::YUV420);
+
+  while (auto frame = source_v_stream->frame()) {
+    ASSERT_TRUE(stream->writeFrame(frame));
+  }
+  ASSERT_TRUE(stream->writeFrame(nullptr));
+
+  sink.finish();
+
+  FFMpegSource written_file("/tmp/mpeg2.mp4");
+  ASSERT_TRUE(written_file.visualStreams().size() == 1);
+  ASSERT_TRUE(written_file.audioStreams().empty());
+  auto v_s = written_file.visualStream(0);
+  bool okay;
+  auto dims = v_s->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(dims.width, 426);
+  ASSERT_EQ(dims.height, 240);
+  auto profile = v_s->property<Profile>(MediaProperty::PROFILE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(profile, Profile::MPEG2_SIMPLE);
+  auto pix_fmt = v_s->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(pix_fmt, PixelFormat::YUV420);
+  auto bitrate = v_s->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate/1'000'000, 1);
+}
+
+TEST(FFMpegSinkTest, WriteMJPEG)
+{
+  FFMpegSource source("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov");
+  auto source_v_stream = source.visualStream(0);
+  ASSERT_TRUE(source_v_stream != nullptr);
+  source_v_stream->setOutputFormat(PixelFormat::YUVJ420, {426, 240});
+  FFMpegSink sink("/tmp/mjpeg.mp4", {Codec::JPEG}, {});
+  ASSERT_TRUE(sink.initialise());
+  auto stream = sink.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({426, 240}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  ASSERT_FALSE(stream->setInputFormat(PixelFormat::YUV420));
+  ASSERT_TRUE(stream->setInputFormat(PixelFormat::YUVJ420));
+
+  while (auto frame = source_v_stream->frame()) {
+    ASSERT_TRUE(stream->writeFrame(frame));
+  }
+  ASSERT_TRUE(stream->writeFrame(nullptr));
+
+  sink.finish();
+
+  FFMpegSource written_file("/tmp/mjpeg.mp4");
+  ASSERT_TRUE(written_file.visualStreams().size() == 1);
+  ASSERT_TRUE(written_file.audioStreams().empty());
+  auto v_s = written_file.visualStream(0);
+  bool okay;
+  auto dims = v_s->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(dims.width, 426);
+  ASSERT_EQ(dims.height, 240);
+  auto pix_fmt = v_s->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(pix_fmt, PixelFormat::YUVJ420);
+  auto bitrate = v_s->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate/1'000'000, 1);
+}
+
+TEST(FFMpegSinkTest, WriteMOV)
+{
+  FFMpegSource source("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov");
+  auto source_v_stream = source.visualStream(0);
+  ASSERT_TRUE(source_v_stream != nullptr);
+  source_v_stream->setOutputFormat(PixelFormat::YUV422, {1920, 1080});
+  FFMpegSink sink("/tmp/h264.mov", {Codec::H264}, {});
+  ASSERT_TRUE(sink.initialise());
+  auto stream = sink.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({1920, 1080}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 2'000'000);
+  ASSERT_TRUE(stream->setInputFormat(PixelFormat::YUV422));
+
+  while (auto frame = source_v_stream->frame()) {
+    ASSERT_TRUE(stream->writeFrame(frame));
+  }
+  ASSERT_TRUE(stream->writeFrame(nullptr));
+
+  sink.finish();
+
+  FFMpegSource written_file("/tmp/h264.mov");
+  ASSERT_TRUE(written_file.visualStreams().size() == 1);
+  ASSERT_TRUE(written_file.audioStreams().empty());
+  auto v_s = written_file.visualStream(0);
+  bool okay;
+  auto dims = v_s->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(dims.width, 1920);
+  ASSERT_EQ(dims.height, 1080);
+  auto pix_fmt = v_s->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(pix_fmt, PixelFormat::YUV422);
+  auto bitrate = v_s->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate/1'000'000, 1);
+}
+
+TEST(FFMpegSinkTest, WriteAVI)
+{
+  FFMpegSource source("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov");
+  auto source_v_stream = source.visualStream(0);
+  ASSERT_TRUE(source_v_stream != nullptr);
+  source_v_stream->setOutputFormat(PixelFormat::YUV422, {1920, 1080});
+  FFMpegSink sink("/tmp/h264.avi", {Codec::H264}, {});
+  ASSERT_TRUE(sink.initialise());
+  auto stream = sink.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({1920, 1080}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 2'000'000);
+  ASSERT_TRUE(stream->setInputFormat(PixelFormat::YUV422));
+
+  while (auto frame = source_v_stream->frame()) {
+    ASSERT_TRUE(stream->writeFrame(frame));
+  }
+  ASSERT_TRUE(stream->writeFrame(nullptr));
+
+  sink.finish();
+
+  FFMpegSource written_file("/tmp/h264.avi");
+  ASSERT_TRUE(written_file.visualStreams().size() == 1);
+  ASSERT_TRUE(written_file.audioStreams().empty());
+  auto v_s = written_file.visualStream(0);
+  bool okay;
+  auto dims = v_s->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(dims.width, 1920);
+  ASSERT_EQ(dims.height, 1080);
+  auto pix_fmt = v_s->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(pix_fmt, PixelFormat::YUV422);
+  auto bitrate = v_s->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate/1'000'000, 1);
+}
+
+TEST(FFMpegSinkTest, WriteMXF)
+{
+  FFMpegSource source("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov");
+  auto source_v_stream = source.visualStream(0);
+  ASSERT_TRUE(source_v_stream != nullptr);
+  source_v_stream->setOutputFormat(PixelFormat::YUV422, {1920, 1080});
+  FFMpegSink sink("/tmp/h264.mxf", {Codec::H264}, {});
+  ASSERT_TRUE(sink.initialise());
+  auto stream = sink.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({1920, 1080}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 2'000'000);
+  ASSERT_TRUE(stream->setInputFormat(PixelFormat::YUV422));
+
+  while (auto frame = source_v_stream->frame()) {
+    ASSERT_TRUE(stream->writeFrame(frame));
+  }
+  ASSERT_TRUE(stream->writeFrame(nullptr));
+
+  sink.finish();
+
+  FFMpegSource written_file("/tmp/h264.mxf");
+  ASSERT_TRUE(written_file.visualStreams().size() == 1);
+  ASSERT_TRUE(written_file.audioStreams().empty());
+  auto v_s = written_file.visualStream(0);
+  bool okay;
+  auto dims = v_s->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(dims.width, 1920);
+  ASSERT_EQ(dims.height, 1080);
+  auto pix_fmt = v_s->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(pix_fmt, PixelFormat::YUV422);
+  auto bitrate = v_s->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate/1'000'000, 1);
+}
 
 

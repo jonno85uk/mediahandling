@@ -30,6 +30,7 @@
 
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 #include "imediasink.h"
 #include "imediastream.h"
@@ -55,6 +56,7 @@ namespace media_handling::ffmpeg
     public: // IMediaSink Overrides
       ~FFMpegSink() override;
       bool initialise() override;
+      void finish() override;
       bool isReady() override;
       MediaStreamPtr audioStream(const size_t index) override;
       std::vector<MediaStreamPtr> audioStreams() override;
@@ -78,7 +80,7 @@ namespace media_handling::ffmpeg
       types::AVFormatContextUPtr fmt_ctx_ {nullptr};
       bool header_written_;
       std::once_flag trailer_written_;
-      bool ready_ {false};
+      std::atomic<bool> ready_ {false};
 
   };
 }

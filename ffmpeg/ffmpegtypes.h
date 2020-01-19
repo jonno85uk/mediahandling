@@ -77,6 +77,7 @@ namespace media_handling::types
   Codec convertCodecID(const AVCodecID id) noexcept;
   AVCodecID convertCodecID(const Codec id) noexcept;
   int convertProfile(const Profile prof) noexcept;
+  Profile convertProfile(const int prof) noexcept;
   std::string_view convertPreset(const Preset pre) noexcept;
   /**
    * @brief Convert from FFMpeg type to media_handling type

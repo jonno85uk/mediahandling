@@ -44,6 +44,8 @@ namespace media_handling
         ~IMediaSink() override = default;
 
         virtual bool initialise() = 0;
+
+        virtual void finish() = 0;
         /**
          * @brief     Identify if sink is correctly setup for encoding
          * @return    true==is ready
