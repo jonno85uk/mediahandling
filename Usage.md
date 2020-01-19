@@ -61,7 +61,7 @@
   auto frame = stream->frame(timestamp); 
 </code></pre>
 
-### Read video frames concurrently from the beggining to end
+### Read video frames concurrently from the beginning to end
 <pre><code>
   auto source =  media_handling::createSource("somefile.mov");
   auto stream = source->visualStream(0);
@@ -98,3 +98,37 @@
   auto frame = stream->frame(); 
 </code></pre>
 
+## Encoding
+
+### Write a video frame to an mp4 file with only a video stream using the h264 encoder
+<pre><code>
+  MediaFrame frame;
+
+  ...
+
+  auto sink =  media_handling::createSink("somefile.mp4", {Codec::H264}, {});
+  sink.initialise();
+  auto stream = sink.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  stream->setInputFormat(PixelFormat::YUV420);
+  stream->writeFrame(frame);
+  // To finish the stream
+  stream->writeFrame(nullptr);
+</code></pre>
+
+### Configure profile and preset of the h264 encoder
+<pre><code>
+  auto sink =  media_handling::createSink("somefile.mp4", {Codec::H264}, {});
+  sink.initialise();
+  auto stream = sink.visualStream(0);
+  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
+  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({320,240}));
+  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
+  stream->setProperty(MediaProperty::BITRATE, 1'000'000);
+  stream->setInputFormat(PixelFormat::YUV420);
+  stream->setProperty(MediaProperty::PROFILE, Profile::H264_HIGH422);
+  stream->setProperty(MediaProperty::PRESET, Preset::X264_FAST);
+</code></pre>
