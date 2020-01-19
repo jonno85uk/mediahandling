@@ -123,12 +123,6 @@ bool FFMpegSink::initialise()
   return true;
 }
 
-bool FFMpegSink::encode(std::shared_ptr<MediaFramePtr> sample)
-{
-  // TODO:
-  return false;
-}
-
 bool FFMpegSink::isReady()
 {
   if (!ready_)

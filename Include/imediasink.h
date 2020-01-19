@@ -44,16 +44,6 @@ namespace media_handling
         ~IMediaSink() override = default;
 
         virtual bool initialise() = 0;
-
-        /**
-         * @brief         Encode a frame-sample with the sink's configured codec
-         * @param sample  Frame-sample to encode
-         * @return        true==success
-         */
-        virtual bool encode(std::shared_ptr<MediaFramePtr> sample) = 0;
-
-
-
         /**
          * @brief     Identify if sink is correctly setup for encoding
          * @return    true==is ready
