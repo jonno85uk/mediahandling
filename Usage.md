@@ -10,33 +10,30 @@
     auto stream_count = source->property<int32_t>(MediaProperty::STREAMS, okay);
     auto bitrate      = source->property<int32_t>(MediaProperty::BITRATE, okay);
 
-
-### Get video dimensions
+## Get stream properties
+### Video
     auto source =  media_handling::createSource("somefile.mov");
     auto stream = source->visualStream(0);
     bool okay;
-    auto dims = stream->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
-
-
-### Get video Framerate
+    auto codec          = stream->property<Codec>(MediaProperty::CODEC, okay);
+    auto codec_profile  = stream->property<Profile>(MediaProperty::PROFILE, okay);
+    auto dims           = stream->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
+    auto frame_rate     = stream->property<Rational>(MediaProperty::FRAME_RATE, okay);
+    auto bitrate        = stream->property<int32_t>(MediaProperty::BITRATE, okay);
+    auto field_order    = stream->property<FieldOrder>(MediaProperty::FIELD_ORDER, okay);
+    auto frame_count    = stream->property<int64_t>(MediaProperty::FRAME_COUNT, okay);
+    auto pixel_format   = stream->property<PixelFormat>(MediaProperty::PIXEL_FORMAT, okay);
+    auto par            = stream->property<Rational>(MediaProperty::PIXEL_ASPECT_RATIO, okay);
+    auto dar            = stream->property<Rational>(MediaProperty::DISPLAY_ASPECT_RATIO, okay);
+    auto colour_space   = stream->property<ColourSpace>(MediaProperty::COLOUR_SPACE, okay);
+### Audio
     auto source =  media_handling::createSource("somefile.mov");
-    auto stream = source->visualStream(0);
+    auto stream = source->audioStream(0);
     bool okay;
-    auto rate = stream->property<Rational>(MediaProperty::FRAME_RATE, okay);
-
-
-### Get video Bitrate
-    auto source =  media_handling::createSource("somefile.mov");
-    auto stream = source->visualStream(0);
-    bool okay;
-    auto rate = stream->property<Rational>(MediaProperty::FRAME_RATE, okay);
-
-
-### Get video field order
-    auto source =  media_handling::createSource("somefile.mov");
-    auto stream = source->visualStream(0);
-    bool okay;
-    auto rate = stream->property<FieldOrder>(MediaProperty::FIELD_ORDER, okay);
+    auto channel_layout = stream->property<SampleFormat>(MediaProperty::AUDIO_LAYOUT, okay);
+    auto channel_count  = stream->property<int32_t>(MediaProperty::AUDIO_CHANNELS, okay);
+    auto sample_rate    = stream->property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
+    auto sample_fmt     = stream->property<SampleFormat>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
 
 
 ## Decoding
