@@ -52,7 +52,7 @@ using media_handling::MediaFramePtr;
 
 namespace  {
   std::array<char, ERR_LEN> err;
-  std::set<AVCodecID> NOBITRATE_CODECS {AV_CODEC_ID_WAVPACK};
+  const std::set<AVCodecID> NOBITRATE_CODECS {AV_CODEC_ID_WAVPACK};
 }
 
 
@@ -540,27 +540,43 @@ bool FFMpegStream::setupEncoder()
   return false;
 }
 
+bool checkSupportedSampleRates(const int* rates, const int32_t sample_rate)
+{
+  // check supported sample rates
+  if (rates == nullptr) {
+    logMessage(media_handling::LogType::WARNING, "Unable to validify set sample-rate with codec supported rates");
+    return true;
+  }
+  int rate = -1;
+  auto ix = 0;
+  bool match = false;
+  do {
+    rate = rates[ix++];
+    match = (rate == sample_rate);
+  } while ((rate != 0) && (!match));
+
+  if (!match) {
+    logMessage(media_handling::LogType::CRITICAL, "Invalid sample rate set for audio encoder");
+    return false;
+  }
+  return true;
+}
 
 bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const
 {
+  AVFormatContext fmt = sink_->formatContext();
+  assert(fmt.oformat);
+  auto ret = avformat_query_codec(fmt.oformat, codec.id, FF_COMPLIANCE_NORMAL);
+  if (ret != 1) {
+    logMessage(LogType::CRITICAL, fmt::format("The codec '{}' is not supported in the container '{}'",
+                                              codec.name,
+                                              fmt.oformat->name));
+    return false;
+  }
   bool okay;
   auto sample_rate = this->property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
   if (okay) {
-    // check supported sample rates
-    if (codec.supported_samplerates == nullptr) {
-      logMessage(LogType::CRITICAL, "Unable to validify set sample rate");
-      return false;
-    }
-    int rate = -1;
-    auto ix = 0;
-    bool match = false;
-    do {
-      rate = codec.supported_samplerates[ix++];
-      match = (rate == sample_rate);
-    } while (rate != 0 && !match);
-
-    if (!match) {
-      logMessage(LogType::CRITICAL, "Invalid sample rate set for audio encoder");
+    if (!checkSupportedSampleRates(codec.supported_samplerates, sample_rate)) {
       return false;
     }
   } else {
@@ -592,7 +608,7 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
     logMessage(LogType::CRITICAL, "Input sample format has not been specified");
     return false;
   }
-  auto ret = avcodec_open2(&context, &codec, nullptr);
+  ret = avcodec_open2(&context, &codec, nullptr);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     logMessage(LogType::CRITICAL, fmt::format("Could not open output audio encoder. {}", err.data()));
@@ -613,7 +629,18 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
     logMessage(LogType::CRITICAL, msg);
     return false;
   }
+
   assert(pkt_);
+  av_init_packet(pkt_);
+
+  // Fill the AVCodecParameters based on the values from the codec context.
+  ret = avcodec_parameters_from_context(stream.codecpar, &context);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    const auto msg = fmt::format("Could not copy audio encoder parameters to output stream, msg={}", err.data());
+    logMessage(LogType::CRITICAL, msg);
+    return false;
+  }
   return true;
 }
 

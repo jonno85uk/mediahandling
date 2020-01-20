@@ -214,6 +214,7 @@ bool FFMpegSink::writeTrailer()
         const auto msg = fmt::format("Could not write output file trailer, msg=", err.data());
         okay = false;
       }
+      avio_closep(&fmt_ctx_->pb);
   };
   std::call_once(trailer_written_, func);
   return okay;
