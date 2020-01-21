@@ -47,6 +47,13 @@ namespace media_handling
     public:
       ~IMediaStream() override = default;
 
+      /**
+       * @brief   For certain formats, certain properties aren't available until the stream has been indexed
+       *          examples: bitrate, frame-count and duration
+       * @return  true==stream indexed successfully
+       */
+      virtual bool index() = 0;
+
       virtual int64_t timestamp() const = 0;
 
       /**

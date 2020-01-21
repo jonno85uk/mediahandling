@@ -136,6 +136,40 @@ FFMpegStream::~FFMpegStream()
 }
 
 
+bool FFMpegStream::index()
+{
+  MediaFramePtr fframe = this->frame(0);
+  int64_t frame_count = 0;
+  int64_t frames_size = 0;
+  int64_t duration = 0;
+  bool okay = true;
+  while ((fframe != nullptr) && okay) {
+    fframe->extractProperties();
+    frame_count++;
+    frames_size += fframe->property<int32_t>(MediaProperty::FRAME_PACKET_SIZE, okay);
+    duration += fframe->property<int64_t>(MediaProperty::FRAME_DURATION, okay);
+    fframe = this->frame();
+  }
+
+  if (okay) {
+    this->setProperty(MediaProperty::FRAME_COUNT, frame_count);
+    const auto scale = this->property<Rational>(MediaProperty::TIMESCALE, okay);
+    if (!okay) {
+      return false;
+    }
+    const Rational dur = duration * scale;
+    this->setProperty(MediaProperty::DURATION, dur);
+    const auto rate = this->property<Rational>(MediaProperty::FRAME_RATE, okay);
+    if (!okay) {
+      return false;
+    }
+    const int32_t bitrate = frames_size / (frame_count/rate);
+    this->setProperty(MediaProperty::BITRATE, bitrate);
+
+  }
+  return okay;
+}
+
 int64_t FFMpegStream::timestamp() const
 {
   return last_timestamp_;
@@ -419,18 +453,20 @@ bool FFMpegStream::setInputFormat(const SampleFormat format)
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {
   assert(context.codec);
+  assert(context.codec->name);
   this->setProperty(MediaProperty::CODEC_NAME, std::string(context.codec->name));
   const media_handling::Codec cdc = types::convertCodecID(context.codec_id);
   this->setProperty(MediaProperty::CODEC, cdc);
   // TODO: if we use this things could go wrong on container != essence
-  auto base = stream.time_base;
+  const auto base = stream.time_base;
   if (base.den > 0) {
-    Rational timescale(base.num, base.den);
+    const Rational timescale(base.num, base.den);
     this->setProperty(MediaProperty::TIMESCALE, timescale);
+    const Rational duration = stream.duration * timescale;
+    this->setProperty(MediaProperty::DURATION, duration);
   }
   this->setProperty(MediaProperty::BITRATE, static_cast<int32_t>(context.bit_rate));
 
-  // TODO: stream durations
   if ( (type_ == StreamType::VIDEO) || (type_ == StreamType::IMAGE) ) {
     extractVisualProperties(stream, context);
   } else if (type_ == StreamType::AUDIO) {
@@ -568,7 +604,7 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
   assert(fmt.oformat);
   auto ret = avformat_query_codec(fmt.oformat, codec.id, FF_COMPLIANCE_NORMAL);
   if (ret != 1) {
-    logMessage(LogType::CRITICAL, fmt::format("The codec '{}' is not supported in the container '{}'",
+    logMessage(LogType::CRITICAL, fmt::format("The audio codec '{}' is not supported in the container '{}'",
                                               codec.name,
                                               fmt.oformat->name));
     return false;
@@ -646,6 +682,15 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
 
 bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const
 {
+  AVFormatContext fmt = sink_->formatContext();
+  assert(fmt.oformat);
+  auto ret = avformat_query_codec(fmt.oformat, codec.id, FF_COMPLIANCE_NORMAL);
+  if (ret != 1) {
+    logMessage(LogType::CRITICAL, fmt::format("The video codec '{}' is not supported in the container '{}'",
+                                              codec.name,
+                                              fmt.oformat->name));
+    return false;
+  }
   auto okay = false;
   const auto dimensions = this->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
   if (!okay) {
@@ -663,24 +708,25 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
     return false;
   }
   if (compression == CompressionStrategy::CBR) {
-    const auto min_bitrate = this->property<int32_t>(MediaProperty::MIN_BITRATE, okay);
-    if (!okay) {
-      logMessage(LogType::CRITICAL, "Video min-bitrate property not set");
-      return false;
-    }
-    const auto max_bitrate = this->property<int32_t>(MediaProperty::MAX_BITRATE, okay);
-    if (!okay) {
-      logMessage(LogType::CRITICAL, "Video max-bitrate property not set");
-      return false;
-    }
+
     const auto bitrate = this->property<int32_t>(MediaProperty::BITRATE, okay);
     if (!okay) {
       logMessage(LogType::CRITICAL, "Video bitrate property not set");
       return false;
     }
-    context.bit_rate = bitrate;
-    context.rc_max_rate = max_bitrate;
-    context.rc_min_rate = min_bitrate;
+    context.bit_rate    = bitrate;
+    context.rc_max_rate = bitrate;
+    context.rc_min_rate = bitrate;
+#ifdef MPEG2_HEADACHES
+    context.rc_buffer_size = bitrate / 4;
+    context.rc_max_available_vbv_use = 1.0;
+    context.rc_min_vbv_overflow_use = 1.0;
+    auto props = reinterpret_cast<AVCPBProperties*>(av_stream_new_side_data(&stream, AV_PKT_DATA_CPB_PROPERTIES, NULL));
+    props->avg_bitrate = bitrate;
+    props->buffer_size = bitrate;
+    props->max_bitrate = bitrate;
+    props->min_bitrate = bitrate;
+#endif
   } else if (compression == CompressionStrategy::TARGETBITRATE) {
     const auto bitrate = this->property<int32_t>(MediaProperty::BITRATE, okay);
     if (!okay) {
@@ -688,6 +734,14 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
       return false;
     }
     context.bit_rate = bitrate;
+    const auto min_bitrate = this->property<int32_t>(MediaProperty::MIN_BITRATE, okay);
+    if (okay) {
+      context.rc_min_rate = min_bitrate;
+    }
+    const auto max_bitrate = this->property<int32_t>(MediaProperty::MAX_BITRATE, okay);
+    if (okay) {
+      context.rc_max_rate = max_bitrate;
+    }
   } else {
     // TODO:
   }
@@ -742,7 +796,7 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
     logMessage(LogType::CRITICAL, "Failed to setup encoder");
   }
 
-  auto ret = avcodec_open2(&context, &codec, nullptr);
+  ret = avcodec_open2(&context, &codec, nullptr);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     logMessage(LogType::CRITICAL, fmt::format("Could not open output video encoder. {}", err.data()));

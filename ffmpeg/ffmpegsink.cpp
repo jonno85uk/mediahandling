@@ -120,6 +120,7 @@ bool FFMpegSink::initialise()
     logMessage(LogType::CRITICAL, "Failed to setup any streams");
     return false;
   }
+  ready_ = true;
   return true;
 }
 

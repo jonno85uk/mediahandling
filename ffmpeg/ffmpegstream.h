@@ -57,6 +57,7 @@ namespace media_handling::ffmpeg
       ~FFMpegStream() override;
 
     public: // IMediaStream override
+      bool index() override;
       int64_t timestamp() const override;
       MediaFramePtr frame(const int64_t timestamp=-1) final;
       bool writeFrame(MediaFramePtr sample) final;

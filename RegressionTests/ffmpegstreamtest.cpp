@@ -665,9 +665,9 @@ TEST (FFMpegStreamTest, ImageSequenceAuto)
   auto stream = source->visualStream(0);
   ASSERT_TRUE(stream->type() == StreamType::VIDEO);
   bool okay = false;
-  auto duration = source->property<int64_t>(MediaProperty::DURATION, okay);
+  auto duration = source->property<Rational>(MediaProperty::DURATION, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(duration, 4040000);
+  ASSERT_EQ(duration, Rational(101, 25));
   auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
   ASSERT_TRUE(okay);
   ASSERT_EQ(rate, Rational(25,1));
@@ -683,9 +683,9 @@ TEST (FFMpegStreamTest, ImageSequenceAutoCAPEXT)
   auto stream = source->visualStream(0);
   ASSERT_TRUE(stream->type() == StreamType::VIDEO);
   bool okay = false;
-  auto duration = source->property<int64_t>(MediaProperty::DURATION, okay);
+  auto duration = source->property<Rational>(MediaProperty::DURATION, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(duration, 200000);
+  ASSERT_EQ(duration, Rational(1, 5));
   auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
   ASSERT_TRUE(okay);
   ASSERT_EQ(rate, Rational(25,1));
@@ -723,9 +723,9 @@ TEST (FFMpegStreamTest, ImageSequenceManualSuccess)
   auto stream = source->visualStream(0);
   ASSERT_TRUE(stream->type() == StreamType::VIDEO);
   bool okay = false;
-  auto duration = source->property<int64_t>(MediaProperty::DURATION, okay);
+  auto duration = source->property<Rational>(MediaProperty::DURATION, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(duration, 4040000);
+  ASSERT_EQ(duration, Rational(101, 25));
   auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
   ASSERT_TRUE(okay);
   ASSERT_EQ(rate, Rational(25,1));
@@ -744,5 +744,29 @@ TEST (FFMpegStreamTest, ImageSequenceAutoDisabled)
   auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
   ASSERT_TRUE(okay);
   ASSERT_EQ(rate, Rational(25,1));
+}
+
+TEST (FFMpegStreamTest, IndexedStreamProperties)
+{
+  auto source = std::make_unique<FFMpegSource>("./ReferenceMedia/Video/mxf/mpeg2.mxf");
+  ASSERT_EQ(source->visualStreams().size(), 1);
+  ASSERT_EQ(source->audioStreams().size(), 0);
+  auto stream = source->visualStream(0);
+  ASSERT_EQ(stream->type(), StreamType::VIDEO);
+  bool okay;
+  auto bitrate = stream->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate, 0);
+  auto frame_count = stream->property<int64_t>(MediaProperty::FRAME_COUNT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(frame_count, 0);
+  ASSERT_TRUE(stream->index());
+  bitrate = stream->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate, 488025);
+  frame_count = stream->property<int64_t>(MediaProperty::FRAME_COUNT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(frame_count, 50);
+
 }
 

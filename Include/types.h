@@ -62,7 +62,7 @@ namespace media_handling
     MIN_BITRATE,          // int32_t
     MAX_BITRATE,          // int32_t
     BITRATE,              // int32_t
-    DURATION,             // int64_t
+    DURATION,             // Rational
     TIMESCALE,            // Rational
     FILENAME,             // std::string
     FILE_FORMAT,          // std::string
@@ -78,6 +78,9 @@ namespace media_handling
     SEQUENCE_PATTERN,     // std::string
     COLOUR_SPACE,         // ColourSpace
     GOP,                  // GOP
+    FRAME_PACKET_SIZE,    // int32_t
+    FRAME_DURATION,        // int64_t
+    START_TIMECODE        // Timecode
   };
 
   enum class Profile
