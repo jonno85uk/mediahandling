@@ -276,7 +276,7 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
       return false;
     }
     av_packet_unref(pkt_);
-  }
+  } //while
   return true;
 }
 
@@ -677,11 +677,10 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
 
   assert(sink_frame_);
   sink_frame_->sample_rate = sample_rate;
-  sink_frame_->nb_samples = context.frame_size != 0 ? context.frame_size : 256;
+  sink_frame_->nb_samples = context.codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE ? 10000 : context.frame_size;
   sink_frame_->format = context.sample_fmt;
   sink_frame_->channel_layout = context.channel_layout;
   sink_frame_->channels = context.channels;
-  av_frame_make_writable(sink_frame_.get());
   ret = av_frame_get_buffer(sink_frame_.get(), 0);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
@@ -689,7 +688,13 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
     logMessage(LogType::CRITICAL, msg);
     return false;
   }
-
+  ret = av_frame_make_writable(sink_frame_.get());
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    const auto msg = fmt::format("Failed to make frame writable, msg={}", err.data());
+    logMessage(LogType::CRITICAL, msg);
+    return false;
+  }
   assert(pkt_);
   av_init_packet(pkt_);
 

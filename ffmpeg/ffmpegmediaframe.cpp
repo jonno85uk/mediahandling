@@ -125,7 +125,19 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
       conv_frame_->channel_layout = types::convertChannelLayout(output_fmt_.layout_);
       conv_frame_->sample_rate = output_fmt_.sample_rate_;
       conv_frame_->format = types::convertSampleFormat(output_fmt_.sample_fmt_);
-      av_frame_make_writable(conv_frame_.get());
+      conv_frame_->nb_samples = 1000;
+      ret = av_frame_get_buffer(conv_frame_.get(), 0);
+      if (ret < 0) {
+          av_strerror(ret, err.data(), ERR_LEN);
+          logMessage(LogType::CRITICAL, fmt::format("Could not allocate frame buffer: {}", err.data()));
+          return {};
+      }
+      ret = av_frame_make_writable(conv_frame_.get());
+      if (ret < 0) {
+          av_strerror(ret, err.data(), ERR_LEN);
+          logMessage(LogType::CRITICAL, fmt::format("Could not ensure frame data is writable: {}", err.data()));
+          return {};
+      }
     }
     ret = swr_convert_frame(output_fmt_.swr_context_.get(), conv_frame_.get(), ff_frame_.get());
     if (ret < 0) {
