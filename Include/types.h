@@ -146,6 +146,9 @@ namespace media_handling
     ALAC,
     FLAC,
     MP3,
+    PCM_S16_LE,
+    PCM_S24_LE,
+    VORBIS,
     WAV
   };
 

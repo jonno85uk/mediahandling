@@ -34,6 +34,8 @@
 
 using media_handling::ffmpeg::FFMpegSink;
 
+namespace mh = media_handling;
+
 constexpr size_t ERR_LEN = 256;
 
 namespace
@@ -56,9 +58,18 @@ FFMpegSink::~FFMpegSink()
   writeTrailer();
 }
 
+void FFMpegSink::setProperty(const MediaProperty prop, const std::any& value)
+{
+  if (ready_) {
+    logMessage(LogType::WARNING, "Cannot change properties once Sink has been initialised");
+    return;
+  }
+  MediaPropertyObject::setProperty(prop, value);
+}
 
 bool FFMpegSink::initialise()
 {
+  //TODO: check codec support in formatcontext
   MediaPropertyObject::setProperty(media_handling::MediaProperty::FILENAME, file_path_);
 
   // Configure container
@@ -177,6 +188,19 @@ media_handling::MediaStreamPtr FFMpegSink::visualStream(const size_t index)
 std::vector<media_handling::MediaStreamPtr> FFMpegSink::visualStreams()
 {
   return streams_.video_;
+}
+
+
+std::set<mh::Codec> FFMpegSink::supportedAudioCodecs() const
+{
+  auto cdcs = fmt_ctx_->oformat->codec_tag;
+  return {};
+}
+
+std::set<mh::Codec> FFMpegSink::supportedVideoCodecs() const
+{
+
+  return {};
 }
 
 

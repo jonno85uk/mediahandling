@@ -138,6 +138,7 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
                                          * av_get_bytes_per_sample(static_cast<AVSampleFormat>(conv_frame_->format))
                                          * conv_frame_->channels);
     f_d.samp_fmt_ = output_fmt_.sample_fmt_;
+    f_d.sample_count_ = conv_frame_->nb_samples;
   } else {
     // No conversion
     f_d.data_ = ff_frame_->data;
@@ -151,6 +152,7 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
       f_d.data_size_ = static_cast<size_t>(ff_frame_->nb_samples
                                            * av_get_bytes_per_sample(static_cast<AVSampleFormat>(ff_frame_->format))
                                            * ff_frame_->channels);
+      f_d.sample_count_ = ff_frame_->nb_samples;
     }
   }
   return f_d;

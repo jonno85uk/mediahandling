@@ -32,6 +32,7 @@
 #include <memory>
 #include <vector>
 #include <stdlib.h>
+#include <set>
 
 #include "types.h"
 #include "imediastream.h"
@@ -76,6 +77,10 @@ namespace media_handling
          * @return  list of visual streams
          */
         virtual std::vector<MediaStreamPtr> visualStreams() = 0;
+
+        virtual std::set<Codec> supportedAudioCodecs() const = 0;
+
+        virtual std::set<Codec> supportedVideoCodecs() const = 0;
     };
 
     using MediaSinkPtr = std::shared_ptr<IMediaSink>;

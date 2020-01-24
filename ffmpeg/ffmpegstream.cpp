@@ -34,11 +34,13 @@
 
 #include "mediahandling.h"
 #include "ffmpegsource.h"
+#include "timecode.h"
 
 extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
 #include <libavutil/channel_layout.h>
+#include <libavutil/timestamp.h>
 #include <libswresample/swresample.h>
 }
 
@@ -50,11 +52,24 @@ constexpr auto SEEK_DIRECTION = AVSEEK_FLAG_BACKWARD;
 using media_handling::ffmpeg::FFMpegStream;
 using media_handling::MediaFramePtr;
 
+namespace mh = media_handling;
+
 namespace  {
   std::array<char, ERR_LEN> err;
   const std::set<AVCodecID> NOBITRATE_CODECS {AV_CODEC_ID_WAVPACK};
 }
 
+
+static void log_packet(const mh::Rational time_base, const mh::Rational frame_rate, const AVPacket *pkt)
+{
+//  fmt::format("pts:{} pts_time:{} dts:{} dts_time:{} duration:{} duration_time:{} stream_index:{}\n",
+//              pkt->pts, );
+//  printf("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
+//  av_ts2str(pkt->pts), av_ts2timestr(pkt->pts, time_base),
+//  av_ts2str(pkt->dts), av_ts2timestr(pkt->dts, time_base),
+//  av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, time_base),
+//  pkt->stream_index);
+}
 
 FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
   : parent_(parent),
@@ -206,11 +221,18 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
 
   // send frame to encoder
   if (sample) {
+    const auto data = sample->data();
+    assert(data.data_);
     for (auto ix = 0; ix < AV_NUM_DATA_POINTERS; ++ix) {
-      sink_frame_->data[ix] = sample->data().data_[ix];
+      sink_frame_->data[ix] = data.data_[ix];
+    }
+    if (data.sample_count_ >= 0) {
+      sink_frame_->pts = audio_samples_;
+      audio_samples_ += data.sample_count_;
+    } else {
+      sink_frame_->pts++;
     }
     auto ret = avcodec_send_frame(sink_codec_ctx_.get(), sink_frame_.get());
-    sink_frame_->pts++;
     if (ret < 0) {
       av_strerror(ret, err.data(), ERR_LEN);
       const auto msg = fmt::format("Failed to send frame to encoder: {}", err.data());
@@ -218,7 +240,7 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
       return false;
     }
   } else {
-    auto ret = avcodec_send_frame(sink_codec_ctx_.get(), nullptr);
+    const auto ret = avcodec_send_frame(sink_codec_ctx_.get(), nullptr);
     if (ret < 0) {
       av_strerror(ret, err.data(), ERR_LEN);
       const auto msg = fmt::format("Failed to send frame to encoder: {}", err.data());
@@ -226,11 +248,9 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
       return false;
     }
   }
-
   // Retrieve packet from encoder
   int ret = 0;
   while (ret >= 0) {
-    av_init_packet(pkt_);
     ret = avcodec_receive_packet(sink_codec_ctx_.get(), pkt_);
     if (ret == AVERROR(EAGAIN)) {
       return true;
@@ -244,9 +264,8 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
       return true;
     }
 
-    av_packet_rescale_ts(pkt_, sink_codec_ctx_->time_base, stream_->time_base);
     pkt_->stream_index = stream_->index;
-
+    av_packet_rescale_ts(pkt_, sink_codec_ctx_->time_base, stream_->time_base);
     // Send packet to container writer
     ret = av_interleaved_write_frame(&sink_->formatContext(), pkt_);
     av_packet_unref(pkt_);
@@ -644,6 +663,11 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
     logMessage(LogType::CRITICAL, "Input sample format has not been specified");
     return false;
   }
+
+  if (fmt.oformat->flags & AVFMT_GLOBALHEADER) {
+    context.flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+  }
+
   ret = avcodec_open2(&context, &codec, nullptr);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
@@ -794,6 +818,10 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
 
   if (!okay) {
     logMessage(LogType::CRITICAL, "Failed to setup encoder");
+  }
+
+  if (fmt.oformat->flags & AVFMT_GLOBALHEADER) {
+    context.flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
   }
 
   ret = avcodec_open2(&context, &codec, nullptr);

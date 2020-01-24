@@ -89,6 +89,7 @@ namespace media_handling::ffmpeg
       bool deinterlacer_setup_ {false};
       int32_t source_index_ {-1};
       std::once_flag setup_encoder_;
+      int64_t audio_samples_ {0};
 
     private:
       void extractProperties(const AVStream& stream, const AVCodecContext& context);

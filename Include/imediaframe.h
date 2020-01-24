@@ -60,6 +60,10 @@ namespace media_handling
          * @see IMediaStream::setOutputFormat
          */
         SampleFormat samp_fmt_ {SampleFormat::NONE};
+        /*
+         * @brief The number of audio samples per channel
+         */
+        int32_t sample_count_ {-1};
       };
       
       IMediaFrame() = default;

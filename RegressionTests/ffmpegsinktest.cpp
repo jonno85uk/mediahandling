@@ -662,4 +662,29 @@ TEST(FFMpegSinkTest, WriteMXF)
   ASSERT_EQ(bitrate, 1225655);
 }
 
+TEST(FFMpegSinkTest, WriteMP3)
+{
+
+  FFMpegSource source("./ReferenceMedia/Audio/ogg/monotone.ogg");
+  auto source_stream = source.audioStream(0);
+  source_stream->setOutputFormat(SampleFormat::FLOAT_P);
+  bool okay;
+  const auto sample_rate = source_stream->property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
+
+  FFMpegSink sink("/tmp/vorbis.mka", {}, {Codec::VORBIS});
+  ASSERT_TRUE(sink.initialise());
+  sink.supportedAudioCodecs();
+  auto sink_stream = sink.audioStream(0);
+  sink_stream->setProperty(MediaProperty::BITRATE, 64'000);
+  sink_stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, sample_rate);
+  sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
+  sink_stream->setInputFormat(SampleFormat::FLOAT_P);
+  while (auto frame = source_stream->frame()) {
+    ASSERT_TRUE(sink_stream->writeFrame(frame));
+  }
+  ASSERT_TRUE(sink_stream->writeFrame(nullptr));
+
+  sink.finish();
+}
+
 

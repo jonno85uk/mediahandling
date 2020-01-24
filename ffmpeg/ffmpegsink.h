@@ -53,6 +53,9 @@ namespace media_handling::ffmpeg
        */
       FFMpegSink(std::string file_path, std::vector<Codec> video_codecs, std::vector<Codec> audio_codecs);
 
+    public: // MediaPropertyObject override
+      void setProperty(const MediaProperty prop, const std::any& value) override;
+
     public: // IMediaSink Overrides
       ~FFMpegSink() override;
       bool initialise() override;
@@ -62,7 +65,8 @@ namespace media_handling::ffmpeg
       std::vector<MediaStreamPtr> audioStreams() override;
       MediaStreamPtr visualStream(const size_t index) override;
       std::vector<MediaStreamPtr> visualStreams() override;
-
+      std::set<Codec> supportedAudioCodecs() const override;
+      std::set<Codec> supportedVideoCodecs() const override;
     public:
       AVFormatContext& formatContext() const;
       bool writeHeader();

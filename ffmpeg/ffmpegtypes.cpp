@@ -53,6 +53,9 @@ namespace
     {mh::Codec::ALAC, AV_CODEC_ID_ALAC},
     {mh::Codec::FLAC, AV_CODEC_ID_FLAC},
     {mh::Codec::MP3, AV_CODEC_ID_MP3},
+    {mh::Codec::PCM_S16_LE, AV_CODEC_ID_PCM_S16LE},
+    {mh::Codec::PCM_S24_LE, AV_CODEC_ID_PCM_S24LE},
+    {mh::Codec::VORBIS, AV_CODEC_ID_VORBIS},
     {mh::Codec::WAV, AV_CODEC_ID_WAVPACK}
   };
 
@@ -449,7 +452,7 @@ AVSampleFormat media_handling::types::convertSampleFormat(const media_handling::
 
 media_handling::ChannelLayout media_handling::types::convertChannelLayout(const uint64_t layout) noexcept
 {
-  return convertFromFFMpegType(layout, AUDIO_CHANNEL_MAP, ChannelLayout::UNKNOWN);
+  return convertFromFFMpegType(layout, AUDIO_CHANNEL_MAP, ChannelLayout::MONO);
 }
 
 

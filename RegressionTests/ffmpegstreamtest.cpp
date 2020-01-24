@@ -770,3 +770,25 @@ TEST (FFMpegStreamTest, IndexedStreamProperties)
 
 }
 
+#ifdef DUMP_AUDIO
+#include <iostream>
+#include <fstream>
+
+TEST (FFMpegStreamTest, AudioToCSV)
+{
+  FFMpegSource source("./ReferenceMedia/Audio/ogg/monotone.ogg");
+  auto source_stream = source.audioStream(0);
+  source_stream->setOutputFormat(SampleFormat::UNSIGNED_8);
+  std::ofstream text;
+  text.open("/tmp/audio.csv");
+  int64_t cnt = 0;
+  while (auto frame = source_stream->frame()) {
+    auto data = frame->data();
+    for (auto ix = 0; ix < data.data_size_; ++ix) {
+      text << static_cast<int32_t>(data.data_[0][ix]) << std::endl;
+    }
+  }
+}
+
+#endif
+
