@@ -306,7 +306,7 @@ void FFMpegSource::extractProperties(const AVFormatContext& ctx)
   MediaPropertyObject::setProperty(MediaProperty::FILE_FORMAT, std::string(ctx.iformat->long_name));
   MediaPropertyObject::setProperty(MediaProperty::DURATION, Rational(ctx.duration, AV_TIME_BASE));
   MediaPropertyObject::setProperty(MediaProperty::STREAMS, static_cast<int32_t>(ctx.nb_streams));
-  MediaPropertyObject::setProperty(MediaProperty::BITRATE, static_cast<int32_t>(ctx.bit_rate));
+  MediaPropertyObject::setProperty(MediaProperty::BITRATE, static_cast<BitRate>(ctx.bit_rate));
 
   extractStreamProperties(format_ctx_->streams, format_ctx_->nb_streams);
 }

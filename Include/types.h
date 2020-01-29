@@ -41,6 +41,7 @@
 namespace media_handling
 {
   using SampleRate = int32_t;
+  using BitRate = int32_t;
   // TODO: maybe turn into a mapping
   enum class MediaProperty
   {
@@ -59,9 +60,9 @@ namespace media_handling
     AUDIO_STREAMS,        // int32_t
     VIDEO_STREAMS,        // int32_t
     VIDEO_FORMAT,         // int32_t
-    MIN_BITRATE,          // int32_t
-    MAX_BITRATE,          // int32_t
-    BITRATE,              // int32_t
+    MIN_BITRATE,          // BitRate
+    MAX_BITRATE,          // BitRate
+    BITRATE,              // BitRate
     DURATION,             // Rational
     TIMESCALE,            // Rational
     FILENAME,             // std::string

@@ -166,8 +166,8 @@ bool FFMpegStream::index()
     if (!okay) {
       return false;
     }
-    const int32_t bitrate = frames_size / (frame_count/rate);
-    this->setProperty(MediaProperty::BITRATE, bitrate);
+    const BitRate bit_rate = frames_size / (frame_count/rate);
+    this->setProperty(MediaProperty::BITRATE, bit_rate);
 
   }
   return okay;
@@ -503,7 +503,7 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
     const Rational duration = stream.duration * timescale;
     this->setProperty(MediaProperty::DURATION, duration);
   }
-  this->setProperty(MediaProperty::BITRATE, static_cast<int32_t>(context.bit_rate));
+  this->setProperty(MediaProperty::BITRATE, static_cast<BitRate>(context.bit_rate));
 
   if ( (type_ == StreamType::VIDEO) || (type_ == StreamType::IMAGE) ) {
     extractVisualProperties(stream, context);
@@ -665,7 +665,7 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
   int64_t bitrate = 0;
   if (NOBITRATE_CODECS.find(context.codec_id) == NOBITRATE_CODECS.end()) {
     // A bitrate is required for lossless codecs
-    bitrate = this->property<int32_t>(MediaProperty::BITRATE, okay);
+    bitrate = this->property<BitRate>(MediaProperty::BITRATE, okay);
     if (!okay) {
       logMessage(LogType::CRITICAL, "Audio Bitrate property not set");
       return false;
@@ -757,7 +757,7 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
   }
   if (compression == CompressionStrategy::CBR) {
 
-    const auto bitrate = this->property<int32_t>(MediaProperty::BITRATE, okay);
+    const auto bitrate = this->property<BitRate>(MediaProperty::BITRATE, okay);
     if (!okay) {
       logMessage(LogType::CRITICAL, "Video bitrate property not set");
       return false;
@@ -776,17 +776,17 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
     props->min_bitrate = bitrate;
 #endif
   } else if (compression == CompressionStrategy::TARGETBITRATE) {
-    const auto bitrate = this->property<int32_t>(MediaProperty::BITRATE, okay);
+    const auto bit_rate = this->property<BitRate>(MediaProperty::BITRATE, okay);
     if (!okay) {
       logMessage(LogType::CRITICAL, "Video bitrate property not set");
       return false;
     }
-    context.bit_rate = bitrate;
-    const auto min_bitrate = this->property<int32_t>(MediaProperty::MIN_BITRATE, okay);
+    context.bit_rate = bit_rate;
+    const auto min_bitrate = this->property<BitRate>(MediaProperty::MIN_BITRATE, okay);
     if (okay) {
       context.rc_min_rate = min_bitrate;
     }
-    const auto max_bitrate = this->property<int32_t>(MediaProperty::MAX_BITRATE, okay);
+    const auto max_bitrate = this->property<BitRate>(MediaProperty::MAX_BITRATE, okay);
     if (okay) {
       context.rc_max_rate = max_bitrate;
     }
