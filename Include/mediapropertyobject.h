@@ -68,6 +68,11 @@ class MediaPropertyObject
      * @return          The value of the property if valid
      */
     virtual std::any property(const MediaProperty prop, bool& is_valid) const;
+    /**
+     * @brief         Retrieve all stored properties
+     * @return        property->value mapping
+     */
+    virtual std::map<MediaProperty, std::any> properties() const;
 
     /**
      * @brief   Templated function to cast the property value from a std::any type

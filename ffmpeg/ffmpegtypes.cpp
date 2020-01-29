@@ -26,11 +26,179 @@
 */
 
 #include "ffmpegtypes.h"
+#include <map>
+#include "mediahandling.h"
 
 namespace mh = media_handling;
 
 using media_handling::InterpolationMethod;
 
+constexpr auto EMPTY_STR = "";
+
+namespace
+{
+  const std::map<mh::Codec, AVCodecID> CODEC_MAP
+  {
+    {mh::Codec::DNXHD, AV_CODEC_ID_DNXHD},
+    {mh::Codec::DPX, AV_CODEC_ID_DPX},
+    {mh::Codec::H264, AV_CODEC_ID_H264},
+    {mh::Codec::JPEG2000, AV_CODEC_ID_JPEG2000},
+    {mh::Codec::JPEG, AV_CODEC_ID_MJPEG},
+    {mh::Codec::MPEG2_VIDEO, AV_CODEC_ID_MPEG2VIDEO},
+    {mh::Codec::PNG, AV_CODEC_ID_PNG},
+    {mh::Codec::RAW, AV_CODEC_ID_RAWVIDEO},
+    {mh::Codec::TIFF, AV_CODEC_ID_TIFF},
+    {mh::Codec::AAC, AV_CODEC_ID_AAC},
+    {mh::Codec::AC3, AV_CODEC_ID_AC3},
+    {mh::Codec::ALAC, AV_CODEC_ID_ALAC},
+    {mh::Codec::FLAC, AV_CODEC_ID_FLAC},
+    {mh::Codec::MP3, AV_CODEC_ID_MP3},
+    {mh::Codec::PCM_S16_LE, AV_CODEC_ID_PCM_S16LE},
+    {mh::Codec::PCM_S24_LE, AV_CODEC_ID_PCM_S24LE},
+    {mh::Codec::VORBIS, AV_CODEC_ID_VORBIS},
+    {mh::Codec::WAV, AV_CODEC_ID_WAVPACK}
+  };
+
+  const std::map<mh::ColourPrimaries, AVColorPrimaries> PRIMARIES_MAP
+  {
+    {mh::ColourPrimaries::BT_709, AVCOL_PRI_BT709},
+    {mh::ColourPrimaries::BT_470M, AVCOL_PRI_BT470M},
+    {mh::ColourPrimaries::BT_709, AVCOL_PRI_BT709},
+    {mh::ColourPrimaries::BT_601, AVCOL_PRI_SMPTE170M},
+    {mh::ColourPrimaries::BT_2020, AVCOL_PRI_BT2020},
+    {mh::ColourPrimaries::BT470BG, AVCOL_PRI_BT470BG},
+    {mh::ColourPrimaries::SMPTE_240M, AVCOL_PRI_SMPTE240M},
+    {mh::ColourPrimaries::SMPTE_428, AVCOL_PRI_SMPTE428}
+  };
+
+  const std::map<mh::TransferCharacteristics, AVColorTransferCharacteristic> TRANSFERS_MAP
+  {
+    {mh::TransferCharacteristics::BT_709, AVCOL_TRC_BT709},
+    {mh::TransferCharacteristics::BT_470M, AVCOL_TRC_GAMMA22},
+    {mh::TransferCharacteristics::BT_470BG, AVCOL_TRC_GAMMA28},
+    {mh::TransferCharacteristics::BT_601, AVCOL_TRC_SMPTE170M},
+    {mh::TransferCharacteristics::SMPTE_240M, AVCOL_TRC_SMPTE240M},
+    {mh::TransferCharacteristics::LINEAR, AVCOL_TRC_LINEAR},
+    {mh::TransferCharacteristics::IEC_61966_2_4, AVCOL_TRC_IEC61966_2_4},
+    {mh::TransferCharacteristics::BT_1361, AVCOL_TRC_BT1361_ECG},
+    {mh::TransferCharacteristics::IEC_61966_2_1, AVCOL_TRC_IEC61966_2_1},
+    {mh::TransferCharacteristics::BT_2020_10, AVCOL_TRC_BT2020_10},
+    {mh::TransferCharacteristics::BT_2020_12, AVCOL_TRC_BT2020_12},
+    {mh::TransferCharacteristics::SMPTE_2084, AVCOL_TRC_SMPTE2084},
+    {mh::TransferCharacteristics::SMPTE_428, AVCOL_TRC_SMPTE428},
+    {mh::TransferCharacteristics::ARIB_STD_B67, AVCOL_TRC_ARIB_STD_B67}
+  };
+
+  const std::map<mh::MatrixCoefficients, AVColorSpace> MATRIX_MAP
+  {
+    {mh::MatrixCoefficients::IEC_61966_2_1, AVCOL_SPC_RGB},
+    {mh::MatrixCoefficients::BT_709, AVCOL_SPC_BT709},
+    {mh::MatrixCoefficients::FCC, AVCOL_SPC_FCC},
+    {mh::MatrixCoefficients::BT_470BG, AVCOL_SPC_BT470BG},
+    {mh::MatrixCoefficients::BT_601_6, AVCOL_SPC_SMPTE170M},
+    {mh::MatrixCoefficients::SMPTE_240M, AVCOL_SPC_SMPTE240M},
+    {mh::MatrixCoefficients::BT_2020_NCL, AVCOL_SPC_BT2020_NCL},
+    {mh::MatrixCoefficients::BT_2020_CL, AVCOL_SPC_BT2020_CL},
+    {mh::MatrixCoefficients::SMPTE_2085, AVCOL_SPC_SMPTE2085},
+    {mh::MatrixCoefficients::BT_2100_0, AVCOL_SPC_ICTCP}
+  };
+
+  const std::map<mh::ColourRange, AVColorRange> COLOUR_RANGE_MAP
+  {
+    {mh::ColourRange::FULL, AVCOL_RANGE_JPEG},
+    {mh::ColourRange::TV, AVCOL_RANGE_MPEG}
+  };
+
+  const std::map<mh::ChannelLayout, uint64_t> AUDIO_CHANNEL_MAP
+  {
+    {mh::ChannelLayout::MONO, AV_CH_LAYOUT_MONO},
+    {mh::ChannelLayout::STEREO, AV_CH_LAYOUT_STEREO},
+    {mh::ChannelLayout::STEREO_LFE, AV_CH_LAYOUT_2POINT1},
+    {mh::ChannelLayout::THREE_STEREO, AV_CH_LAYOUT_SURROUND},
+    {mh::ChannelLayout::THREE_SURROUND, AV_CH_LAYOUT_2_1},
+    {mh::ChannelLayout::THREE_SURROUND_LFE, AV_CH_LAYOUT_3POINT1},
+    {mh::ChannelLayout::FOUR_STEREO, AV_CH_LAYOUT_QUAD},
+    {mh::ChannelLayout::FOUR_SURROUND, AV_CH_LAYOUT_4POINT0},
+    {mh::ChannelLayout::FOUR_SURROUND_LFE, AV_CH_LAYOUT_MONO},
+    {mh::ChannelLayout::FIVE, AV_CH_LAYOUT_5POINT0},
+    {mh::ChannelLayout::FIVE_STEREO, AV_CH_LAYOUT_5POINT0_BACK},
+    {mh::ChannelLayout::FIVE_LFE, AV_CH_LAYOUT_5POINT1},
+    {mh::ChannelLayout::FIVE_STEREO_LFE, AV_CH_LAYOUT_5POINT1_BACK},
+    {mh::ChannelLayout::SIX, AV_CH_LAYOUT_6POINT0},
+    {mh::ChannelLayout::SIX_LFE, AV_CH_LAYOUT_6POINT1},
+    {mh::ChannelLayout::SEVEN, AV_CH_LAYOUT_7POINT0},
+    {mh::ChannelLayout::SEVEN_LFE, AV_CH_LAYOUT_7POINT1}
+  };
+
+  const std::map<mh::Profile, int> PROFILE_MAP
+  {
+    {mh::Profile::H264_BASELINE,FF_PROFILE_H264_BASELINE},
+    {mh::Profile::H264_MAIN,  FF_PROFILE_H264_MAIN},
+    {mh::Profile::H264_HIGH, FF_PROFILE_H264_HIGH},
+    {mh::Profile::H264_HIGH10, FF_PROFILE_H264_HIGH_10},
+    {mh::Profile::H264_HIGH422, FF_PROFILE_H264_HIGH_422},
+    {mh::Profile::H264_HIGH444, FF_PROFILE_H264_HIGH_444},
+    {mh::Profile::MPEG2_SIMPLE, FF_PROFILE_MPEG2_SIMPLE},
+    {mh::Profile::MPEG2_MAIN, FF_PROFILE_MPEG2_MAIN},
+    {mh::Profile::MPEG2_HIGH, FF_PROFILE_MPEG2_HIGH},
+    {mh::Profile::MPEG2_422, FF_PROFILE_MPEG2_422},
+    {mh::Profile::DNXHD, FF_PROFILE_DNXHD},
+    {mh::Profile::DNXHR_LB, FF_PROFILE_DNXHR_LB},
+    {mh::Profile::DNXHR_SQ, FF_PROFILE_DNXHR_SQ},
+    {mh::Profile::DNXHR_HQ, FF_PROFILE_DNXHR_HQ},
+    {mh::Profile::DNXHR_HQX, FF_PROFILE_DNXHR_HQX},
+    {mh::Profile::DNXHR_444, FF_PROFILE_DNXHR_444},
+  };
+
+  const std::map<mh::Preset, std::string_view> PRESET_MAP
+  {
+    {mh::Preset::X264_VERYSLOW, "veryslow"},
+    {mh::Preset::X264_SLOWER, "slower"},
+    {mh::Preset::X264_SLOW, "slow"},
+    {mh::Preset::X264_MEDIUM, "medium"},
+    {mh::Preset::X264_FAST, "fast"},
+    {mh::Preset::X264_FASTER, "faster"},
+    {mh::Preset::X264_VERYFAST, "veryfast"},
+    {mh::Preset::X264_SUPERFAST, "superfast"},
+    {mh::Preset::X264_ULTRAFAST, "ultrafast"}
+  };
+}
+
+template <typename T_K, typename T_V>
+T_K convertFromFFMpegType(const T_V ff_key, const std::map<T_K, T_V>& mapping, const T_K default_value) noexcept
+{
+  try {
+    for (const auto& [key, value] : mapping) {
+      if (value == ff_key) {
+        return key;
+      }
+    }
+  } catch (const std::exception& ex) {
+    media_handling::logMessage(media_handling::LogType::WARNING,
+                               fmt::format("convertFromFFMpegType() -- Caught an exception, ex={}", ex.what()));
+  } catch (...) {
+    media_handling::logMessage(media_handling::LogType::WARNING,
+                               fmt::format("convertFromFFMpegType() -- Caught an unknown exception, ex={}"));
+  }
+  return default_value;
+}
+
+template <typename T_K, typename T_V>
+T_V convertToFFMpegType(const T_K mh_key, const std::map<T_K, T_V>& mapping, const T_V default_value) noexcept
+{
+  try {
+    if (mapping.count(mh_key) == 1) {
+      return mapping.at(mh_key);
+    }
+  } catch (const std::exception& ex) {
+    media_handling::logMessage(media_handling::LogType::WARNING,
+                               fmt::format("convertToFFMpegType() -- Caught an exception, ex={}", ex.what()));
+  } catch (...) {
+    media_handling::logMessage(media_handling::LogType::WARNING,
+                               fmt::format("convertToFFMpegType() -- Caught an unknown exception, ex={}"));
+  }
+  return default_value;
+}
 
 void media_handling::types::avFormatContextDeleter(AVFormatContext* context)
 {
@@ -58,118 +226,41 @@ void media_handling::types::swrContextDeleter(SwrContext* context)
 }
 
 
+void media_handling::types::avCodecContextDeleter(AVCodecContext* context)
+{
+  avcodec_close(context);
+  avcodec_free_context(&context);
+}
+void media_handling::types::avCodecDeleter(AVCodec* codec)
+{
+  // None
+}
+
+void media_handling::types::avStreamDeleter(AVStream* stream)
+{
+  // None. Should be freed by avformat
+}
+
 media_handling::ColourPrimaries media_handling::types::convertColourPrimary(const AVColorPrimaries primary) noexcept
 {
-  media_handling::ColourPrimaries val;
-  switch (primary) {
-    case AVCOL_PRI_BT709:
-      val = ColourPrimaries::BT_709;
-      break;
-    case AVCOL_PRI_BT470M:
-      val = ColourPrimaries::BT_470M;
-      break;
-    case AVCOL_PRI_BT470BG:
-      [[fallthrough]];
-    case AVCOL_PRI_SMPTE170M:
-      val = ColourPrimaries::BT_601;
-      break;
-    case AVCOL_PRI_BT2020:
-      val = ColourPrimaries::BT_2020;
-      break;
-    case AVCOL_PRI_SMPTE240M:
-      val = ColourPrimaries::SMPTE_240M;
-      break;
-    case AVCOL_PRI_SMPTE428:
-      val = ColourPrimaries::SMPTE_428;
-      break;
-    default:
-      val = ColourPrimaries::UNKNOWN;
-      break;
-  }
-  return val;
+  return convertFromFFMpegType(primary, PRIMARIES_MAP, mh::ColourPrimaries::UNKNOWN);
 }
 
 mh::TransferCharacteristics mh::types::convertTransferCharacteristics(const AVColorTransferCharacteristic transfer) noexcept
 {
-  switch (transfer) {
-    case AVCOL_TRC_BT709:
-      return TransferCharacteristics::BT_709;
-    case AVCOL_TRC_GAMMA22:
-      return TransferCharacteristics::BT_470M;
-    case AVCOL_TRC_GAMMA28:
-      return TransferCharacteristics::BT_470BG;
-    case AVCOL_TRC_SMPTE170M:
-      return TransferCharacteristics::BT_601;
-    case AVCOL_TRC_SMPTE240M:
-      return TransferCharacteristics::SMPTE_240M;
-    case AVCOL_TRC_LINEAR:
-      return TransferCharacteristics::LINEAR;
-      //    AVCOL_TRC_LOG          = 9,  ///< "Logarithmic transfer characteristic (100:1 range)"
-      //    AVCOL_TRC_LOG_SQRT     = 10, ///< "Logarithmic transfer characteristic (100 * Sqrt(10) : 1 range)"
-    case AVCOL_TRC_IEC61966_2_4:
-      return TransferCharacteristics::IEC_61966_2_4;
-    case AVCOL_TRC_BT1361_ECG:
-      return TransferCharacteristics::BT_1361;
-    case AVCOL_TRC_IEC61966_2_1:
-      return TransferCharacteristics::IEC_61966_2_1;
-    case AVCOL_TRC_BT2020_10:
-      return TransferCharacteristics::BT_2020_10;
-    case AVCOL_TRC_BT2020_12:
-      return TransferCharacteristics::BT_2020_12;
-    case AVCOL_TRC_SMPTE2084:
-      return TransferCharacteristics::SMPTE_2084;
-    case AVCOL_TRC_SMPTE428:
-      return TransferCharacteristics::SMPTE_428;
-    case AVCOL_TRC_ARIB_STD_B67:
-      return TransferCharacteristics::ARIB_STD_B67;
-    default:
-      return TransferCharacteristics::UNKNOWN;
-  }
+  return convertFromFFMpegType(transfer, TRANSFERS_MAP, TransferCharacteristics::UNKNOWN);
 }
 
 
 mh::MatrixCoefficients mh::types::convertMatrixCoefficients(const AVColorSpace matrix) noexcept
 {
-  switch (matrix) {
-    case AVCOL_SPC_RGB:
-      return MatrixCoefficients::IEC_61966_2_1;
-    case AVCOL_SPC_BT709:
-      return MatrixCoefficients::BT_709;
-    case AVCOL_SPC_FCC:
-      return MatrixCoefficients::FCC;
-    case AVCOL_SPC_BT470BG:
-      return MatrixCoefficients::BT_470BG;
-    case AVCOL_SPC_SMPTE170M:
-      return MatrixCoefficients::BT_601_6;
-    case AVCOL_SPC_SMPTE240M:
-      return MatrixCoefficients::SMPTE_240M;
-//  AVCOL_SPC_YCGCO       = 8,  ///< Used by Dirac / VC-2 and H.264 FRext, see ITU-T SG16
-    case AVCOL_SPC_BT2020_NCL:
-      return MatrixCoefficients::BT_2020_NCL;
-    case AVCOL_SPC_BT2020_CL:
-      return MatrixCoefficients::BT_2020_CL;
-    case AVCOL_SPC_SMPTE2085:
-      return MatrixCoefficients::SMPTE_2085;
-//  AVCOL_SPC_CHROMA_DERIVED_NCL = 12, ///< Chromaticity-derived non-constant luminance system
-//  AVCOL_SPC_CHROMA_DERIVED_CL = 13, ///< Chromaticity-derived constant luminance system
-    case AVCOL_SPC_ICTCP:
-      return MatrixCoefficients::BT_2100_0;
-    default:
-      return MatrixCoefficients::UNKNOWN;
-  }
+  return convertFromFFMpegType(matrix, MATRIX_MAP, MatrixCoefficients::UNKNOWN);
 }
 
 
 mh::ColourRange mh::types::convertColourRange(const AVColorRange range) noexcept
 {
-  switch (range) {
-    case AVCOL_RANGE_MPEG:
-      return ColourRange::TV;
-    case AVCOL_RANGE_JPEG:
-      return ColourRange::FULL;
-    default:
-      return ColourRange::UNKNOWN;
-  }
+  return convertFromFFMpegType(range, COLOUR_RANGE_MAP, ColourRange::UNKNOWN);
 }
 
 int media_handling::types::convertInterpolationMethod(const InterpolationMethod interpolation) noexcept
@@ -361,161 +452,42 @@ AVSampleFormat media_handling::types::convertSampleFormat(const media_handling::
 
 media_handling::ChannelLayout media_handling::types::convertChannelLayout(const uint64_t layout) noexcept
 {
-  media_handling::ChannelLayout conv_layout = ChannelLayout::UNKNOWN;
-
-
-  switch (layout)
-  {
-    case AV_CH_LAYOUT_MONO:
-      conv_layout = ChannelLayout::MONO;
-      break;
-    case AV_CH_LAYOUT_STEREO:
-      conv_layout = ChannelLayout::STEREO;
-      break;
-    case AV_CH_LAYOUT_2POINT1:
-      conv_layout = ChannelLayout::STEREO_LFE;
-      break;
-    case AV_CH_LAYOUT_2_1:
-      conv_layout = ChannelLayout::THREE_SURROUND;
-      break;
-    case AV_CH_LAYOUT_SURROUND:
-      conv_layout = ChannelLayout::THREE_STEREO;
-      break;
-    case AV_CH_LAYOUT_3POINT1:
-      conv_layout = ChannelLayout::THREE_SURROUND_LFE;
-      break;
-    case AV_CH_LAYOUT_4POINT0:
-      conv_layout = ChannelLayout::FOUR_SURROUND;
-      break;
-    case AV_CH_LAYOUT_QUAD:
-      conv_layout = ChannelLayout::FOUR_STEREO;
-      break;
-    case AV_CH_LAYOUT_4POINT1:
-      conv_layout = ChannelLayout::FOUR_SURROUND_LFE;
-      break;
-    case AV_CH_LAYOUT_5POINT0:
-      conv_layout = ChannelLayout::FIVE;
-      break;
-    case AV_CH_LAYOUT_5POINT0_BACK:
-      conv_layout = ChannelLayout::FIVE_STEREO;
-      break;
-    case AV_CH_LAYOUT_5POINT1:
-      conv_layout = ChannelLayout::FIVE_LFE;
-      break;
-    case AV_CH_LAYOUT_5POINT1_BACK:
-      conv_layout = ChannelLayout::FIVE_STEREO_LFE;
-      break;
-    case AV_CH_LAYOUT_6POINT0:
-      conv_layout = ChannelLayout::SIX;
-      break;
-    case AV_CH_LAYOUT_6POINT1:
-      conv_layout = ChannelLayout::SIX_LFE;
-      break;
-    case AV_CH_LAYOUT_7POINT0:
-      conv_layout = ChannelLayout::SEVEN;
-      break;
-    case AV_CH_LAYOUT_7POINT1:
-      conv_layout = ChannelLayout::SEVEN_LFE;
-      break;
-  }
-
-  return conv_layout;
+  return convertFromFFMpegType(layout, AUDIO_CHANNEL_MAP, ChannelLayout::MONO);
 }
 
 
 uint64_t media_handling::types::convertChannelLayout(const ChannelLayout layout) noexcept
 {
-  switch (layout)
-  {
-    case ChannelLayout::MONO:
-      return AV_CH_LAYOUT_MONO;
-    case ChannelLayout::STEREO:
-      return AV_CH_LAYOUT_STEREO;
-    case ChannelLayout::STEREO_LFE:
-      return AV_CH_LAYOUT_2POINT1;
-    case ChannelLayout::THREE_STEREO:
-      return AV_CH_LAYOUT_SURROUND;
-    case ChannelLayout::THREE_SURROUND:
-      return AV_CH_LAYOUT_2_1;
-    case ChannelLayout::THREE_SURROUND_LFE:
-      return AV_CH_LAYOUT_3POINT1;
-    case ChannelLayout::FOUR_STEREO:
-      return AV_CH_LAYOUT_QUAD;
-    case ChannelLayout::FOUR_SURROUND:
-      return AV_CH_LAYOUT_4POINT0;
-    case ChannelLayout::FOUR_SURROUND_LFE:
-      return AV_CH_LAYOUT_4POINT1;
-    case ChannelLayout::FIVE:
-      return AV_CH_LAYOUT_5POINT0;
-    case ChannelLayout::FIVE_STEREO:
-      return AV_CH_LAYOUT_5POINT0_BACK;
-    case ChannelLayout::FIVE_LFE:
-      return AV_CH_LAYOUT_5POINT1;
-    case ChannelLayout::FIVE_STEREO_LFE:
-      return AV_CH_LAYOUT_5POINT1_BACK;
-    case ChannelLayout::SIX:
-      return AV_CH_LAYOUT_6POINT0;
-    case ChannelLayout::SIX_LFE:
-      return AV_CH_LAYOUT_6POINT1;
-    case ChannelLayout::SEVEN:
-      return AV_CH_LAYOUT_7POINT0;
-    case ChannelLayout::SEVEN_LFE:
-      return AV_CH_LAYOUT_7POINT1;
-    case ChannelLayout::THREE_STEREO_LFE:
-      [[fallthrough]];
-    case ChannelLayout::UNKNOWN:
-      [[fallthrough]];
-    default:
-      return 0;
-  }
+  return convertToFFMpegType(layout, AUDIO_CHANNEL_MAP, static_cast<uint64_t>(0));
 }
 
 
 media_handling::Codec media_handling::types::convertCodecID(const AVCodecID id) noexcept
 {
-  media_handling::Codec cdc = media_handling::Codec::UNKNOWN;
+  return convertFromFFMpegType(id, CODEC_MAP, Codec::UNKNOWN);
+}
 
-  switch (id)
-  {
-    case AV_CODEC_ID_AAC:
-      cdc = media_handling::Codec::AAC;
-      break;
-    case AV_CODEC_ID_DNXHD:
-      cdc = media_handling::Codec::DNXHD;
-      break;
-    case AV_CODEC_ID_DPX:
-      cdc = media_handling::Codec::DPX;
-      break;
-    case AV_CODEC_ID_H264:
-      cdc = media_handling::Codec::H264;
-      break;
-    case AV_CODEC_ID_JPEG2000:
-      cdc = media_handling::Codec::JPEG2000;
-      break;
-    case AV_CODEC_ID_MJPEG:
-      cdc = media_handling::Codec::JPEG;
-      break;
-    case AV_CODEC_ID_MPEG2VIDEO:
-      cdc = media_handling::Codec::MPEG2_VIDEO;
-      break;
-    case AV_CODEC_ID_MPEG4:
-      cdc = media_handling::Codec::MPEG4;
-      break;
-    case AV_CODEC_ID_PNG:
-      cdc = media_handling::Codec::PNG;
-      break;
-    case AV_CODEC_ID_RAWVIDEO:
-      cdc = media_handling::Codec::RAW;
-      break;
-    case AV_CODEC_ID_TIFF:
-      cdc = media_handling::Codec::TIFF;
-      break;
-    default:
-      cdc = media_handling::Codec::UNKNOWN;
-      break;
-  }
 
-  return cdc;
+AVCodecID mh::types::convertCodecID(const Codec id) noexcept
+{
+  return convertToFFMpegType(id, CODEC_MAP, AV_CODEC_ID_NONE);
+}
+
+
+int mh::types::convertProfile(const Profile prof) noexcept
+{
+  return convertToFFMpegType(prof, PROFILE_MAP, FF_PROFILE_UNKNOWN);
+}
+
+
+mh::Profile mh::types::convertProfile(const int prof) noexcept
+{
+  return convertFromFFMpegType(prof, PROFILE_MAP, Profile::UNKNOWN);
+}
+
+std::string_view mh::types::convertPreset(const Preset pre) noexcept
+{
+  return convertToFFMpegType(pre, PRESET_MAP, std::string_view(EMPTY_STR));
 }
 
 media_handling::SampleFormat media_handling::types::convert(enum AVSampleFormat av_format) noexcept
@@ -568,3 +540,4 @@ media_handling::SampleFormat media_handling::types::convert(enum AVSampleFormat 
   }
   return format;
 }
+

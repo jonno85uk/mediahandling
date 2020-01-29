@@ -36,7 +36,7 @@ extern "C" {
 #include "mediahandling.h"
 #include "ffmpegtypes.h"
 
-using media_handling::FFMpegMediaFrame;
+using media_handling::ffmpeg::FFMpegMediaFrame;
 using media_handling::MediaProperty;
 
 namespace mh = media_handling;
@@ -51,19 +51,18 @@ namespace
 
 FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual)
   : ff_frame_(std::move(frame)),
-    is_visual_(visual),
-    is_audio_(!visual)
+    is_audio_(!visual),
+    is_visual_(visual)
 {
   assert(ff_frame_);
-  assert(ff_frame_->pts >= 0);
   timestamp_ = ff_frame_->pts;
 }
 
 
-FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, OutputFormat format)
+FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, InOutFormat format)
   : ff_frame_(std::move(frame)),
-    is_visual_(visual),
     is_audio_(!visual),
+    is_visual_(visual),
     output_fmt_(std::move(format))
 {
 }
@@ -90,6 +89,10 @@ std::optional<int64_t> FFMpegMediaFrame::lineSize(const int index) const
 
 media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
 {
+  if (frame_data_)
+  {
+    return frame_data_.value();
+  }
   assert(ff_frame_);
   media_handling::IMediaFrame::FrameData f_d;
   f_d.timestamp_ = ff_frame_->best_effort_timestamp; // value lost in resampled frame
@@ -126,7 +129,19 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
       conv_frame_->channel_layout = types::convertChannelLayout(output_fmt_.layout_);
       conv_frame_->sample_rate = output_fmt_.sample_rate_;
       conv_frame_->format = types::convertSampleFormat(output_fmt_.sample_fmt_);
-      av_frame_make_writable(conv_frame_.get());
+      conv_frame_->nb_samples = 1000;
+      ret = av_frame_get_buffer(conv_frame_.get(), 0);
+      if (ret < 0) {
+          av_strerror(ret, err.data(), ERR_LEN);
+          logMessage(LogType::CRITICAL, fmt::format("Could not allocate frame buffer: {}", err.data()));
+          return {};
+      }
+      ret = av_frame_make_writable(conv_frame_.get());
+      if (ret < 0) {
+          av_strerror(ret, err.data(), ERR_LEN);
+          logMessage(LogType::CRITICAL, fmt::format("Could not ensure frame data is writable: {}", err.data()));
+          return {};
+      }
     }
     ret = swr_convert_frame(output_fmt_.swr_context_.get(), conv_frame_.get(), ff_frame_.get());
     if (ret < 0) {
@@ -139,11 +154,13 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
                                          * av_get_bytes_per_sample(static_cast<AVSampleFormat>(conv_frame_->format))
                                          * conv_frame_->channels);
     f_d.samp_fmt_ = output_fmt_.sample_fmt_;
+    f_d.sample_count_ = conv_frame_->nb_samples;
+    f_d.line_size_ = conv_frame_->linesize[0];
   } else {
     // No conversion
     f_d.data_ = ff_frame_->data;
+    f_d.line_size_ = ff_frame_->linesize[0];
     if (is_visual_ && (is_visual_ == true)) {
-      f_d.line_size_ = ff_frame_->linesize[0];
       f_d.data_size_ = static_cast<size_t>(av_image_get_buffer_size(static_cast<AVPixelFormat>(ff_frame_->format),
                                                                     ff_frame_->width,
                                                                     ff_frame_->height,
@@ -152,15 +169,23 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
       f_d.data_size_ = static_cast<size_t>(ff_frame_->nb_samples
                                            * av_get_bytes_per_sample(static_cast<AVSampleFormat>(ff_frame_->format))
                                            * ff_frame_->channels);
+      f_d.sample_count_ = ff_frame_->nb_samples;
     }
   }
   return f_d;
+}
 
+
+void FFMpegMediaFrame::setData(FrameData frame_data)
+{
+  frame_data_ = std::move(frame_data);
 }
 
 void FFMpegMediaFrame::extractProperties()
 {
   assert(ff_frame_);
+  this->setProperty(MediaProperty::FRAME_PACKET_SIZE, static_cast<int32_t>(ff_frame_->pkt_size));
+  this->setProperty(MediaProperty::FRAME_DURATION, ff_frame_->pkt_duration);
   if (is_visual_ && (is_visual_ == true) ) {
     extractVisualProperties();
   } else if (is_audio_ && (is_audio_ == true) ) {

@@ -48,6 +48,13 @@ namespace media_handling
     public:
       ~IMediaStream() override = default;
 
+      /**
+       * @brief   For certain formats, certain properties aren't available until the stream has been indexed
+       *          examples: bitrate, frame-count and duration
+       * @return  true==stream indexed successfully
+       */
+      virtual bool index() = 0;
+
       virtual int64_t timestamp() const = 0;
 
       /**
@@ -59,11 +66,10 @@ namespace media_handling
 
       /**
        * @brief setFrame    Set the frame-sample for the stream
-       * @param timestamp   Position in the stream
        * @param sample      Frame sample
        * @return            true==success
        */
-      virtual bool setFrame(const int64_t timestamp, MediaFramePtr sample) = 0;
+      virtual bool writeFrame(MediaFramePtr sample) = 0;
 
       /**
        * @brief   Obtain the type of this stream
@@ -96,7 +102,21 @@ namespace media_handling
        * @param rate    sample-rate to change source file to
        * @return        true==output format set
        */
-      virtual bool setOutputFormat(const SampleFormat format, std::optional<int32_t> rate = {}) = 0;
+      virtual bool setOutputFormat(const SampleFormat format, std::optional<SampleRate> rate = {}) = 0;
+
+      /**
+       * @brief   Set the pixel format that the stream should expect for encoding
+       * @param   format  The PixelFormat
+       * @return  true==success
+       */
+      virtual bool setInputFormat(const PixelFormat format) = 0;
+
+      /**
+       * @brief   Set the sample format that the stream should expect for encoding
+       * @param   format  The SampleFormat
+       * @return  true==success
+       */
+      virtual bool setInputFormat(const SampleFormat format, std::optional<SampleRate> rate = {}) = 0;
   };
 
   using MediaStreamPtr = std::shared_ptr<IMediaStream>;

@@ -30,6 +30,7 @@
 
 #include <atomic>
 #include "imediasource.h"
+#include "imediasink.h"
 #include "rational.h"
 
 
@@ -99,6 +100,10 @@ namespace media_handling
    * @return  valid MediaSourcePtr or null
    */
   MediaSourcePtr createSource(std::string file_path);
+
+  MediaSinkPtr createSink(std::string file_path, std::vector<Codec> video_codecs, std::vector<Codec> audio_codecs);
+
+  MediaFramePtr createFrame();
 
   /**
    * @brief Globally set the ability to auto-detect image sequences

@@ -37,13 +37,13 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
-namespace media_handling
+namespace media_handling::ffmpeg
 {
 
   class FFMpegMediaFrame : public IMediaFrame
   {
     public:
-      struct OutputFormat
+      struct InOutFormat
       {
           // Needed as there's no documented way to identify how swr/swscontexts were created
           types::SWSContextPtr sws_context_ {nullptr};
@@ -54,17 +54,17 @@ namespace media_handling
           int32_t sample_rate_ {-1};
           Dimensions dims_;
       };
+
+      FFMpegMediaFrame() = default;
       FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual);
+      FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, InOutFormat format);
 
-      FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, OutputFormat format);
-
-      // FIXME: rule of five
-
-      /* IMediaFrame overrides */
+    public: /* IMediaFrame overrides */
       std::optional<bool> isAudio() const override;
       std::optional<bool> isVisual() const override;
       std::optional<int64_t> lineSize(const int index) const override;
       IMediaFrame::FrameData data() noexcept override;
+      void setData(FrameData frame_data) override;
       void extractProperties() override;
       int64_t timestamp() const noexcept override;
 
@@ -74,13 +74,12 @@ namespace media_handling
       std::optional<bool> is_audio_; // TODO: just use one
       std::optional<bool> is_visual_;
       int64_t timestamp_ {-1};
-      OutputFormat output_fmt_;
+      InOutFormat output_fmt_;
+      std::optional<FrameData> frame_data_;
 
+    private:
       void extractVisualProperties();
-
       void extractAudioProperties();
-
-
   };
 }
 

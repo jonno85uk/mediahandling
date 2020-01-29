@@ -42,9 +42,9 @@ using namespace media_handling::ffmpeg;
 TEST (FFMpegStreamTest, NullInst)
 {
   AVStream strm;
-  EXPECT_THROW(FFMpegStream(nullptr, nullptr), std::exception);
-  EXPECT_THROW(FFMpegStream(nullptr, nullptr), std::exception);
-  EXPECT_THROW(FFMpegStream(nullptr, &strm), std::exception);
+  EXPECT_THROW(FFMpegStream((FFMpegSource*)nullptr, nullptr), std::exception);
+  EXPECT_THROW(FFMpegStream((FFMpegSource*)nullptr, nullptr), std::exception);
+  EXPECT_THROW(FFMpegStream((FFMpegSource*)nullptr, &strm), std::exception);
 }
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStream)
@@ -469,7 +469,7 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadConvertedFrame)
 }
 
 
-class AudioPropertiesTests : public testing::TestWithParam<std::tuple<std::string, ChannelLayout, SampleFormat, int64_t>>
+class AudioPropertiesTests : public testing::TestWithParam<std::tuple<std::string, ChannelLayout, SampleFormat, int32_t>>
 {
   public:
     std::unique_ptr<FFMpegSource> source_;
@@ -487,7 +487,7 @@ TEST_P (AudioPropertiesTests, CheckEqual)
   auto prop_format = stream->property<SampleFormat>(MediaProperty::AUDIO_FORMAT, is_valid);
   ASSERT_TRUE(is_valid);
   ASSERT_EQ(prop_format, format);
-  auto prop_bitrate = stream->property<int64_t>(MediaProperty::BITRATE, is_valid);
+  auto prop_bitrate = stream->property<int32_t>(MediaProperty::BITRATE, is_valid);
   ASSERT_TRUE(is_valid);
   ASSERT_EQ(prop_bitrate, bitrate);
 }
@@ -665,9 +665,9 @@ TEST (FFMpegStreamTest, ImageSequenceAuto)
   auto stream = source->visualStream(0);
   ASSERT_TRUE(stream->type() == StreamType::VIDEO);
   bool okay = false;
-  auto duration = source->property<int64_t>(MediaProperty::DURATION, okay);
+  auto duration = source->property<Rational>(MediaProperty::DURATION, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(duration, 4040000);
+  ASSERT_EQ(duration, Rational(101, 25));
   auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
   ASSERT_TRUE(okay);
   ASSERT_EQ(rate, Rational(25,1));
@@ -683,9 +683,9 @@ TEST (FFMpegStreamTest, ImageSequenceAutoCAPEXT)
   auto stream = source->visualStream(0);
   ASSERT_TRUE(stream->type() == StreamType::VIDEO);
   bool okay = false;
-  auto duration = source->property<int64_t>(MediaProperty::DURATION, okay);
+  auto duration = source->property<Rational>(MediaProperty::DURATION, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(duration, 200000);
+  ASSERT_EQ(duration, Rational(1, 5));
   auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
   ASSERT_TRUE(okay);
   ASSERT_EQ(rate, Rational(25,1));
@@ -723,9 +723,9 @@ TEST (FFMpegStreamTest, ImageSequenceManualSuccess)
   auto stream = source->visualStream(0);
   ASSERT_TRUE(stream->type() == StreamType::VIDEO);
   bool okay = false;
-  auto duration = source->property<int64_t>(MediaProperty::DURATION, okay);
+  auto duration = source->property<Rational>(MediaProperty::DURATION, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(duration, 4040000);
+  ASSERT_EQ(duration, Rational(101, 25));
   auto rate = source->property<Rational>(MediaProperty::FRAME_RATE, okay);
   ASSERT_TRUE(okay);
   ASSERT_EQ(rate, Rational(25,1));
@@ -745,4 +745,55 @@ TEST (FFMpegStreamTest, ImageSequenceAutoDisabled)
   ASSERT_TRUE(okay);
   ASSERT_EQ(rate, Rational(25,1));
 }
+
+TEST (FFMpegStreamTest, IndexedStreamProperties)
+{
+  auto source = std::make_unique<FFMpegSource>("./ReferenceMedia/Video/mxf/mpeg2.mxf");
+  ASSERT_EQ(source->visualStreams().size(), 1);
+  ASSERT_EQ(source->audioStreams().size(), 0);
+  auto stream = source->visualStream(0);
+  ASSERT_EQ(stream->type(), StreamType::VIDEO);
+  bool okay;
+  auto bitrate = stream->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate, 0);
+  auto frame_count = stream->property<int64_t>(MediaProperty::FRAME_COUNT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(frame_count, 0);
+  ASSERT_TRUE(stream->index());
+  bitrate = stream->property<int32_t>(MediaProperty::BITRATE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(bitrate, 488025);
+  frame_count = stream->property<int64_t>(MediaProperty::FRAME_COUNT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(frame_count, 50);
+
+}
+
+#ifdef DUMP_AUDIO
+#include <iostream>
+#include <fstream>
+
+TEST (FFMpegStreamTest, AudioToCSV)
+{
+  FFMpegSource source("./ReferenceMedia/Audio/ogg/monotone.ogg");
+  auto source_stream = source.audioStream(0);
+  source_stream->setOutputFormat(SampleFormat::SIGNED_16P);
+  source_stream->setOutputFormat(SampleFormat::UNSIGNED_8);
+  std::ofstream text;
+  text.open("/tmp/audio.csv");
+  int64_t cnt = 0;
+  while (auto frame = source_stream->frame()) {
+    auto data = frame->data();
+//    for (auto ix = 1; ix < data.data_size_; ix+=2) {
+//      auto val = data.data_[0][ix] | data.data_[0][ix+1] << 8;
+//      text << val << std::endl;
+    for (auto ix = 0; ix < data.data_size_; ix++) {
+            text << static_cast<int32_t>(data.data_[0][ix]) << std::endl;
+
+    }
+  }
+}
+
+#endif
 

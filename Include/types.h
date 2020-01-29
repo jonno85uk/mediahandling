@@ -40,23 +40,29 @@
  */
 namespace media_handling
 {
-
+  using SampleRate = int32_t;
   // TODO: maybe turn into a mapping
   enum class MediaProperty
   {
-    PROFILE,              //TODO: for mpeg2/4, aac, dnxhd, etc encoded profile
+    THREADS,              // int32_t
+    COMPRESSION,          // CompressionStrategy
+    PROFILE,              // Profile
+    LEVEL,                // Level
     CODEC,                // Codec
     CODEC_NAME,           // std::string
+    PRESET,               // Preset
     AUDIO_FORMAT,         // SampleFormat
     AUDIO_LAYOUT,         // ChannelLayout
-    AUDIO_SAMPLING_RATE,  // int32_t
+    AUDIO_SAMPLING_RATE,  // SampleRate
     AUDIO_SAMPLES,        // int32_t per channel
     AUDIO_CHANNELS,       // int32_t
     AUDIO_STREAMS,        // int32_t
     VIDEO_STREAMS,        // int32_t
     VIDEO_FORMAT,         // int32_t
-    BITRATE,              // int64_t
-    DURATION,             // int64_t
+    MIN_BITRATE,          // int32_t
+    MAX_BITRATE,          // int32_t
+    BITRATE,              // int32_t
+    DURATION,             // Rational
     TIMESCALE,            // Rational
     FILENAME,             // std::string
     FILE_FORMAT,          // std::string
@@ -71,13 +77,60 @@ namespace media_handling
     FRAME_RATE,           // Rational
     SEQUENCE_PATTERN,     // std::string
     COLOUR_SPACE,         // ColourSpace
+    GOP,                  // GOP
+    FRAME_PACKET_SIZE,    // int32_t
+    FRAME_DURATION,       // int64_t
+    START_TIMECODE        // Timecode
+  };
+
+  enum class Profile
+  {
+    UNKNOWN,
+    H264_BASELINE,      //  BP
+    H264_MAIN,          //  MP
+    H264_HIGH,          //  HiP
+    H264_HIGH10,        //  Hi10P
+    H264_HIGH422,       //  Hi422P
+    H264_HIGH444,       //  Hi444PP
+    MPEG2_SIMPLE,       //  SP
+    MPEG2_MAIN,         //  MP
+    MPEG2_HIGH,         //  HP
+    MPEG2_422,           //  422
+    DNXHD,
+    DNXHR_LB,
+    DNXHR_SQ,
+    DNXHR_HQ,
+    DNXHR_HQX,
+    DNXHR_444
+  };
+
+  enum class Level
+  {
+    UNKNOWN,
+    MPEG2_LOW,      // LL
+    MPEG2_MAIN,     // ML
+    MPEG2_HIGH1440, // H-14
+    MPEG2_HIGH      // HL
+  };
+
+  enum class Preset
+  {
+    UNKNOWN,
+    X264_VERYSLOW,
+    X264_SLOWER,
+    X264_SLOW,
+    X264_MEDIUM,
+    X264_FAST,
+    X264_FASTER,
+    X264_VERYFAST,
+    X264_SUPERFAST,
+    X264_ULTRAFAST
   };
 
   enum class Codec
   {
     //TODO: use fourccs
     UNKNOWN,
-    AAC,
     DNXHD,
     DPX,
     H264,
@@ -87,7 +140,16 @@ namespace media_handling
     MPEG4,
     PNG,
     RAW,
-    TIFF
+    TIFF,
+    AAC,
+    AC3,
+    ALAC,
+    FLAC,
+    MP3,
+    PCM_S16_LE,
+    PCM_S24_LE,
+    VORBIS,
+    WAV
   };
 
   enum class StreamType
@@ -127,11 +189,6 @@ namespace media_handling
     SIGNED_64P
   };
 
-  struct Dimensions
-  {
-      int width {-1};
-      int height {-1};
-  };
 
   enum class InterpolationMethod
   {
@@ -143,9 +200,9 @@ namespace media_handling
   };
 
   /**
- * @brief The PixelFormat enum
- * @note only 8bit per channel
- */
+   * @brief The PixelFormat enum
+   * @note only 8bit per channel
+   */
   enum class PixelFormat
   {
     // TODO: use fourccs
@@ -191,6 +248,7 @@ namespace media_handling
     BT_709,
     BT_2020,
     BT_2100,
+    BT470BG,
     SMPTE_240M,
     SMPTE_428
   };
@@ -238,29 +296,49 @@ namespace media_handling
     FULL
   };
 
+  enum class CompressionStrategy {
+    CBR,
+    CRF,
+    TARGETSIZE,
+    TARGETBITRATE,
+    UNKNOWN
+  };
+
+  struct Dimensions
+  {
+    int width {-1};
+    int height {-1};
+  };
+
   struct ColourSpace
   {
-      ColourSpace() = default;
-      ColourSpace(const ColourPrimaries primaries,
-                  const TransferCharacteristics transfer,
-                  const MatrixCoefficients matrix,
-                  const ColourRange range)
-        : colour_primaries_(primaries),
-          transfer_characteristics_(transfer),
-          matrix_coefficients_(matrix),
-          range_(range)
-      {}
-      bool operator==(const ColourSpace& rhs) const noexcept
-      {
-        return (rhs.colour_primaries_ == colour_primaries_) &&
-            (rhs.transfer_characteristics_ == transfer_characteristics_) &&
-            (rhs.matrix_coefficients_ == matrix_coefficients_) &&
-            (rhs.range_ == range_);
-      }
-      ColourPrimaries         colour_primaries_ {ColourPrimaries::UNKNOWN};
-      TransferCharacteristics transfer_characteristics_ {TransferCharacteristics::UNKNOWN};
-      MatrixCoefficients      matrix_coefficients_ {MatrixCoefficients::UNKNOWN};
-      ColourRange             range_ {ColourRange::UNKNOWN};
+    ColourSpace() = default;
+    ColourSpace(const ColourPrimaries primaries,
+                const TransferCharacteristics transfer,
+                const MatrixCoefficients matrix,
+                const ColourRange range)
+      : colour_primaries_(primaries),
+        transfer_characteristics_(transfer),
+        matrix_coefficients_(matrix),
+        range_(range)
+    {}
+    bool operator==(const ColourSpace& rhs) const noexcept
+    {
+      return (rhs.colour_primaries_ == colour_primaries_) &&
+          (rhs.transfer_characteristics_ == transfer_characteristics_) &&
+          (rhs.matrix_coefficients_ == matrix_coefficients_) &&
+          (rhs.range_ == range_);
+    }
+    ColourPrimaries         colour_primaries_ {ColourPrimaries::UNKNOWN};
+    TransferCharacteristics transfer_characteristics_ {TransferCharacteristics::UNKNOWN};
+    MatrixCoefficients      matrix_coefficients_ {MatrixCoefficients::UNKNOWN};
+    ColourRange             range_ {ColourRange::UNKNOWN};
+  };
+
+  struct GOP
+  {
+    int32_t m_;
+    int32_t n_;
   };
 
 }

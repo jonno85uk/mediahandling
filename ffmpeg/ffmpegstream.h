@@ -30,8 +30,11 @@
 
 #include "imediastream.h"
 #include <optional>
+#include <mutex>
 
 #include "ffmpegmediaframe.h"
+#include "ffmpegsink.h"
+#include "ffmpegtypes.h"
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -49,39 +52,58 @@ namespace media_handling::ffmpeg
     public:
       FFMpegStream() = default;
       FFMpegStream(FFMpegSource* parent, AVStream* const stream);
+      FFMpegStream(FFMpegSink* sink, const AVCodecID codec);
       ~FFMpegStream() override;
 
-      /* IMediaStream override*/
+    public: // IMediaStream override
+      bool index() override;
       int64_t timestamp() const override;
       MediaFramePtr frame(const int64_t timestamp=-1) final;
-      bool setFrame(const int64_t timestamp, MediaFramePtr sample) final;
+      bool writeFrame(MediaFramePtr sample) final;
       StreamType type() const final;
       int32_t sourceIndex() const noexcept final;
       bool setOutputFormat(const PixelFormat format,
                            const Dimensions& dims = {0, 0},
                            InterpolationMethod interp = InterpolationMethod::NEAREST) final;
-      bool setOutputFormat(const SampleFormat format, std::optional<int32_t> rate = {}) final;
+      bool setOutputFormat(const SampleFormat format, std::optional<SampleRate> rate = {}) final;
+      bool setInputFormat(const PixelFormat format) final;
+      bool setInputFormat(const SampleFormat format, std::optional<SampleRate> rate = {}) final;
 
     private:
-      FFMpegSource* parent_;
+      FFMpegSource* parent_ {nullptr};
+      FFMpegSink* sink_ {nullptr};
+      // TODO: use smart ptrs from ffmpegtypes.h
       AVStream* stream_ {nullptr};
       AVCodec* codec_ {nullptr};
       AVCodecContext* codec_ctx_ {nullptr};
+      std::shared_ptr<AVCodecContext> sink_codec_ctx_ {nullptr};
+      types::AVFrameUPtr sink_frame_ {nullptr};
       AVPacket* pkt_ {nullptr};
       AVDictionary* opts_ {nullptr};
       int pixel_format_{};
-      FFMpegMediaFrame::OutputFormat output_format_;
+      FFMpegMediaFrame::InOutFormat output_format_;
+      FFMpegMediaFrame::InOutFormat input_format_;
 
       mutable int64_t last_timestamp_ {-1};
       StreamType type_{StreamType::UNKNOWN};
       bool deinterlacer_setup_ {false};
       int32_t source_index_ {-1};
+      std::once_flag setup_encoder_;
+      int64_t audio_samples_ {0};
 
+    private:
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
       void extractVisualProperties(const AVStream& stream, const AVCodecContext& context);
       void extractAudioProperties(const AVStream& stream, const AVCodecContext& context);
       bool seek(const int64_t timestamp);
       void setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const;
+      bool setupEncoder();
+      bool setupAudioEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const;
+      bool setupVideoEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const;
+      bool setupH264Encoder(AVCodecContext& ctx) const;
+      bool setupMPEG2Encoder(AVCodecContext& ctx) const;
+      bool setupMPEG4Encoder(AVCodecContext& ctx) const;
+      bool setupDNXHDEncoder(AVCodecContext& ctx) const;
 
       /**
        * @brief Extract extra properties from a frame
@@ -90,6 +112,13 @@ namespace media_handling::ffmpeg
       void extractFrameProperties();
 
       MediaFramePtr frame(AVCodecContext& codec_ctx, const int stream_idx) const;
+
+      bool setupSWR(FFMpegMediaFrame::InOutFormat& fmt,
+                    const ChannelLayout layout,
+                    const SampleFormat src_fmt,
+                    const SampleFormat dst_fmt,
+                    const int32_t src_rate,
+                    const int32_t dst_rate);
   };
 
 }

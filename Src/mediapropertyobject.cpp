@@ -54,3 +54,8 @@ std::any MediaPropertyObject::property(const MediaProperty prop, bool& is_valid)
   is_valid = false;
   return {};
 }
+
+std::map<media_handling::MediaProperty, std::any> MediaPropertyObject::properties() const
+{
+  return properties_;
+}

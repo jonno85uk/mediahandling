@@ -1,26 +1,17 @@
-# MediaHandling [![Codacy Badge](https://api.codacy.com/project/badge/Grade/fd1f6eda59fd4bdbbe54c90bac7300d5)](https://www.codacy.com/manual/jonno85uk/mediahandling?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jonno85uk/mediahandling&amp;utm_campaign=Badge_Grade)[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-
-This is a library primarily intended for the use in the project [Chestnut](https://github.com/jonno85uk/chestnut)
-by handling all media-file operations (properties/decoding/encoding).
-This is done by abstracting the underlying media library with a common interface.
-
-Currently, only the [FFmpeg](https://ffmpeg.org/) library is being used.
-
 # Usage
 
-## Properties
+## File Properties
 
-### Get file properties
+## Get file properties
     auto source =  media_handling::createSource("somefile.mov");
     bool okay;
     auto format       = source->property<std::string>(MediaProperty::FILE_FORMAT, okay);
     auto duration     = source->property<int64_t>(MediaProperty::DURATION, okay);
     auto stream_count = source->property<int32_t>(MediaProperty::STREAMS, okay);
     auto bitrate      = source->property<int32_t>(MediaProperty::BITRATE, okay);
-    auto all_props    = source->getProperties();
 
-### Get stream properties
-#### Video
+## Get stream properties
+### Video
     auto source =  media_handling::createSource("somefile.mov");
     auto stream = source->visualStream(0);
     bool okay;
@@ -117,36 +108,3 @@ Currently, only the [FFmpeg](https://ffmpeg.org/) library is being used.
     stream->setInputFormat(PixelFormat::YUV420);
     stream->setProperty(MediaProperty::PROFILE, Profile::H264_HIGH422);
     stream->setProperty(MediaProperty::PRESET, Preset::X264_FAST);
-
-# Installation
-
-## Dependencies
-
-[fmt](https://github.com/fmtlib/fmt) and [FFmpeg](https://ffmpeg.org/) development headers and libraries
-
-## Building
-
-Change directory to the top-level of the project.
-
-<pre><code>mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr/local/ -DCMAKE_BUILD_TYPE=Release ..
-make
-sudo make install</code></pre>
-
-## Regression Tests
-
-Install [git-lfs](https://git-lfs.github.com/) and [google-test](https://github.com/google/googletest)
-<pre><code>git-lfs fetch
-git-lfs pull
-</pre></code>
-
-Change directory to RegressionTests
-<pre><code>mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr/local/ -DCMAKE_BUILD_TYPE=Release ..
-make</code></pre>
-
-Change back to RegressionTests directory and run
-
-<pre>build/mh_regression</pre>

@@ -60,6 +60,10 @@ namespace media_handling
          * @see IMediaStream::setOutputFormat
          */
         SampleFormat samp_fmt_ {SampleFormat::NONE};
+        /*
+         * @brief The number of audio samples per channel
+         */
+        int32_t sample_count_ {-1};
       };
       
       IMediaFrame() = default;
@@ -83,6 +87,8 @@ namespace media_handling
        * @return 
        */
       virtual FrameData data() noexcept = 0;
+
+      virtual void setData(FrameData frame_data) = 0;
 
       /**
        * @brief It is not always resource-wise to extract all properties for every frame when decoding

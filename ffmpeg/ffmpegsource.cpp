@@ -304,9 +304,9 @@ void FFMpegSource::extractProperties(const AVFormatContext& ctx)
   assert(ctx.iformat);
   MediaPropertyObject::setProperty(MediaProperty::FILENAME, file_path_);
   MediaPropertyObject::setProperty(MediaProperty::FILE_FORMAT, std::string(ctx.iformat->long_name));
-  MediaPropertyObject::setProperty(MediaProperty::DURATION, ctx.duration);
+  MediaPropertyObject::setProperty(MediaProperty::DURATION, Rational(ctx.duration, AV_TIME_BASE));
   MediaPropertyObject::setProperty(MediaProperty::STREAMS, static_cast<int32_t>(ctx.nb_streams));
-  MediaPropertyObject::setProperty(MediaProperty::BITRATE, ctx.bit_rate);
+  MediaPropertyObject::setProperty(MediaProperty::BITRATE, static_cast<int32_t>(ctx.bit_rate));
 
   extractStreamProperties(format_ctx_->streams, format_ctx_->nb_streams);
 }
@@ -317,7 +317,6 @@ void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t st
   int32_t visual_count = 0;
   int32_t audio_count = 0;
 
-  // TODO: create the FFMpegStreams on-demand, e.g. via audioStream() or visualStream()
   gsl::span<AVStream*> span_streams(streams, stream_count);
   for (auto& stream: span_streams) {
     assert(stream);
