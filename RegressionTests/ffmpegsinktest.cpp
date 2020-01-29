@@ -28,10 +28,12 @@
 
 
 #include <gtest/gtest.h>
+#include <cmath>
 
 #include "ffmpegsink.h"
 #include "ffmpegsource.h"
 #include "rational.h"
+#include "mediahandling.h"
 
 using namespace media_handling;
 using namespace media_handling::ffmpeg;
@@ -659,32 +661,210 @@ TEST(FFMpegSinkTest, WriteMXF)
   ASSERT_EQ(pix_fmt, PixelFormat::YUV422);
   auto bitrate = v_s->property<int32_t>(MediaProperty::BITRATE, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(bitrate, 1225655);
+  ASSERT_EQ(bitrate/100000, 12);
 }
+
+TEST(FFMpegSinkTest, AutoInputFormatConv)
+{
+
+  auto fmt = SampleFormat::FLOAT; // Not possible with PCM
+  FFMpegSink sink("/tmp/autoformat.wav", {}, {Codec::PCM_S16_LE});
+  ASSERT_TRUE(sink.initialise());
+  auto sink_stream = sink.audioStream(0);
+  ASSERT_FALSE(sink_stream->setInputFormat(fmt));
+  sink_stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22050);
+  ASSERT_FALSE(sink_stream->setInputFormat(fmt));
+  sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
+  ASSERT_TRUE(sink_stream->setInputFormat(fmt));
+}
+
+TEST(FFMpegSinkTest, AutoInputFormatConvTransCode)
+{
+  FFMpegSource source("./ReferenceMedia/Audio/ogg/monotone.ogg");
+  auto source_stream = source.audioStream(0);
+  bool okay;
+  auto fmt = source_stream->property<SampleFormat>(MediaProperty::AUDIO_FORMAT, okay);
+
+  FFMpegSink sink("/tmp/autoformat.flac", {}, {Codec::FLAC});
+  ASSERT_TRUE(sink.initialise());
+  auto sink_stream = sink.audioStream(0);
+//  sink_stream->setProperty(MediaProperty::BITRATE, 64000);
+  sink_stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22050);
+  sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
+  ASSERT_TRUE(sink_stream->setInputFormat(fmt));
+
+  while (auto frame = source_stream->frame()) {
+    ASSERT_TRUE(sink_stream->writeFrame(frame));
+  }
+
+}
+//#define FFMPEG_COMPRESS_MUX
 
 TEST(FFMpegSinkTest, WriteMP3)
 {
-
+  constexpr auto destination = "/tmp/vorbis.ogg";
   FFMpegSource source("./ReferenceMedia/Audio/ogg/monotone.ogg");
+//  FFMpegSource source("./ReferenceMedia/Audio/wav/monotone.wav");
   auto source_stream = source.audioStream(0);
-  source_stream->setOutputFormat(SampleFormat::FLOAT_P);
   bool okay;
+  auto format = source_stream->property<SampleFormat>(MediaProperty::AUDIO_FORMAT, okay);
+  ASSERT_TRUE(okay);
+  auto layout = source_stream->property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
+  ASSERT_TRUE(okay);
+  source_stream->setOutputFormat(SampleFormat::FLOAT_P);
   const auto sample_rate = source_stream->property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
 
-  FFMpegSink sink("/tmp/vorbis.mka", {}, {Codec::VORBIS});
+#ifdef FFMPEG_COMPRESS_MUX
+  auto fformat = types::convertSampleFormat(format);
+  AVFormatContext *oc;
+  /* allocate the output media context */
+  int ret = avformat_alloc_output_context2(&oc, nullptr, nullptr, destination);
+  ASSERT_TRUE(oc != nullptr);
+  ASSERT_TRUE(ret >= 0);
+
+  AVOutputFormat *fmt = oc->oformat;
+  if (fmt->audio_codec != AV_CODEC_ID_NONE) {
+
+    AVCodec* codec = avcodec_find_encoder(fmt->audio_codec);
+    ASSERT_TRUE(codec != nullptr);
+    AVStream* st = avformat_new_stream(oc, nullptr);
+    st->id = oc->nb_streams - 1;
+    ASSERT_TRUE(st != nullptr);
+    AVCodecContext* c = avcodec_alloc_context3(codec);
+    ASSERT_TRUE(c != nullptr);
+    c->sample_fmt = fformat;
+    c->bit_rate = 64000;
+    c->sample_rate = sample_rate;
+    c->channels = 1;
+    c->channel_layout = AV_CH_LAYOUT_MONO;
+    st->time_base = {1, c->sample_rate};
+    if (oc->oformat->flags & AVFMT_GLOBALHEADER) {
+        c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
+
+    ret = avcodec_open2(c, codec, nullptr);
+    ASSERT_TRUE(ret >= 0);
+    ret = avcodec_parameters_from_context(st->codecpar, c);
+    ASSERT_TRUE(ret >= 0);
+
+    av_dump_format(oc, 0, destination, 1);
+    ret = avio_open(&oc->pb, destination, AVIO_FLAG_WRITE);
+    ASSERT_TRUE(ret >= 0);
+    ret = avformat_write_header(oc, nullptr);
+    ASSERT_TRUE(ret >= 0);
+
+    int64_t sample_count = 0;
+    AVFrame* fframe = av_frame_alloc();
+    fframe->format = fformat;
+    fframe->channel_layout = AV_CH_LAYOUT_MONO;
+    fframe->sample_rate = sample_rate;
+    fframe->nb_samples = c->codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE ? 10000 : c->frame_size;
+    ret = av_frame_get_buffer(fframe, 0);
+    ASSERT_TRUE(ret >= 0);
+
+    while (auto frame = source_stream->frame())
+    {
+      auto data = frame->data();
+      AVPacket pkt = { nullptr, 0, 0 }; // data and size must be 0;
+      av_init_packet(&pkt);
+
+
+      ret = av_frame_make_writable(fframe);
+      ASSERT_TRUE(ret >= 0);
+      fframe->pts = av_rescale_q(sample_count, {1, sample_rate}, c->time_base);
+      ASSERT_GE(fframe->pts, -1);
+      fframe->data[0] = data.data_[0];
+
+
+      int got_packet;
+      ret = avcodec_encode_audio2(c, &pkt, fframe, &got_packet);
+      ASSERT_TRUE(ret >= 0);
+      if (got_packet == 1) {
+        av_packet_rescale_ts(&pkt, c->time_base, st->time_base);
+        pkt.stream_index = st->index;
+        ret = av_interleaved_write_frame(oc, &pkt);
+        ASSERT_TRUE(ret >= 0);
+      }
+
+      sample_count += data.data_size_;
+    }
+
+    av_frame_free(&fframe);
+    ret = av_write_trailer(oc);
+    ASSERT_TRUE(ret >= 0);
+  }
+#else
+  FFMpegSink sink(destination, {}, {Codec::VORBIS});
   ASSERT_TRUE(sink.initialise());
-  sink.supportedAudioCodecs();
   auto sink_stream = sink.audioStream(0);
-  sink_stream->setProperty(MediaProperty::BITRATE, 64'000);
+  sink_stream->setProperty(MediaProperty::BITRATE, 192'000);
   sink_stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, sample_rate);
-  sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
-  sink_stream->setInputFormat(SampleFormat::FLOAT_P);
+  sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, layout);
+  sink_stream->setInputFormat(format);
   while (auto frame = source_stream->frame()) {
     ASSERT_TRUE(sink_stream->writeFrame(frame));
   }
   ASSERT_TRUE(sink_stream->writeFrame(nullptr));
 
   sink.finish();
+#endif
 }
 
+TEST (FFMpegSinkTest, WriteSilence)
+{
+  FFMpegSink sink("/tmp/silence.wav", {}, {Codec::PCM_S16_LE});
+  ASSERT_TRUE(sink.initialise());
+  auto sink_stream = sink.audioStream(0);
+  sink_stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22050);
+  sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
+  sink_stream->setInputFormat(SampleFormat::SIGNED_16);
+
+  IMediaFrame::FrameData data;
+  data.samp_fmt_ = SampleFormat::SIGNED_16;
+  data.sample_count_ = 20;
+  data.data_ = new uint8_t*[8];
+  std::vector<uint8_t> samples(20, 0);
+  data.data_[0] = samples.data();
+
+  MediaFramePtr frame = media_handling::createFrame();
+  frame->setData(data);
+  ASSERT_TRUE(sink_stream->writeFrame(frame));
+  ASSERT_TRUE(sink_stream->writeFrame(frame));
+  ASSERT_TRUE(sink_stream->writeFrame(frame));
+  ASSERT_TRUE(sink_stream->writeFrame(frame));
+  ASSERT_TRUE(sink_stream->writeFrame(frame));
+  sink.finish();
+
+}
+
+TEST(FFMpegSinkTest, WriteSine)
+{
+  FFMpegSink sink("/tmp/sine.wav", {}, {Codec::PCM_S16_LE});
+  ASSERT_TRUE(sink.initialise());
+  auto sink_stream = sink.audioStream(0);
+  sink_stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22050);
+  sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
+  sink_stream->setInputFormat(SampleFormat::SIGNED_16);
+
+  IMediaFrame::FrameData data;
+  data.samp_fmt_ = SampleFormat::SIGNED_16;
+  data.sample_count_ = 360;
+  data.data_ = new uint8_t*[8];
+  std::vector<uint8_t> samples;
+  for (auto x = 0; x < 100; x++){
+  for (auto i = 0; i < 360; i+=2) {
+    int16_t val = 0x7FFF * sin(i*3.14/180);
+    samples.push_back(val & 0xFF);
+    samples.push_back(val >> 8);
+  }
+  }
+
+
+  data.data_[0] = samples.data();
+
+  MediaFramePtr frame = media_handling::createFrame();
+  frame->setData(data);
+  ASSERT_TRUE(sink_stream->writeFrame(frame));
+  sink.finish();
+}
 

@@ -59,7 +59,6 @@ namespace media_handling::ffmpeg
     public: // IMediaSink Overrides
       ~FFMpegSink() override;
       bool initialise() override;
-      void finish() override;
       bool isReady() override;
       MediaStreamPtr audioStream(const size_t index) override;
       std::vector<MediaStreamPtr> audioStreams() override;
@@ -71,6 +70,7 @@ namespace media_handling::ffmpeg
       AVFormatContext& formatContext() const;
       bool writeHeader();
       bool writeTrailer();
+      void finish();
     private:
       std::string file_path_;
       struct {

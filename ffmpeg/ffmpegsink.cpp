@@ -55,7 +55,7 @@ FFMpegSink::FFMpegSink(std::string file_path, std::vector<Codec> video_codecs, s
 
 FFMpegSink::~FFMpegSink()
 {
-  writeTrailer();
+  finish();
 }
 
 void FFMpegSink::setProperty(const MediaProperty prop, const std::any& value)
@@ -136,17 +136,6 @@ bool FFMpegSink::initialise()
 }
 
 
-void FFMpegSink::finish()
-{
-  writeTrailer();
-  ready_ = false;
-  fmt_ctx_.reset();
-  codecs_.audio_.clear();
-  codecs_.video_.clear();
-  streams_.audio_.clear();
-  streams_.video_.clear();
-  file_path_.clear();
-}
 
 bool FFMpegSink::isReady()
 {
@@ -194,12 +183,13 @@ std::vector<media_handling::MediaStreamPtr> FFMpegSink::visualStreams()
 std::set<mh::Codec> FFMpegSink::supportedAudioCodecs() const
 {
   auto cdcs = fmt_ctx_->oformat->codec_tag;
+  // TODO:
   return {};
 }
 
 std::set<mh::Codec> FFMpegSink::supportedVideoCodecs() const
 {
-
+  // TODO:
   return {};
 }
 
@@ -236,11 +226,27 @@ bool FFMpegSink::writeTrailer()
       auto ret = av_write_trailer(fmt_ctx_.get());
       if (ret < 0) {
         av_strerror(ret, err.data(), ERR_LEN);
-        const auto msg = fmt::format("Could not write output file trailer, msg=", err.data());
+        const auto msg = fmt::format("Could not write output file trailer, msg={}, filePath={}", err.data(), file_path_);
+        logMessage(LogType::CRITICAL, msg);
         okay = false;
+      } else {
+        const auto msg = fmt::format("Wrote trailer, filePath={}", file_path_);
+        logMessage(LogType::DEBUG, msg);
       }
       avio_closep(&fmt_ctx_->pb);
   };
   std::call_once(trailer_written_, func);
   return okay;
+}
+
+void FFMpegSink::finish()
+{
+  writeTrailer();
+  ready_ = false;
+  fmt_ctx_.reset();
+  codecs_.audio_.clear();
+  codecs_.video_.clear();
+  streams_.audio_.clear();
+  streams_.video_.clear();
+  file_path_.clear();
 }

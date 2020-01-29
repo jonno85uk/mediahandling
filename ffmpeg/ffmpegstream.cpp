@@ -45,7 +45,6 @@ extern "C" {
 }
 
 
-constexpr AVSampleFormat SAMPLE_FORMAT = AV_SAMPLE_FMT_S16;
 constexpr auto ERR_LEN = 256;
 constexpr auto SEEK_DIRECTION = AVSEEK_FLAG_BACKWARD;
 
@@ -56,20 +55,10 @@ namespace mh = media_handling;
 
 namespace  {
   std::array<char, ERR_LEN> err;
-  const std::set<AVCodecID> NOBITRATE_CODECS {AV_CODEC_ID_WAVPACK};
+  const std::set<AVCodecID> NOBITRATE_CODECS {AV_CODEC_ID_WAVPACK, AV_CODEC_ID_PCM_S16LE, AV_CODEC_ID_PCM_S32LE,
+        AV_CODEC_ID_FLAC};
 }
 
-
-static void log_packet(const mh::Rational time_base, const mh::Rational frame_rate, const AVPacket *pkt)
-{
-//  fmt::format("pts:{} pts_time:{} dts:{} dts_time:{} duration:{} duration_time:{} stream_index:{}\n",
-//              pkt->pts, );
-//  printf("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
-//  av_ts2str(pkt->pts), av_ts2timestr(pkt->pts, time_base),
-//  av_ts2str(pkt->dts), av_ts2timestr(pkt->dts, time_base),
-//  av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, time_base),
-//  pkt->stream_index);
-}
 
 FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
   : parent_(parent),
@@ -113,7 +102,6 @@ FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
   } else {
     throw std::exception(); // TODO: custom type
   }
-
 
   pkt_ = av_packet_alloc();
   assert(pkt_);
@@ -223,9 +211,27 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
   if (sample) {
     const auto data = sample->data();
     assert(data.data_);
-    for (auto ix = 0; ix < AV_NUM_DATA_POINTERS; ++ix) {
-      sink_frame_->data[ix] = data.data_[ix];
+    if (input_format_.swr_context_ != nullptr) {
+      // Convert audio
+      assert(data.line_size_ > 0);
+      const auto ret = swr_convert(input_format_.swr_context_.get(),
+                                   sink_frame_->data, sink_frame_->linesize[0],
+                                   const_cast<const uint8_t**>(data.data_), data.line_size_);
+      if (ret < 0) {
+        av_strerror(ret, err.data(), ERR_LEN);
+        const auto msg = fmt::format("Failed to convert audio sample, msg={}", err.data());
+        logMessage(LogType::CRITICAL, msg);
+        return false;
+      }
+    } else if (input_format_.sws_context_ != nullptr) {
+      // TODO: convert video
+    } else {
+      // Copy
+      for (auto ix = 0; ix < AV_NUM_DATA_POINTERS; ++ix) {
+        sink_frame_->data[ix] = data.data_[ix];
+      }
     }
+
     if (data.sample_count_ >= 0) {
       sink_frame_->pts = audio_samples_;
       audio_samples_ += data.sample_count_;
@@ -275,17 +281,14 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
       logMessage(LogType::CRITICAL, msg);
       return false;
     }
-    av_packet_unref(pkt_);
   } //while
   return true;
 }
-
 
 media_handling::StreamType FFMpegStream::type() const
 {
   return type_;
 }
-
 
 int32_t FFMpegStream::sourceIndex() const noexcept
 {
@@ -346,7 +349,7 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
   return output_format_.sws_context_ != nullptr;
 }
 
-bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<int32_t> rate)
+bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<SampleRate> rate)
 {
   if ((parent_ == nullptr) && (sink_ != nullptr) ) {
     logMessage(LogType::WARNING, "Stream is setup for encoding");
@@ -355,7 +358,7 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<int3
   bool okay = false;
   const auto layout = property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
   assert(okay);
-  const auto sample_rate = property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
+  const auto sample_rate = property<SampleRate>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
   assert(okay);
   const auto src_fmt = property<SampleFormat>(MediaProperty::AUDIO_FORMAT, okay);
   assert(okay);
@@ -409,7 +412,6 @@ bool FFMpegStream::setInputFormat(const PixelFormat format)
   } while ((!okay) && (fmt != AV_PIX_FMT_NONE));
 
   if (!okay) {
-#ifdef AUTO_CONV_FMT
     const auto dims = this->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
     if (okay) {
       SwsContext* ctx = sws_getContext(dims.width, dims.height, ff_format,
@@ -424,7 +426,6 @@ bool FFMpegStream::setInputFormat(const PixelFormat format)
       logMessage(LogType::WARNING, fmt::format("Auto converting input format to {}", codec_->pix_fmts[0]));
       return true;
     }
-#endif
     std::string msg = "Invalid pixel format set as input. Valid types are:\n";
     for (const auto& f : formats) {
       if (f == AV_PIX_FMT_NONE) {
@@ -437,7 +438,7 @@ bool FFMpegStream::setInputFormat(const PixelFormat format)
   return okay;
 }
 
-bool FFMpegStream::setInputFormat(const SampleFormat format)
+bool FFMpegStream::setInputFormat(const SampleFormat format, std::optional<SampleRate> rate)
 {
   assert(codec_);
   assert(sink_codec_ctx_);
@@ -456,15 +457,33 @@ bool FFMpegStream::setInputFormat(const SampleFormat format)
   } while ((!okay) && (fmt != AV_SAMPLE_FMT_NONE));
 
   if (!okay) {
-    // TODO: create a swr
-    std::string msg = "Invalid sample format set as input. Valid types are:\n";
-    for (const auto& f : formats) {
-      if (f == AV_SAMPLE_FMT_NONE) {
-        continue;
-      }
-      msg.append(fmt::format("\t {}\n", types::convertSampleFormat(f))); //TODO: maybe show as string repr
+
+    const auto dst_fmt = types::convertSampleFormat(codec_->sample_fmts[0]);
+    const auto dst_rate = this->property<SampleRate>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
+    if (!okay)
+    {
+      logMessage(LogType::CRITICAL, "Stream sampling rate has not been set");
+      return okay;
     }
-    logMessage(LogType::WARNING, msg);
+    const auto layout = this->property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
+    if (!okay)
+    {
+      logMessage(LogType::CRITICAL, "Stream channel layout has not been set");
+      return okay;
+    }
+    auto src_rate = rate.has_value() ? rate.value() : dst_rate;
+
+    okay = setupSWR(input_format_, layout, format, dst_fmt, src_rate, dst_rate);
+    if (okay)
+    {
+      sink_codec_ctx_->sample_fmt = codec_->sample_fmts[0];
+      logMessage(LogType::INFO, "Setup an auto audio-converter");
+    }
+    else
+    {
+      logMessage(LogType::CRITICAL, "Failed to setup auto audio-converter");
+    }
+
   }
   return okay;
 }
@@ -522,7 +541,7 @@ void FFMpegStream::extractVisualProperties(const AVStream& stream, const AVCodec
 void FFMpegStream::extractAudioProperties(const AVStream& stream, const AVCodecContext& context)
 {
   this->setProperty(MediaProperty::AUDIO_CHANNELS, static_cast<int32_t>(context.channels));
-  this->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, static_cast<int32_t>(context.sample_rate));
+  this->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, static_cast<SampleRate>(context.sample_rate));
   const SampleFormat s_format = types::convertSampleFormat(context.sample_fmt);
   this->setProperty(MediaProperty::AUDIO_FORMAT, s_format);
 
@@ -629,7 +648,7 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
     return false;
   }
   bool okay;
-  auto sample_rate = this->property<int32_t>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
+  auto sample_rate = this->property<SampleRate>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
   if (okay) {
     if (!checkSupportedSampleRates(codec.supported_samplerates, sample_rate)) {
       return false;
@@ -859,9 +878,6 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
     logMessage(LogType::CRITICAL, msg);
     return false;
   }
-
-
-
   return okay;
 }
 
@@ -915,6 +931,7 @@ bool FFMpegStream::setupMPEG4Encoder(AVCodecContext& ctx) const
   // TODO: low priority
   return true;
 }
+
 bool FFMpegStream::setupDNXHDEncoder(AVCodecContext& ctx) const
 {
   bool okay;
@@ -992,11 +1009,11 @@ MediaFramePtr FFMpegStream::frame(AVCodecContext& codec_ctx, const int stream_id
         // successful read
         assert(type_ != media_handling::StreamType::UNKNOWN);
         if ( (output_format_.swr_context_ != nullptr) || (output_format_.sws_context_ != nullptr) ) {
-          return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame),
+          return std::make_shared<media_handling::ffmpeg::FFMpegMediaFrame>(std::move(frame),
                                                                     type_ != StreamType::AUDIO,
                                                                     output_format_);
         }
-        return std::make_shared<media_handling::FFMpegMediaFrame>(std::move(frame), type_ != StreamType::AUDIO);
+        return std::make_shared<media_handling::ffmpeg::FFMpegMediaFrame>(std::move(frame), type_ != StreamType::AUDIO);
       }
 
       if (dec_err_code == AVERROR(EAGAIN)) {
@@ -1014,4 +1031,40 @@ MediaFramePtr FFMpegStream::frame(AVCodecContext& codec_ctx, const int stream_id
     }//while
   }//while
   return nullptr;
+}
+
+
+bool FFMpegStream::setupSWR(FFMpegMediaFrame::InOutFormat& fmt,
+                            const ChannelLayout layout,
+                            const SampleFormat src_fmt,
+                            const SampleFormat dst_fmt,
+                            const int32_t src_rate,
+                            const int32_t dst_rate)
+{
+  const auto av_layout = types::convertChannelLayout(layout);
+  const auto av_src_fmt = types::convertSampleFormat(src_fmt);
+  const auto av_dst_fmt = types::convertSampleFormat(dst_fmt);
+  SwrContext* ctx = swr_alloc_set_opts(nullptr,
+                                       static_cast<int64_t>(av_layout),
+                                       av_dst_fmt,
+                                       dst_rate,
+                                       static_cast<int64_t>(av_layout),
+                                       av_src_fmt,
+                                       src_rate,
+                                       0,
+                                       nullptr);
+
+  const auto ret = swr_init(ctx);
+  if (ret < 0) {
+    av_strerror(ret, err.data(), ERR_LEN);
+    logMessage(LogType::CRITICAL, fmt::format("Could not init resample context: {}", err.data()));
+    return false;
+  }
+
+  assert(ctx);
+  fmt.sample_fmt_ = dst_fmt;
+  fmt.layout_ = layout;
+  fmt.sample_rate_ = dst_rate;
+  fmt.swr_context_ = std::shared_ptr<SwrContext>(ctx, types::swrContextDeleter);
+  return true;
 }
