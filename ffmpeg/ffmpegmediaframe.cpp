@@ -36,7 +36,7 @@ extern "C" {
 #include "mediahandling.h"
 #include "ffmpegtypes.h"
 
-using media_handling::FFMpegMediaFrame;
+using media_handling::ffmpeg::FFMpegMediaFrame;
 using media_handling::MediaProperty;
 
 namespace mh = media_handling;
@@ -59,7 +59,7 @@ FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual)
 }
 
 
-FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, OutputFormat format)
+FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, InOutFormat format)
   : ff_frame_(std::move(frame)),
     is_audio_(!visual),
     is_visual_(visual),
@@ -89,6 +89,10 @@ std::optional<int64_t> FFMpegMediaFrame::lineSize(const int index) const
 
 media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
 {
+  if (frame_data_)
+  {
+    return frame_data_.value();
+  }
   assert(ff_frame_);
   media_handling::IMediaFrame::FrameData f_d;
   f_d.timestamp_ = ff_frame_->best_effort_timestamp; // value lost in resampled frame
@@ -151,11 +155,12 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
                                          * conv_frame_->channels);
     f_d.samp_fmt_ = output_fmt_.sample_fmt_;
     f_d.sample_count_ = conv_frame_->nb_samples;
+    f_d.line_size_ = conv_frame_->linesize[0];
   } else {
     // No conversion
     f_d.data_ = ff_frame_->data;
+    f_d.line_size_ = ff_frame_->linesize[0];
     if (is_visual_ && (is_visual_ == true)) {
-      f_d.line_size_ = ff_frame_->linesize[0];
       f_d.data_size_ = static_cast<size_t>(av_image_get_buffer_size(static_cast<AVPixelFormat>(ff_frame_->format),
                                                                     ff_frame_->width,
                                                                     ff_frame_->height,
@@ -168,7 +173,12 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
     }
   }
   return f_d;
+}
 
+
+void FFMpegMediaFrame::setData(FrameData frame_data)
+{
+  frame_data_ = std::move(frame_data);
 }
 
 void FFMpegMediaFrame::extractProperties()

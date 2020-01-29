@@ -32,6 +32,7 @@
 
 #include "ffmpegsource.h"
 #include "ffmpegsink.h"
+#include "ffmpegmediaframe.h"
 
 static std::atomic<media_handling::BackendType> media_backend = media_handling::BackendType::FFMPEG;
 
@@ -180,6 +181,21 @@ media_handling::MediaSinkPtr media_handling::createSink(std::string file_path,
   switch (media_backend) {
     case BackendType::FFMPEG:
       return std::make_shared<ffmpeg::FFMpegSink>(std::move(file_path), std::move(video_codecs), std::move(audio_codecs));
+    case BackendType::GSTREAMER:
+    [[fallthrough]];
+    case BackendType::INTEL:
+    [[fallthrough]];
+    default:
+      return {};
+  }
+}
+
+
+media_handling::MediaFramePtr media_handling::createFrame()
+{
+  switch (media_backend) {
+    case BackendType::FFMPEG:
+      return std::make_shared<ffmpeg::FFMpegMediaFrame>();
     case BackendType::GSTREAMER:
     [[fallthrough]];
     case BackendType::INTEL:

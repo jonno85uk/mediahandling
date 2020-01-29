@@ -103,6 +103,8 @@ namespace media_handling
 
   MediaSinkPtr createSink(std::string file_path, std::vector<Codec> video_codecs, std::vector<Codec> audio_codecs);
 
+  MediaFramePtr createFrame();
+
   /**
    * @brief Globally set the ability to auto-detect image sequences
    * @param value true==auto-detecting

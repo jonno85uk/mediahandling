@@ -88,6 +88,8 @@ namespace media_handling
        */
       virtual FrameData data() noexcept = 0;
 
+      virtual void setData(FrameData frame_data) = 0;
+
       /**
        * @brief It is not always resource-wise to extract all properties for every frame when decoding
        *        so call this at least once before reading any properties

@@ -40,7 +40,7 @@
  */
 namespace media_handling
 {
-
+  using SampleRate = int32_t;
   // TODO: maybe turn into a mapping
   enum class MediaProperty
   {
@@ -53,7 +53,7 @@ namespace media_handling
     PRESET,               // Preset
     AUDIO_FORMAT,         // SampleFormat
     AUDIO_LAYOUT,         // ChannelLayout
-    AUDIO_SAMPLING_RATE,  // int32_t
+    AUDIO_SAMPLING_RATE,  // SampleRate
     AUDIO_SAMPLES,        // int32_t per channel
     AUDIO_CHANNELS,       // int32_t
     AUDIO_STREAMS,        // int32_t
@@ -79,7 +79,7 @@ namespace media_handling
     COLOUR_SPACE,         // ColourSpace
     GOP,                  // GOP
     FRAME_PACKET_SIZE,    // int32_t
-    FRAME_DURATION,        // int64_t
+    FRAME_DURATION,       // int64_t
     START_TIMECODE        // Timecode
   };
 

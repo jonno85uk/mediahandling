@@ -66,9 +66,9 @@ namespace media_handling::ffmpeg
       bool setOutputFormat(const PixelFormat format,
                            const Dimensions& dims = {0, 0},
                            InterpolationMethod interp = InterpolationMethod::NEAREST) final;
-      bool setOutputFormat(const SampleFormat format, std::optional<int32_t> rate = {}) final;
+      bool setOutputFormat(const SampleFormat format, std::optional<SampleRate> rate = {}) final;
       bool setInputFormat(const PixelFormat format) final;
-      bool setInputFormat(const SampleFormat format) final;
+      bool setInputFormat(const SampleFormat format, std::optional<SampleRate> rate = {}) final;
 
     private:
       FFMpegSource* parent_ {nullptr};
@@ -82,7 +82,8 @@ namespace media_handling::ffmpeg
       AVPacket* pkt_ {nullptr};
       AVDictionary* opts_ {nullptr};
       int pixel_format_{};
-      FFMpegMediaFrame::OutputFormat output_format_;
+      FFMpegMediaFrame::InOutFormat output_format_;
+      FFMpegMediaFrame::InOutFormat input_format_;
 
       mutable int64_t last_timestamp_ {-1};
       StreamType type_{StreamType::UNKNOWN};
@@ -112,6 +113,13 @@ namespace media_handling::ffmpeg
       void extractFrameProperties();
 
       MediaFramePtr frame(AVCodecContext& codec_ctx, const int stream_idx) const;
+
+      bool setupSWR(FFMpegMediaFrame::InOutFormat& fmt,
+                    const ChannelLayout layout,
+                    const SampleFormat src_fmt,
+                    const SampleFormat dst_fmt,
+                    const int32_t src_rate,
+                    const int32_t dst_rate);
   };
 
 }
