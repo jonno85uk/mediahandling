@@ -378,19 +378,6 @@ TEST (FFMpegSinkTest, SetupVideoDNXHDInvalidDims)
   ASSERT_FALSE(stream->writeFrame( {}));
 }
 
-TEST (FFMpegSinkTest, SetupVideoDNXHDInvalidInputFormat)
-{
-  FFMpegSink thing("./test.mp4", {Codec::DNXHD}, {});
-  ASSERT_TRUE(thing.initialise());
-  auto stream = thing.visualStream(0);
-  stream->setProperty(MediaProperty::FRAME_RATE, Rational(25));
-  stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({1920, 1080}));
-  stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
-  stream->setProperty(MediaProperty::BITRATE, 45'000'000);
-  stream->setProperty(MediaProperty::PROFILE, Profile::DNXHD);
-  ASSERT_FALSE(stream->setInputFormat(PixelFormat::YUV444));
-}
-
 TEST (FFMpegSinkTest, SetupVideoDNXHDInvalidBitrate)
 {
   FFMpegSink thing("./test.mp4", {Codec::DNXHD}, {});
@@ -519,7 +506,6 @@ TEST(FFMpegSinkTest, WriteMJPEG)
   stream->setProperty(MediaProperty::DIMENSIONS, Dimensions({426, 240}));
   stream->setProperty(MediaProperty::COMPRESSION, CompressionStrategy::TARGETBITRATE);
   stream->setProperty(MediaProperty::BITRATE, 1'000'000);
-  ASSERT_FALSE(stream->setInputFormat(PixelFormat::YUV420));
   ASSERT_TRUE(stream->setInputFormat(PixelFormat::YUVJ420));
 
   while (auto frame = source_v_stream->frame()) {
@@ -685,7 +671,7 @@ TEST(FFMpegSinkTest, AutoInputFormatConvTransCode)
   bool okay;
   auto fmt = source_stream->property<SampleFormat>(MediaProperty::AUDIO_FORMAT, okay);
 
-  FFMpegSink sink("/tmp/autoformat.flac", {}, {Codec::FLAC});
+  FFMpegSink sink("/tmp/autoformat.m4a", {}, {Codec::AAC});
   ASSERT_TRUE(sink.initialise());
   auto sink_stream = sink.audioStream(0);
 //  sink_stream->setProperty(MediaProperty::BITRATE, 64000);
