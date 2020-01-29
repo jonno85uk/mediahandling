@@ -150,6 +150,15 @@ TEST (FFMpegSourceTest, h264FHDCodec)
   ASSERT_FALSE(is_valid); // Property is of the stream
 }
 
+TEST (FFMpegSourceTest, Properties)
+{
+  std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
+  FFMpegSource src(fname);
+  auto all_properties = src.properties();
+  ASSERT_TRUE(!all_properties.empty());
+  ASSERT_EQ(all_properties.size(), 8);
+}
+
 class StreamCountParameterTests : public testing::TestWithParam<std::tuple<std::string, int32_t>>
 {
   public:
@@ -308,5 +317,6 @@ INSTANTIATE_TEST_CASE_P(
                       std::make_tuple("./ReferenceMedia/Video/mpeg2/interlaced_avc.MTS", Rational(25,1)),
                       std::make_tuple("./ReferenceMedia/Video/dnxhd/fhd_dnxhd.mov", Rational(30,1))
 ));
+
 
 
