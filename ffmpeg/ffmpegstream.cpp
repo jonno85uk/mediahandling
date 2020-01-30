@@ -138,9 +138,29 @@ FFMpegStream::~FFMpegStream()
   av_dict_free(&opts_);
 }
 
+void FFMpegStream::setProperties(std::map<media_handling::MediaProperty, std::any> props)
+{
+  if (setup_) {
+    logMessage(LogType::WARNING, "Setting/changing properties of a writing stream that is in use is prohibited");
+  } else {
+    media_handling::MediaPropertyObject::setProperties(std::move(props));
+  }
+}
+
+void FFMpegStream::setProperty(const MediaProperty prop, const std::any& value)
+{
+  if (setup_) {
+    logMessage(LogType::WARNING, "Setting/changing a property of a writing stream that is in use is prohibited");
+  } else {
+    media_handling::MediaPropertyObject::setProperty(prop, value);
+  }
+}
+
 
 bool FFMpegStream::index()
 {
+  // Intention is to change already set properties so unset lock
+  setup_ = false;
   MediaFramePtr fframe = this->frame(0);
   int64_t frame_count = 0;
   int64_t frames_size = 0;
@@ -158,18 +178,21 @@ bool FFMpegStream::index()
     this->setProperty(MediaProperty::FRAME_COUNT, frame_count);
     const auto scale = this->property<Rational>(MediaProperty::TIMESCALE, okay);
     if (!okay) {
+      setup_ = true;
       return false;
     }
     const Rational dur = duration * scale;
     this->setProperty(MediaProperty::DURATION, dur);
     const auto rate = this->property<Rational>(MediaProperty::FRAME_RATE, okay);
     if (!okay) {
+      setup_ = true;
       return false;
     }
     const BitRate bit_rate = frames_size / (frame_count/rate);
     this->setProperty(MediaProperty::BITRATE, bit_rate);
 
   }
+  setup_ = true;
   return okay;
 }
 
@@ -488,6 +511,12 @@ bool FFMpegStream::setInputFormat(const SampleFormat format, std::optional<Sampl
   return okay;
 }
 
+
+void FFMpegStream::initialise() noexcept
+{
+  setup_ = true;
+}
+
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {
   assert(context.codec);
@@ -596,6 +625,7 @@ bool FFMpegStream::setupEncoder()
       if (!okay) {
         logMessage(LogType::CRITICAL, "Failed to setup audio encoder");
       }
+      setup_ = okay;
       return sink_->writeHeader();
     }
     case AVMEDIA_TYPE_VIDEO:
@@ -604,6 +634,7 @@ bool FFMpegStream::setupEncoder()
       if (!okay) {
         logMessage(LogType::CRITICAL, "Failed to setup video encoder");
       }
+      setup_ = okay;
       return sink_->writeHeader();
     }
     default:

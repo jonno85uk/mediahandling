@@ -674,7 +674,7 @@ TEST(FFMpegSinkTest, AutoInputFormatConvTransCode)
   FFMpegSink sink("/tmp/autoformat.m4a", {}, {Codec::AAC});
   ASSERT_TRUE(sink.initialise());
   auto sink_stream = sink.audioStream(0);
-//  sink_stream->setProperty(MediaProperty::BITRATE, 64000);
+  sink_stream->setProperty(MediaProperty::BITRATE, 64000);
   sink_stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22050);
   sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
   ASSERT_TRUE(sink_stream->setInputFormat(fmt));
@@ -838,11 +838,11 @@ TEST(FFMpegSinkTest, WriteSine)
   data.data_ = new uint8_t*[8];
   std::vector<uint8_t> samples;
   for (auto x = 0; x < 100; x++){
-  for (auto i = 0; i < 360; i+=2) {
-    int16_t val = 0x7FFF * sin(i*3.14/180);
-    samples.push_back(val & 0xFF);
-    samples.push_back(val >> 8);
-  }
+    for (auto i = 0; i < 360; i+=2) {
+      int16_t val = 0x7FFF * sin(i*3.14/180);
+      samples.push_back(val & 0xFF);
+      samples.push_back(val >> 8);
+    }
   }
 
 
@@ -854,3 +854,19 @@ TEST(FFMpegSinkTest, WriteSine)
   sink.finish();
 }
 
+TEST(FFMpegSinkTest, StreamPropertiesLocked)
+{
+  FFMpegSink sink("/tmp/properties.wav", {}, {Codec::PCM_S16_LE});
+  sink.initialise();
+  auto sink_stream = sink.audioStream(0);
+  sink_stream->setProperty(MediaProperty::AUDIO_SAMPLING_RATE, 22050);
+  sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::MONO);
+  sink_stream->setInputFormat(SampleFormat::SIGNED_16);
+  sink_stream->writeFrame(nullptr);
+  sink_stream->setProperty(MediaProperty::AUDIO_LAYOUT, ChannelLayout::STEREO);
+  bool okay;
+  const auto layout = sink_stream->property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(layout, ChannelLayout::MONO);
+
+}

@@ -11,6 +11,7 @@ int main(int argc, char **argv)
   ::testing::InitGoogleTest(&argc, argv);
 #ifndef LOGGING  
   media_handling::assignLoggerCallback(&logFunc);
+  media_handling::enableBackendLogs(false);
 #endif
   return RUN_ALL_TESTS();
 }

@@ -35,9 +35,9 @@ std::string MediaPropertyObject::repr()
   return "TODO";
 }
 
-void MediaPropertyObject::setProperties(const std::map<MediaProperty, std::any>& props)
+void MediaPropertyObject::setProperties(std::map<media_handling::MediaProperty, std::any> props)
 {
-  properties_ = props;
+  properties_ = std::move(props);
 }
 
 void MediaPropertyObject::setProperty(const MediaProperty prop, const std::any& value)

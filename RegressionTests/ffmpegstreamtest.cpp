@@ -770,6 +770,18 @@ TEST (FFMpegStreamTest, IndexedStreamProperties)
 
 }
 
+TEST (FFMpegStreamTest, StreamPropertiesLocked)
+{
+  FFMpegSource source("./ReferenceMedia/Audio/ogg/monotone.ogg");
+  auto source_stream = source.audioStream(0);
+  bool okay;
+  const auto format = source_stream->property<SampleFormat>(MediaProperty::AUDIO_FORMAT, okay);
+  source_stream->setProperty(MediaProperty::AUDIO_FORMAT, SampleFormat::NONE);
+  const auto format2 = source_stream->property<SampleFormat>(MediaProperty::AUDIO_FORMAT, okay);
+  ASSERT_EQ(format, format2);
+}
+
+
 #ifdef DUMP_AUDIO
 #include <iostream>
 #include <fstream>

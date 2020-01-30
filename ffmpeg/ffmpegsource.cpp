@@ -159,7 +159,9 @@ MediaStreamPtr FFMpegSource::audioStream(const int index)
   for (auto& stream: span_streams) {
     if (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
       if (streams == index) {
-        return this->newMediaStream(*stream);
+        auto f_s = this->newMediaStream(*stream);
+        std::dynamic_pointer_cast<FFMpegStream>(f_s)->initialise();
+        return f_s;
       } else {
         streams++;
       }
@@ -176,7 +178,9 @@ MediaStreamMap FFMpegSource::audioStreams()
   gsl::span<AVStream*> span_streams(format_ctx_->streams, format_ctx_->nb_streams);
   for (auto& stream: span_streams) {
     if (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-      a_m[streams++] = this->newMediaStream(*stream);
+      auto f_s = this->newMediaStream(*stream);
+      std::dynamic_pointer_cast<FFMpegStream>(f_s)->initialise();
+      a_m[streams++] = f_s;
     }
   }
   return a_m;
@@ -198,6 +202,7 @@ MediaStreamPtr FFMpegSource::visualStream(const int index)
         const auto frate = this->property(MediaProperty::FRAME_RATE, is_okay);
         assert(is_okay);
         f_s->setProperty(MediaProperty::FRAME_RATE, frate);
+        std::dynamic_pointer_cast<FFMpegStream>(f_s)->initialise();
         return f_s;
       } else {
         streams++;
@@ -219,6 +224,7 @@ MediaStreamMap FFMpegSource::visualStreams()
       const auto frate = this->property(MediaProperty::FRAME_RATE, is_okay);
       assert(is_okay);
       f_s->setProperty(MediaProperty::FRAME_RATE, frate);
+      std::dynamic_pointer_cast<FFMpegStream>(f_s)->initialise();
       a_m[streams++] = f_s;
     }
   }

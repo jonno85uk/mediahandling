@@ -52,7 +52,7 @@ class MediaPropertyObject
      * @brief         Set the properties of this object. This will overwrite previous properties.
      * @param props   New map of properties
      */
-    virtual void setProperties(const std::map<MediaProperty, std::any>& props);
+    virtual void setProperties(std::map<MediaProperty, std::any> props);
 
     /**
      * @brief         Set a single property of this object

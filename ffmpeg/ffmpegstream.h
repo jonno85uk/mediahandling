@@ -31,15 +31,16 @@
 #include "imediastream.h"
 #include <optional>
 #include <mutex>
+extern "C" {
+#include <libavformat/avformat.h>
+#include <libavutil/frame.h>
+}
+
 
 #include "ffmpegmediaframe.h"
 #include "ffmpegsink.h"
 #include "ffmpegtypes.h"
 
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavutil/frame.h>
-}
 
 namespace media_handling::ffmpeg
 {
@@ -55,6 +56,10 @@ namespace media_handling::ffmpeg
       FFMpegStream(FFMpegSink* sink, const AVCodecID codec);
       ~FFMpegStream() override;
 
+    public: // MediaPropertyObject overrides
+      void setProperties(std::map<MediaProperty, std::any> props) override;
+      void setProperty(const MediaProperty prop, const std::any& value) override;
+
     public: // IMediaStream override
       bool index() override;
       int64_t timestamp() const override;
@@ -68,6 +73,12 @@ namespace media_handling::ffmpeg
       bool setOutputFormat(const SampleFormat format, std::optional<SampleRate> rate = {}) final;
       bool setInputFormat(const PixelFormat format) final;
       bool setInputFormat(const SampleFormat format, std::optional<SampleRate> rate = {}) final;
+
+    public:
+      /**
+       * @brief Mark this stream as initialised to prevent properties being changed whilst in use
+       */
+      void initialise() noexcept;
 
     private:
       FFMpegSource* parent_ {nullptr};
@@ -90,6 +101,7 @@ namespace media_handling::ffmpeg
       int32_t source_index_ {-1};
       std::once_flag setup_encoder_;
       int64_t audio_samples_ {0};
+      std::atomic_bool setup_ {false};
 
     private:
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
