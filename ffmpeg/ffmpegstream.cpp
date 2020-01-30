@@ -162,6 +162,9 @@ bool FFMpegStream::index()
   // Intention is to change already set properties so unset lock
   setup_ = false;
   MediaFramePtr fframe = this->frame(0);
+  if (fframe == nullptr) {
+    return false;
+  }
   int64_t frame_count = 0;
   int64_t frames_size = 0;
   int64_t duration = 0;
@@ -589,7 +592,7 @@ bool FFMpegStream::seek(const int64_t timestamp)
   assert(codec_ctx_);
   parent_->resetPacketQueue();
   avcodec_flush_buffers(codec_ctx_);
-  int ret = av_seek_frame(parent_->context(), stream_->index, timestamp, SEEK_DIRECTION);
+  const int ret = av_seek_frame(parent_->context(), stream_->index, timestamp, SEEK_DIRECTION);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     logMessage(LogType::WARNING, fmt::format("Could not seek frame: {}", err.data()));
@@ -1020,11 +1023,8 @@ MediaFramePtr FFMpegStream::frame(AVCodecContext& codec_ctx, const int stream_id
   types::AVFrameUPtr frame(av_frame_alloc());
   while (err_code >= 0)
   {
-    auto pkt = parent_->nextPacket(stream_idx);
-    if (pkt == nullptr) {
-      break;
-    }
-
+    const auto pkt = parent_->nextPacket(stream_idx);
+    // Send nulls to flush decoder
     err_code = avcodec_send_packet(&codec_ctx, pkt.get());
     if (err_code < 0) {
       av_strerror(err_code, err.data(), ERR_LEN);

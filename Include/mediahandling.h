@@ -37,8 +37,8 @@
 namespace media_handling
 {
 
-  constexpr auto SEQUENCE_MATCHING_PATTERN = "^(.+?)([0-9]+)\\.(bmp|dpx|exr|png|tiff|jp2|tga)$";
-  constexpr auto SPECIFIC_MATCHING_PATTERN = "([0-9]+)\\.(bmp|dpx|exr|png|tiff|jp2|tga)$";
+  constexpr auto SEQUENCE_MATCHING_PATTERN = "^(.+?)([0-9]+)\\.(bmp|dpx|exr|jpeg|jpg|png|tiff|jp2|tga)$";
+  constexpr auto SPECIFIC_MATCHING_PATTERN = "([0-9]+)\\.(bmp|dpx|jpeg|jpg|exr|png|tiff|jp2|tga)$";
 
   namespace global
   {
@@ -59,6 +59,12 @@ namespace media_handling
      * @return      Valid sequence pattern if value exists
      */
     std::optional<std::string> generateSequencePattern(const std::string& path);
+    /**
+     * @brief       Extract the start number of an image sequence file path
+     * @param path  File path to existing file
+     * @return      >= 0 indicates a valid value
+     */
+    int getSequenceStartNumber(const std::string& path);
   }
 
   enum class BackendType

@@ -57,8 +57,7 @@ namespace
 FFMpegSource::FFMpegSource(std::string file_path) : file_path_(std::move(file_path))
 {
   if (!FFMpegSource::initialise()) {
-    //TODO: why did I use throw_with_nested?
-    std::throw_with_nested(std::runtime_error("FFMpegSource::initialise failed, filepath=" + file_path_) );
+    throw std::runtime_error("FFMpegSource::initialise failed, filepath=" + file_path_);
   }
 }
 
@@ -80,18 +79,17 @@ bool FFMpegSource::initialise()
   // Ensure resources freed on a re-initialise
   reset();
 
-  const std::string path([&] {
-    std::string result;
+  const auto [path, start] ([&] () -> std::tuple<std::string, int> {
     if (media_handling::global::auto_detect_img_sequence == false) {
-      return file_path_;
+      return {file_path_, -1};
     }
 
+    std::string result;
     if (media_handling::utils::pathIsInSequence(file_path_)) {
       if (auto ptn = media_handling::utils::generateSequencePattern(file_path_)) {
         result = ptn.value();
       }
     }
-
     // A manually created sequence pattern takes priority
     bool okay = false;
     const auto pattern = MediaPropertyObject::property<std::string>(MediaProperty::SEQUENCE_PATTERN, okay);
@@ -107,15 +105,22 @@ bool FFMpegSource::initialise()
 
     if (result.empty()) {
       // Nothing found then carry on with no modified file-path
-      return file_path_;
+      return {file_path_, -1};
+    } else {
+      const auto start = media_handling::utils::getSequenceStartNumber(file_path_);
+      return {result, start};
     }
-    return result;
   }());
 
-  const auto p = path.c_str(); //only because path is unavailable when in debug
+  const auto p = path.c_str(); // only because path is unavailable when in debug
+  AVDictionary* dict = nullptr;
+  if (start > 0) {
+    // FFMpeg expects sequences to start at zero by default
+    av_dict_set(&dict, "start_number", std::to_string(start).c_str(), 0);
+  }
   // Open the file
   AVFormatContext* ctx = nullptr;
-  int err_code = avformat_open_input(&ctx, p, nullptr, nullptr);
+  int err_code = avformat_open_input(&ctx, p, nullptr, &dict);
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
     logMessage(LogType::CRITICAL, "Failed to open file, code=" + err + "fileName=" + p);

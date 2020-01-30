@@ -128,6 +128,20 @@ std::optional<std::string> media_handling::utils::generateSequencePattern(const 
 }
 
 
+int media_handling::utils::getSequenceStartNumber(const std::string& path)
+{
+  const std::filesystem::path file_path(path);
+  std::regex pattern(SEQUENCE_MATCHING_PATTERN, std::regex_constants::icase);
+  std::smatch match;
+  // strip path
+  const auto fname(file_path.filename().string());
+  if (!std::regex_search(fname, match, pattern)) {
+    logMessage(LogType::WARNING, std::string(SEQUENCE_MATCHING_PATTERN) + " doesn't match filename " + path);
+    return -1;
+  }
+  return stoi(match.str(2));
+}
+
 
 bool media_handling::initialise(const BackendType backend)
 {

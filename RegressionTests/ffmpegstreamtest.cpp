@@ -691,6 +691,29 @@ TEST (FFMpegStreamTest, ImageSequenceAutoCAPEXT)
   ASSERT_EQ(rate, Rational(25,1));
 }
 
+TEST (FFMpegStreamTest, ImageSequenceAutoJPEG)
+{
+  FFMpegSource source("./ReferenceMedia/Image/sequence/jpeg/image-001.jpeg");
+  bool okay;
+  const auto duration = source.property<Rational>(MediaProperty::DURATION, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(duration, Rational(2, 5));
+  auto stream = source.visualStream(0);
+  auto frames = stream->property<int64_t>(MediaProperty::FRAME_COUNT, okay);
+  ASSERT_EQ(frames, 0);
+  ASSERT_TRUE(stream->index());
+  frames = stream->property<int64_t>(MediaProperty::FRAME_COUNT, okay);
+  ASSERT_TRUE(frames > 0);
+}
+
+TEST (FFMpegStreamTest, ImageSequenceAutoJPGNotZeroStart)
+{
+  FFMpegSource source("./ReferenceMedia/Image/sequence/jpg/image-020.jpg");
+  bool okay;
+  const auto duration = source.property<Rational>(MediaProperty::DURATION, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(duration, Rational(2, 5));
+}
 
 TEST (FFMpegStreamTest, ImageSequenceManualFailure)
 {
