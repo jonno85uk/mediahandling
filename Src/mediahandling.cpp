@@ -140,6 +140,23 @@ bool media_handling::initialise(const BackendType backend)
 }
 
 
+void media_handling::enableBackendLogs(const bool enabled)
+{
+  switch (media_backend) {
+    case BackendType::FFMPEG:
+    {
+      const int level = enabled ? AV_LOG_VERBOSE : AV_LOG_PANIC;
+      av_log_set_level(level);
+      break;
+    }
+    case BackendType::GSTREAMER:
+    [[fallthrough]];
+    case BackendType::INTEL:
+    [[fallthrough]];
+    default:
+      break;
+  }
+}
 
 void media_handling::assignLoggerCallback(media_handling::LOGGINGFN func)
 {

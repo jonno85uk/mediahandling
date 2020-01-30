@@ -95,14 +95,33 @@ namespace media_handling
   bool initialise(const BackendType backend);
 
   /**
+   * @brief           Enable/disable printing of the backend library messages to console
+   * @param enabled
+   */
+  void enableBackendLogs(const bool enabled);
+
+  /**
    * @brief             Create a new media source from a file using pre-selected backend
    * @param file_path   Path (absolute or relative) to the file 
    * @return  valid MediaSourcePtr or null
    */
   MediaSourcePtr createSource(std::string file_path);
 
+  /**
+   * @brief               Create a new media sink with the selected filepath and codecs for writing
+   * @param file_path     Path to a new/existing file. The parent directory must exist.
+   * @param video_codecs  List of video codecs to use per stream.
+   *                      The amount of codecs indicate the amount of video streams in this file
+   * @param audio_codecs  List of audio codecs to use per stream.
+   *                      The amount of codecs indicate the amount of video streams in this file
+   * @return              valid MediaSinkPtr or null
+   */
   MediaSinkPtr createSink(std::string file_path, std::vector<Codec> video_codecs, std::vector<Codec> audio_codecs);
 
+  /**
+   * @brief     Create a mew media frame for populating data to be encoded
+   * @return    valid MediaFramePtr or null
+   */
   MediaFramePtr createFrame();
 
   /**
