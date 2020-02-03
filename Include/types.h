@@ -96,7 +96,7 @@ namespace media_handling
     MPEG2_SIMPLE,       //  SP
     MPEG2_MAIN,         //  MP
     MPEG2_HIGH,         //  HP
-    MPEG2_422,           //  422
+    MPEG2_422,          //  422
     DNXHD,
     DNXHR_LB,
     DNXHR_SQ,
@@ -210,7 +210,10 @@ namespace media_handling
     RGB24,
     RGBA,
     YUV420,
-    YUVJ420,  // Full-range YUV420
+    /**
+     * Full-range YUV420
+     */
+    YUVJ420,
     YUV422,
     YUV444,
     YUV422_P_10_LE,
@@ -220,10 +223,22 @@ namespace media_handling
 
   enum class ChannelLayout
   {
+    /**
+     * Single channel
+     */
     MONO,
-    STEREO,               // 2.0
-    STEREO_LFE,           // 2.0 + LFE
-    THREE_STEREO,         // 2.0 + front-center
+    /**
+     * 2.0
+     */
+    STEREO,
+    /**
+     * 2.0 + Low frequence effect channel
+     */
+    STEREO_LFE,
+    /**
+     *  2.0 + front-center
+     */
+    THREE_STEREO,
     THREE_SURROUND,       // 2.0 + back-center
     THREE_STEREO_LFE,     // 3.1
     THREE_SURROUND_LFE,
@@ -293,14 +308,32 @@ namespace media_handling
   enum class ColourRange
   {
     UNKNOWN,
+    /**
+     * For 2^8 -- 16->235
+     */
     TV,
+    /**
+     * For 2^8 -- 0->255
+     */
     FULL
   };
 
   enum class CompressionStrategy {
+    /**
+     * Constant bitrate strategy
+     */
     CBR,
+    /**
+     * Constant rate-factor strategy
+     */
     CRF,
+    /**
+     * Target size strategy
+     */
     TARGETSIZE,
+    /**
+     * Target bitrate strategy
+     */
     TARGETBITRATE,
     UNKNOWN
   };
@@ -336,9 +369,17 @@ namespace media_handling
     ColourRange             range_ {ColourRange::UNKNOWN};
   };
 
+
+
   struct GOP
   {
+    /**
+     * @brief The amount of b-frames in the structure
+     */
     int32_t m_;
+    /**
+     * @brief The total length of the gop structure (distance between keyframes)
+     */
     int32_t n_;
   };
 

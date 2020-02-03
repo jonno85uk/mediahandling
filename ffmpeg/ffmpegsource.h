@@ -51,6 +51,11 @@ namespace media_handling::ffmpeg
   {
     public:
       FFMpegSource() = default;
+      /**
+       * @brief             Constructor specifying file-path
+       * @note              If the file does not exist or cannot be opened, this will throw
+       * @param file_path
+       */
       explicit FFMpegSource(std::string file_path);
       ~FFMpegSource() override;
       FFMpegSource(const FFMpegSource& cpy) = delete;
