@@ -457,7 +457,7 @@ bool FFMpegStream::setInputFormat(const PixelFormat format)
       if (f == AV_PIX_FMT_NONE) {
         continue;
       }
-      msg.append(fmt::format("\t {}\n", types::convertPixelFormat(f))); //TODO: maybe show as string repr
+      msg.append(fmt::format("\t {}\n", static_cast<int>(types::convertPixelFormat(f)))); //TODO: maybe show as string repr
     }
     logMessage(LogType::WARNING, msg);
   }
