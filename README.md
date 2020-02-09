@@ -120,6 +120,10 @@ Currently, only the [FFmpeg](https://ffmpeg.org/) library is being used.
 
 # Installation
 
+In Arch or Manjaro Linux, a package is available via AUR. To install:
+  
+<pre><code>pacaur -S mediahandling</code></pre>
+
 ## Dependencies
 
 [fmt](https://github.com/fmtlib/fmt) and [FFmpeg](https://ffmpeg.org/) development headers and libraries
