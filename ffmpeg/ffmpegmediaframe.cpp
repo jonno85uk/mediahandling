@@ -65,6 +65,8 @@ FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, 
     is_visual_(visual),
     output_fmt_(std::move(format))
 {
+  assert(ff_frame_);
+  timestamp_ = ff_frame_->pts;
 }
 
 std::optional<bool> FFMpegMediaFrame::isAudio() const
