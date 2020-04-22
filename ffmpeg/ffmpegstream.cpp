@@ -527,6 +527,8 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   this->setProperty(MediaProperty::CODEC_NAME, std::string(context.codec->name));
   const media_handling::Codec cdc = types::convertCodecID(context.codec_id);
   this->setProperty(MediaProperty::CODEC, cdc);
+  const Rational frame_rate(stream.avg_frame_rate.num, stream.avg_frame_rate.den);
+  this->setProperty(MediaProperty::FRAME_RATE, frame_rate);
   // TODO: if we use this things could go wrong on container != essence
   const auto base = stream.time_base;
   if (base.den > 0) {
