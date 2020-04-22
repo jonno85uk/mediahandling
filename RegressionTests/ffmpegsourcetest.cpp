@@ -320,3 +320,22 @@ INSTANTIATE_TEST_CASE_P(
 
 
 
+TEST (FFMpegSourceTest, StartTimeCodeMov)
+{
+  FFMpegSource source("./ReferenceMedia/Video/h265/h265_320_10hr.mov");
+  bool okay;
+  const auto start_tc = source.property<TimeCode>(MediaProperty::START_TIMECODE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(start_tc.toString(), "10:00:00:00");
+}
+
+TEST (FFMpegSourceTest, StartTimeCodeMxf)
+{
+  FFMpegSource source("./ReferenceMedia/Video/jpeg2000/bark.mxf");
+  bool okay;
+  const auto start_tc = source.property<TimeCode>(MediaProperty::START_TIMECODE, okay);
+  ASSERT_TRUE(okay);
+  ASSERT_EQ(start_tc.toString(), "01:00:00:00");
+}
+
+

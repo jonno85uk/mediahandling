@@ -43,6 +43,7 @@ using media_handling::MediaStreamPtr;
 using media_handling::MediaStreamMap;
 
 constexpr auto ERR_LEN = 1024;
+constexpr auto TAG_TIMECODE = "timecode";
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -140,6 +141,10 @@ bool FFMpegSource::initialise()
   findFrameRate();
   // Extract properties
   extractProperties(*format_ctx_);
+  if (format_ctx_->metadata)
+  {
+    extractMetadata(*format_ctx_->metadata);
+  }
 
 #ifdef VERBOSE_FFMPEG
   av_dump_format(format_ctx_, 0, file_path_.c_str(), 0);
@@ -322,6 +327,30 @@ void FFMpegSource::extractProperties(const AVFormatContext& ctx)
   extractStreamProperties(format_ctx_->streams, format_ctx_->nb_streams);
 }
 
+void FFMpegSource::extractMetadata(const AVDictionary& metadata)
+{
+  if (av_dict_count(&metadata) < 1)
+  {
+    return;
+  }
+
+  if (AVDictionaryEntry* entry = av_dict_get(&metadata, TAG_TIMECODE, nullptr, 0))
+  {
+    bool okay;
+    const auto frame_rate = this->property<Rational>(MediaProperty::FRAME_RATE, okay);
+    std::string tc_str(entry->value);
+    TimeCode tc({1,1}, frame_rate);
+    if (tc.setTimeCode(tc_str))
+    {
+      this->setProperty(MediaProperty::START_TIMECODE, tc);
+    }
+    else
+    {
+      logMessage(LogType::WARNING, "Failed to configure start timecode");
+    }
+  }
+}
+
 
 void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t stream_count)
 {
@@ -333,9 +362,11 @@ void FFMpegSource::extractStreamProperties(AVStream** streams, const uint32_t st
     assert(stream);
     switch (stream->codecpar->codec_type) {
       case AVMEDIA_TYPE_VIDEO:
+        FFMpegStream(this, stream); // extract any properties which may attach to source
         visual_count++;
         break;
       case AVMEDIA_TYPE_AUDIO:
+        FFMpegStream(this, stream); // extract any properties which may attach to source
         audio_count++;
         break;
       default:

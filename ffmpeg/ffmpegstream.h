@@ -105,6 +105,7 @@ namespace media_handling::ffmpeg
 
     private:
       void extractProperties(const AVStream& stream, const AVCodecContext& context);
+      void extractMetadata(const AVDictionary& metadata);
       void extractVisualProperties(const AVStream& stream, const AVCodecContext& context);
       void extractAudioProperties(const AVStream& stream, const AVCodecContext& context);
       bool seek(const int64_t timestamp);

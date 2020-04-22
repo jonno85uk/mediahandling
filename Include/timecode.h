@@ -38,6 +38,7 @@ namespace media_handling
   class TimeCode
   {
     public:
+      TimeCode() = default;
       /**
        * @brief Constructor
        * @param time_scale

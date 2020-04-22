@@ -47,6 +47,7 @@ extern "C" {
 
 constexpr auto ERR_LEN = 256;
 constexpr auto SEEK_DIRECTION = AVSEEK_FLAG_BACKWARD;
+constexpr auto TAG_TIMECODE = "timecode";
 
 using media_handling::ffmpeg::FFMpegStream;
 using media_handling::MediaFramePtr;
@@ -527,8 +528,11 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   this->setProperty(MediaProperty::CODEC_NAME, std::string(context.codec->name));
   const media_handling::Codec cdc = types::convertCodecID(context.codec_id);
   this->setProperty(MediaProperty::CODEC, cdc);
-  const Rational frame_rate(stream.avg_frame_rate.num, stream.avg_frame_rate.den);
-  this->setProperty(MediaProperty::FRAME_RATE, frame_rate);
+  if (stream.avg_frame_rate.den != 0)
+  {
+    const Rational frame_rate(stream.avg_frame_rate.num, stream.avg_frame_rate.den);
+    this->setProperty(MediaProperty::FRAME_RATE, frame_rate);
+  }
   // TODO: if we use this things could go wrong on container != essence
   const auto base = stream.time_base;
   if (base.den > 0) {
@@ -545,6 +549,36 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
     extractAudioProperties(stream, context);
   } else {
     assert("Cannot get properties of unknown stream");
+  }
+  if (stream.metadata)
+  {
+    extractMetadata(*stream.metadata);
+  }
+}
+
+void FFMpegStream::extractMetadata(const AVDictionary& metadata)
+{
+  auto count = av_dict_count(&metadata);
+  if (count < 1)
+  {
+    return;
+  }
+  if (AVDictionaryEntry* entry = av_dict_get(&metadata, TAG_TIMECODE, nullptr, 0))
+  {
+    assert(parent_);
+    bool okay;
+    const auto timescale = this->property<Rational>(MediaProperty::TIMESCALE, okay);
+    const auto frame_rate = this->property<Rational>(MediaProperty::FRAME_RATE, okay);
+    std::string tc_str(entry->value);
+    TimeCode tc(timescale, frame_rate);
+    if (tc.setTimeCode(tc_str))
+    {
+      parent_->setProperty(MediaProperty::START_TIMECODE, tc);
+    }
+    else
+    {
+      logMessage(LogType::WARNING, "Failed to configure start timecode");
+    }
   }
 }
 

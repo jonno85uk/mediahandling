@@ -112,6 +112,7 @@ namespace media_handling::ffmpeg
       AVFormatContext* context() const noexcept;
     private:
       void extractProperties(const AVFormatContext& ctx);
+      void extractMetadata(const AVDictionary& metadata);
       void extractStreamProperties(AVStream** streams, const uint32_t stream_count);
       void findFrameRate();
       /**

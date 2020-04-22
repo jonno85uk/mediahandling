@@ -32,6 +32,7 @@
 #include "imediasource.h"
 #include "imediasink.h"
 #include "rational.h"
+#include "timecode.h"
 
 
 namespace media_handling
