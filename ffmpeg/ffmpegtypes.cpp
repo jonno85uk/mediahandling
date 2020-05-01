@@ -348,6 +348,9 @@ media_handling::PixelFormat media_handling::types::convertPixelFormat(const AVPi
     case AV_PIX_FMT_YUV444P:
       converted = PixelFormat::YUV444;
       break;
+    case AV_PIX_FMT_YUV420P10LE:
+      converted = PixelFormat::YUV420_P_10_LE;
+      break;
     case AV_PIX_FMT_YUV422P10LE:
       converted = PixelFormat::YUV422_P_10_LE;
       break;
