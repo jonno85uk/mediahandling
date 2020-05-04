@@ -118,6 +118,7 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
                     conv_frame_->data,
                     conv_frame_->linesize);
     f_d.data_ = conv_frame_->data;
+    f_d.dims_ = {conv_frame_->width, conv_frame_->height};
     f_d.line_size_ = conv_frame_->linesize[0];
     f_d.pix_fmt_ = output_fmt_.pix_fmt_;
     f_d.data_size_ = static_cast<size_t>(av_image_get_buffer_size(static_cast<AVPixelFormat>(conv_frame_->format),

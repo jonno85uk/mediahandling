@@ -41,6 +41,7 @@ namespace media_handling
     public:
       struct FrameData
       {
+        Dimensions dims_ {-1, -1};
         int64_t timestamp_ {-1};
         int32_t line_size_ {-1};
         size_t data_size_ {0};
