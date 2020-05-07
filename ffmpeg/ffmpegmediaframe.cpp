@@ -163,6 +163,7 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
     // No conversion
     f_d.data_ = ff_frame_->data;
     f_d.line_size_ = ff_frame_->linesize[0];
+    f_d.dims_ = {ff_frame_->width, ff_frame_->height};
     if (is_visual_ && (is_visual_ == true)) {
       f_d.data_size_ = static_cast<size_t>(av_image_get_buffer_size(static_cast<AVPixelFormat>(ff_frame_->format),
                                                                     ff_frame_->width,
