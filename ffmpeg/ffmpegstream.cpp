@@ -599,6 +599,8 @@ void FFMpegStream::extractVisualProperties(const AVStream& stream, const AVCodec
   if (stream.display_aspect_ratio.den > 0) {
     Rational dar(stream.display_aspect_ratio.num, stream.display_aspect_ratio.den);
     this->setProperty(MediaProperty::DISPLAY_ASPECT_RATIO, dar);
+  } else {
+    this->setProperty(MediaProperty::DISPLAY_ASPECT_RATIO, Rational(context.width, context.height));
   }
 
   const Profile prof = types::convertProfile(context.profile);
@@ -1045,6 +1047,11 @@ void FFMpegStream::extractFrameProperties()
     const auto space = tmp_frame->property<ColourSpace>(MediaProperty::COLOUR_SPACE, is_valid);
     if (is_valid) {
       MediaPropertyObject::setProperty(MediaProperty::COLOUR_SPACE, space);
+    }
+
+    const auto dar = tmp_frame->property<Rational>(MediaProperty::DISPLAY_ASPECT_RATIO, is_valid);
+    if (is_valid) {
+      MediaPropertyObject::setProperty(MediaProperty::DISPLAY_ASPECT_RATIO, dar);
     }
   } else {
     logMessage(LogType::CRITICAL, "Failed to read a frame from stream");

@@ -162,6 +162,20 @@ namespace
     {mh::Preset::X264_SUPERFAST, "superfast"},
     {mh::Preset::X264_ULTRAFAST, "ultrafast"}
   };
+
+  const std::map<mh::PixelFormat, AVPixelFormat> PIX_FMT_MAP
+  {
+    {mh::PixelFormat::RGBA, AV_PIX_FMT_RGBA},
+    {mh::PixelFormat::RGB24, AV_PIX_FMT_RGB24},
+    {mh::PixelFormat::RGB_48_LE, AV_PIX_FMT_RGB48LE},
+    {mh::PixelFormat::YUV420, AV_PIX_FMT_YUV420P},
+    {mh::PixelFormat::YUVJ420, AV_PIX_FMT_YUVJ420P},
+    {mh::PixelFormat::YUV422, AV_PIX_FMT_YUV422P},
+    {mh::PixelFormat::YUV444, AV_PIX_FMT_YUV444P},
+    {mh::PixelFormat::YUV420_P_10_LE, AV_PIX_FMT_YUV420P10LE},
+    {mh::PixelFormat::YUV422_P_10_LE, AV_PIX_FMT_YUV422P10LE},
+    {mh::PixelFormat::YUV444_P_12_LE, AV_PIX_FMT_YUV444P12LE}
+  };
 }
 
 template <typename T_K, typename T_V>
@@ -290,83 +304,14 @@ int media_handling::types::convertInterpolationMethod(const InterpolationMethod 
 
 AVPixelFormat media_handling::types::convertPixelFormat(const media_handling::PixelFormat format) noexcept
 {
-  AVPixelFormat converted {AV_PIX_FMT_NONE};
-
-  switch (format) {
-    case PixelFormat::RGBA:
-      converted = AV_PIX_FMT_RGBA;
-      break;
-    case PixelFormat::RGB24:
-      converted = AV_PIX_FMT_RGB24;
-      break;
-    case PixelFormat::YUV420:
-      converted = AV_PIX_FMT_YUV420P;
-      break;
-    case PixelFormat::YUVJ420:
-      converted = AV_PIX_FMT_YUVJ420P;
-      break;
-    case PixelFormat::YUV422:
-      converted = AV_PIX_FMT_YUV422P;
-      break;
-    case PixelFormat::YUV444:
-      converted = AV_PIX_FMT_YUV444P;
-      break;
-    case PixelFormat::YUV420_P_10_LE:
-      converted = AV_PIX_FMT_YUV420P10LE;
-      break;
-    case PixelFormat::YUV422_P_10_LE:
-      converted = AV_PIX_FMT_YUV422P10LE;
-      break;
-    case PixelFormat::YUV444_P_12_LE:
-      converted = AV_PIX_FMT_YUV444P12LE;
-      break;
-    default:
-      converted = AV_PIX_FMT_NONE;
-      break;
-  }
-
-  return converted;
+  return convertToFFMpegType(format, PIX_FMT_MAP, AV_PIX_FMT_NONE);
 }
 
 
 media_handling::PixelFormat media_handling::types::convertPixelFormat(const AVPixelFormat format) noexcept
 {
-  PixelFormat converted {PixelFormat::UNKNOWN};
-  switch (format) {
-    case AV_PIX_FMT_RGB24:
-      converted = PixelFormat::RGB24;
-      break;
-    case AV_PIX_FMT_RGBA:
-      converted = PixelFormat::RGBA;
-      break;
-    case AV_PIX_FMT_YUV420P:
-      converted = PixelFormat::YUV420;
-      break;
-    case AV_PIX_FMT_YUVJ420P:
-      converted = PixelFormat::YUVJ420;
-      break;
-    case AV_PIX_FMT_YUV422P:
-      converted = PixelFormat::YUV422;
-      break;
-    case AV_PIX_FMT_YUV444P:
-      converted = PixelFormat::YUV444;
-      break;
-    case AV_PIX_FMT_YUV420P10LE:
-      converted = PixelFormat::YUV420_P_10_LE;
-      break;
-    case AV_PIX_FMT_YUV422P10LE:
-      converted = PixelFormat::YUV422_P_10_LE;
-      break;
-    case AV_PIX_FMT_YUV444P12LE:
-      converted = PixelFormat::YUV444_P_12_LE;
-      break;
-    default:
-      converted = PixelFormat::UNKNOWN;
-      break;
-  }
-  return converted;
+  return convertFromFFMpegType(format, PIX_FMT_MAP, PixelFormat::UNKNOWN);
 }
-
 
 media_handling::SampleFormat media_handling::types::convertSampleFormat(const AVSampleFormat format) noexcept
 {

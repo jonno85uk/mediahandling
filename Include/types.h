@@ -209,6 +209,7 @@ namespace media_handling
     // TODO: use fourccs
     RGB24,
     RGBA,
+    RGB_48_LE,
     YUV420,
     /**
      * Full-range YUV420
