@@ -143,6 +143,26 @@ namespace media_handling
       {
         return operator/=(Rational(rhs));
       }
+      template<typename T>
+      constexpr bool operator>=(const T& val) const noexcept
+      {
+        return toDouble() >= val;
+      }
+      template<typename T>
+      constexpr bool operator>(const T& val) const noexcept
+      {
+        return toDouble() > val;
+      }
+      template<typename T>
+      constexpr bool operator<=(const T& val) const noexcept
+      {
+        return toDouble() <= val;
+      }
+      template<typename T>
+      constexpr bool operator<(const T& val) const noexcept
+      {
+        return toDouble() < val;
+      }
 
       bool operator>(const Rational& rhs) const noexcept
       {
