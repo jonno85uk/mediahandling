@@ -176,6 +176,18 @@ namespace
     {mh::PixelFormat::YUV422_P_10_LE, AV_PIX_FMT_YUV422P10LE},
     {mh::PixelFormat::YUV444_P_12_LE, AV_PIX_FMT_YUV444P12LE}
   };
+
+  const std::map<mh::PictureType, AVPictureType> PICTURE_TYPE_MAP
+  {
+      {mh::PictureType::UNDEFINED, AV_PICTURE_TYPE_NONE},
+      {mh::PictureType::INTRA, AV_PICTURE_TYPE_I},
+      {mh::PictureType::PREDICTED, AV_PICTURE_TYPE_P},
+      {mh::PictureType::BIDIRECTIONAL_INTRA, AV_PICTURE_TYPE_BI},
+      {mh::PictureType::BIDIRECTIONAL_PREDICTED, AV_PICTURE_TYPE_B},
+      {mh::PictureType::SWITCHING_INTRA, AV_PICTURE_TYPE_SI},
+      {mh::PictureType::SWITCHING_PREDICTED, AV_PICTURE_TYPE_SP},
+      {mh::PictureType::S_VIDEO_OBJECT_PLANE, AV_PICTURE_TYPE_S}
+  };
 }
 
 template <typename T_K, typename T_V>
@@ -439,6 +451,17 @@ mh::Profile mh::types::convertProfile(const int prof) noexcept
 std::string_view mh::types::convertPreset(const Preset pre) noexcept
 {
   return convertToFFMpegType(pre, PRESET_MAP, std::string_view(EMPTY_STR));
+}
+
+
+AVPictureType mh::types::convertPictureType(const PictureType ptype) noexcept
+{
+  return convertToFFMpegType(ptype, PICTURE_TYPE_MAP, AV_PICTURE_TYPE_NONE);
+}
+
+mh::PictureType mh::types::convertPictureType(const AVPictureType ptype) noexcept
+{
+  return convertFromFFMpegType(ptype, PICTURE_TYPE_MAP, PictureType::UNDEFINED);
 }
 
 media_handling::SampleFormat media_handling::types::convert(enum AVSampleFormat av_format) noexcept

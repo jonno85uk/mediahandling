@@ -79,6 +79,8 @@ namespace media_handling::types
   int convertProfile(const Profile prof) noexcept;
   Profile convertProfile(const int prof) noexcept;
   std::string_view convertPreset(const Preset pre) noexcept;
+  AVPictureType convertPictureType(const PictureType ptype) noexcept;
+  PictureType convertPictureType(const AVPictureType ptype) noexcept;
   /**
    * @brief Convert from FFMpeg type to media_handling type
    * @param format FFMpeg sample format

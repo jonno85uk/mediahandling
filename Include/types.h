@@ -81,7 +81,8 @@ namespace media_handling
     GOP,                  // GOP
     FRAME_PACKET_SIZE,    // int32_t
     FRAME_DURATION,       // int64_t
-    START_TIMECODE        // Timecode
+    START_TIMECODE,       // Timecode
+    PICTURE_TYPE          // PictureType
   };
 
   enum class Profile
@@ -166,6 +167,18 @@ namespace media_handling
     PROGRESSIVE,
     TOP_FIRST,
     BOTTOM_FIRST
+  };
+
+  enum class PictureType
+  {
+    UNDEFINED,
+    INTRA,
+    PREDICTED,
+    BIDIRECTIONAL_INTRA,
+    BIDIRECTIONAL_PREDICTED,
+    SWITCHING_INTRA,
+    SWITCHING_PREDICTED,
+    S_VIDEO_OBJECT_PLANE,
   };
 
   /**
