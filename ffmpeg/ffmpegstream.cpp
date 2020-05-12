@@ -222,9 +222,34 @@ MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
     }
   } // else read next frame
 
-  return frame(*codec_ctx_, stream_->index);
+  MediaFramePtr result;
+  do {
+    result = frame(*codec_ctx_, stream_->index);
+  } while (result && (result->timestamp() != time_stamp));
+  return result;
 }
 
+MediaFramePtr FFMpegStream::frameBySecond(const double second)
+{
+  bool okay;
+  const auto scale = this->property<Rational>(MediaProperty::TIMESCALE, okay);
+  assert(okay);
+  const auto rate = this->property<Rational>(MediaProperty::FRAME_RATE, okay);
+  assert(okay);
+  const int64_t ts = (second * rate) / scale;
+  return this->frameByTimestamp(ts);
+}
+
+MediaFramePtr FFMpegStream::frameByFrameNumber(const int64_t frame_number)
+{
+  bool okay;
+  const auto scale = this->property<Rational>(MediaProperty::TIMESCALE, okay);
+  assert(okay);
+  const auto rate = this->property<Rational>(MediaProperty::FRAME_RATE, okay);
+  assert(okay);
+  const int64_t ts = (frame_number / rate) / scale;
+  return this->frameByTimestamp(ts);
+}
 
 bool FFMpegStream::writeFrame(MediaFramePtr sample)
 {
