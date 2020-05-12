@@ -216,7 +216,7 @@ MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
 
   if ((time_stamp >= 0) && (last_timestamp_ != time_stamp)) {
     // TODO: more checks to prevent unneeded seek
-    if (!seek(timestamp)) {
+    if (!seek(time_stamp)) {
       logMessage(LogType::WARNING, fmt::format("Failed to seek:  {}", time_stamp));
       return nullptr;
     }
