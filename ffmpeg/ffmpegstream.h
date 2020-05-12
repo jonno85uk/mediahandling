@@ -63,7 +63,10 @@ namespace media_handling::ffmpeg
     public: // IMediaStream override
       bool index() override;
       int64_t timestamp() const override;
-      MediaFramePtr frame(const int64_t timestamp=-1) final;
+      MediaFramePtr frame(const int64_t time_stamp=-1) final;
+      MediaFramePtr frameByTimestamp(const int64_t time_stamp=-1) final;
+      MediaFramePtr frameBySecond(const double second=-1) final;
+      MediaFramePtr frameByFrameNumber(const int64_t frame_number) final;
       bool writeFrame(MediaFramePtr sample) final;
       StreamType type() const final;
       int32_t sourceIndex() const noexcept final;
@@ -108,7 +111,7 @@ namespace media_handling::ffmpeg
       void extractMetadata(const AVDictionary& metadata);
       void extractVisualProperties(const AVStream& stream, const AVCodecContext& context);
       void extractAudioProperties(const AVStream& stream, const AVCodecContext& context);
-      bool seek(const int64_t timestamp);
+      bool seek(const int64_t time_stamp);
       void setupDecoder(const AVCodecID codec_id, AVDictionary* dict) const;
       bool setupEncoder();
       bool setupAudioEncoder(AVStream& stream, AVCodecContext& context, AVCodec& codec) const;

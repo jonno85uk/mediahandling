@@ -205,7 +205,12 @@ int64_t FFMpegStream::timestamp() const
   return last_timestamp_;
 }
 
-MediaFramePtr FFMpegStream::frame(const int64_t timestamp)
+MediaFramePtr FFMpegStream::frame(const int64_t time_stamp)
+{
+  return frameByTimestamp(time_stamp);
+}
+
+MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
 {
   assert(codec_ctx_);
 
@@ -624,14 +629,14 @@ void FFMpegStream::extractAudioProperties(const AVStream& stream, const AVCodecC
   this->setProperty(MediaProperty::AUDIO_LAYOUT, layout);
 }
 
-bool FFMpegStream::seek(const int64_t timestamp)
+bool FFMpegStream::seek(const int64_t time_stamp)
 {
   assert(parent_);
   assert(stream_);
   assert(codec_ctx_);
   parent_->resetPacketQueue();
   avcodec_flush_buffers(codec_ctx_);
-  const int ret = av_seek_frame(parent_->context(), stream_->index, timestamp, SEEK_DIRECTION);
+  const int ret = av_seek_frame(parent_->context(), stream_->index, time_stamp, SEEK_DIRECTION);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     logMessage(LogType::WARNING, fmt::format("Could not seek frame: {}", err.data()));
@@ -1056,6 +1061,8 @@ void FFMpegStream::extractFrameProperties()
   } else {
     logMessage(LogType::CRITICAL, "Failed to read a frame from stream");
   }
+  // Ensure playhead is reset
+  this->seek(0);
 }
 
 

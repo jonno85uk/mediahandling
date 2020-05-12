@@ -57,12 +57,19 @@ namespace media_handling
 
       virtual int64_t timestamp() const = 0;
 
+      [[deprecated("Replaced by frameByTimestamp")]]
+      virtual MediaFramePtr frame(const int64_t time_stamp=-1) = 0;
+
       /**
        * @brief frame       Retrieve a frame-sample from the stream
        * @param timestamp   The position in the stream for retrieval
        * @return            Frame sample on success or null
        */
-      virtual MediaFramePtr frame(const int64_t timestamp=-1) = 0;
+      virtual MediaFramePtr frameByTimestamp(const int64_t time_stamp=-1) = 0;
+
+      virtual MediaFramePtr frameBySecond(const double second) = 0;
+
+      virtual MediaFramePtr frameByFrameNumber(const int64_t frame_number) = 0;
 
       /**
        * @brief setFrame    Set the frame-sample for the stream
