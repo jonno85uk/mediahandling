@@ -214,10 +214,10 @@ MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
 {
   assert(codec_ctx_);
 
-  if ((timestamp >= 0) && (last_timestamp_ != timestamp)) {
+  if ((time_stamp >= 0) && (last_timestamp_ != time_stamp)) {
     // TODO: more checks to prevent unneeded seek
     if (!seek(timestamp)) {
-      logMessage(LogType::WARNING, fmt::format("Failed to seek:  {}", timestamp));
+      logMessage(LogType::WARNING, fmt::format("Failed to seek:  {}", time_stamp));
       return nullptr;
     }
   } // else read next frame
