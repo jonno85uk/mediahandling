@@ -220,7 +220,10 @@ void FFMpegMediaFrame::extractVisualProperties()
     this->setProperty(MediaProperty::FIELD_ORDER, FieldOrder::PROGRESSIVE);
   }
 
-  const auto ptype = mh::types::convertPictureType(ff_frame_->pict_type);
+  auto ptype = mh::types::convertPictureType(ff_frame_->pict_type);
+  if (ff_frame_->key_frame) {
+    ptype = PictureType::INSTANTANEOUS_DECODER_REFRESH;
+  }
   this->setProperty(mh::MediaProperty::PICTURE_TYPE, ptype);
   // PAR
   Rational par {ff_frame_->sample_aspect_ratio.num, ff_frame_->sample_aspect_ratio.den};

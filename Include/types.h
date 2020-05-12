@@ -179,6 +179,7 @@ namespace media_handling
     SWITCHING_INTRA,
     SWITCHING_PREDICTED,
     S_VIDEO_OBJECT_PLANE,
+    INSTANTANEOUS_DECODER_REFRESH
   };
 
   /**
