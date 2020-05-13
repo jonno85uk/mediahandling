@@ -105,6 +105,10 @@ namespace media_handling::ffmpeg
       std::once_flag setup_encoder_;
       int64_t audio_samples_ {0};
       std::atomic_bool setup_ {false};
+      /**
+       * @brief The interval between frames in multiples of timescale (frame duration)
+       */
+      int pts_intvl_ {0};
 
     private:
       void extractProperties(const AVStream& stream, const AVCodecContext& context);

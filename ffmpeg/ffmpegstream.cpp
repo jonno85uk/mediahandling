@@ -215,17 +215,30 @@ MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
   assert(codec_ctx_);
 
   if ((time_stamp >= 0) && (last_timestamp_ != time_stamp)) {
-    // TODO: more checks to prevent unneeded seek
-    if (!seek(time_stamp)) {
-      logMessage(LogType::WARNING, fmt::format("Failed to seek:  {}", time_stamp));
-      return nullptr;
+    const int diff = abs(last_timestamp_ - time_stamp);
+    if ( (diff > pts_intvl_) || (time_stamp < last_timestamp_)) {
+      // Only seek if change or required time_stamp is not next frame or reversed
+      if (!seek(time_stamp)) {
+        logMessage(LogType::WARNING, fmt::format("Failed to seek:  {}", time_stamp));
+        return nullptr;
+      }
     }
   } // else read next frame
 
+  if (time_stamp == -1) {
+    // Get next frame
+    return frame(*codec_ctx_, stream_->index);
+  }
+
+  constexpr auto RETRY_LIMIT = 100000;
   MediaFramePtr result;
+  auto cnt = 0;
   do {
     result = frame(*codec_ctx_, stream_->index);
-  } while (result && (result->timestamp() != time_stamp));
+  } while (result && (result->timestamp() != time_stamp) && (cnt++ < RETRY_LIMIT));
+  if (!result && cnt >= RETRY_LIMIT) {
+    logMessage(LogType::WARNING, fmt::format("Failed to retrieve frame. ts={}", time_stamp));
+  }
   return result;
 }
 
@@ -580,6 +593,13 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   } else {
     assert("Cannot get properties of unknown stream");
   }
+
+  if (stream.r_frame_rate.den > 0) {
+    const Rational tb(stream.time_base.num, stream.time_base.den);
+    const Rational fr(stream.r_frame_rate.num, stream.r_frame_rate.den);
+    pts_intvl_ = (1 / fr) / tb;
+  }
+
   if (stream.metadata)
   {
     extractMetadata(*stream.metadata);
@@ -662,6 +682,7 @@ bool FFMpegStream::seek(const int64_t time_stamp)
   parent_->resetPacketQueue();
   avcodec_flush_buffers(codec_ctx_);
   const int ret = av_seek_frame(parent_->context(), stream_->index, time_stamp, SEEK_DIRECTION);
+  logMessage(LogType::DEBUG, fmt::format("Seeking. ts={}, idx={}", time_stamp, stream_->index));
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     logMessage(LogType::WARNING, fmt::format("Could not seek frame: {}", err.data()));
