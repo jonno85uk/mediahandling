@@ -597,7 +597,7 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   if (stream.r_frame_rate.den > 0) {
     const Rational tb(stream.time_base.num, stream.time_base.den);
     const Rational fr(stream.r_frame_rate.num, stream.r_frame_rate.den);
-    pts_intvl_ = (1 / fr) / tb;
+    pts_intvl_ = fr.invert() / tb;
   }
 
   if (stream.metadata)

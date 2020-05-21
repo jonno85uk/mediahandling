@@ -143,7 +143,8 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamDAR)
   auto stream = src->visualStream(0);
   bool is_valid;
   auto dar = stream->property<media_handling::Rational>(media_handling::MediaProperty::DISPLAY_ASPECT_RATIO, is_valid);
-  ASSERT_FALSE(is_valid);
+  ASSERT_TRUE(is_valid);
+  ASSERT_EQ(dar, Rational(16, 9));
 }
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamFrameCount)
@@ -256,9 +257,9 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadFrame)
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   auto stream = src->visualStream(0);
-  auto frame = stream->frame(0);
+  auto frame = stream->frameByTimestamp(0);
   ASSERT_TRUE(frame != nullptr);
-  ASSERT_EQ(frame->timestamp(), 256);
+  ASSERT_EQ(frame->timestamp(), 0);
 }
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadTenthFrame)
@@ -279,9 +280,17 @@ TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadNextFrame)
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   auto stream = src->visualStream(0);
-  MediaFramePtr frame = stream->frame(0);
-  frame = stream->frame();
-  ASSERT_EQ(frame->timestamp(), 512); // timebase/fps
+  ASSERT_TRUE(stream);
+  bool okay;
+  auto base = stream->property<Rational>(MediaProperty::TIMESCALE, okay);
+  ASSERT_TRUE(okay);
+  auto rate = stream->property<Rational>(MediaProperty::FRAME_RATE, okay);
+  ASSERT_TRUE(okay);
+  int intvl = rate.invert() / base;
+  MediaFramePtr frame = stream->frameByTimestamp(0);
+  frame = stream->frameByTimestamp();
+  ASSERT_TRUE(frame);
+  ASSERT_EQ(frame->timestamp(), intvl);
 }
 
 TEST (FFMpegStreamTest, Openh264FHDVisualStreamReadToEOS)
@@ -320,7 +329,8 @@ TEST (FFMpegStreamTest, SetOutputFormatVideo)
   auto stream = src->visualStream(0);
   ASSERT_TRUE(stream->setOutputFormat(PixelFormat::YUV420));
 
-  auto frame = stream->frame(100);
+  auto frame = stream->frameByTimestamp(100);
+  ASSERT_TRUE(frame);
   auto data = frame->data();
   ASSERT_TRUE(data.data_ != nullptr);
   ASSERT_TRUE(data.data_size_ == 3110400);
@@ -336,7 +346,7 @@ TEST (FFMpegStreamTest, SetOutputFormatVideoScaled)
   auto stream = src->visualStream(0);
   ASSERT_TRUE(stream->setOutputFormat(PixelFormat::YUV420, {640, 480}));
 
-  auto frame = stream->frame(0);
+  auto frame = stream->frameByTimestamp(0);
   auto data = frame->data();
   ASSERT_TRUE(data.data_ != nullptr);
   ASSERT_TRUE(data.data_size_ == 460800);
@@ -443,7 +453,7 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrame)
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   auto stream = src->audioStream(0);
-  auto frame = stream->frame(0);
+  auto frame = stream->frameByTimestamp(0);
   ASSERT_TRUE(frame != nullptr);
   auto data = frame->data();
   ASSERT_EQ(data.timestamp_, 1024);
@@ -508,7 +518,7 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrameToEOS)
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   auto stream = src->audioStream(0);
   MediaFramePtr frame = stream->frame(0);
-
+  ASSERT_TRUE(frame);
   auto sz = frame->lineSize(0);
   ASSERT_EQ(sz, 8192);
   sz = frame->lineSize(1);
@@ -712,7 +722,7 @@ TEST (FFMpegStreamTest, ImageSequenceAutoJPGNotZeroStart)
   bool okay;
   const auto duration = source.property<Rational>(MediaProperty::DURATION, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(duration, Rational(2, 5));
+  ASSERT_EQ(duration, Rational(11, 25));
 }
 
 TEST (FFMpegStreamTest, ImageSequenceManualFailure)
@@ -786,7 +796,7 @@ TEST (FFMpegStreamTest, IndexedStreamProperties)
   ASSERT_TRUE(stream->index());
   bitrate = stream->property<int32_t>(MediaProperty::BITRATE, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(bitrate, 488025);
+  ASSERT_TRUE(bitrate > 0); // value changes with ffmpeg update
   frame_count = stream->property<int64_t>(MediaProperty::FRAME_COUNT, okay);
   ASSERT_TRUE(okay);
   ASSERT_EQ(frame_count, 50);

@@ -156,7 +156,7 @@ TEST (FFMpegSourceTest, Properties)
   FFMpegSource src(fname);
   auto all_properties = src.properties();
   ASSERT_TRUE(!all_properties.empty());
-  ASSERT_EQ(all_properties.size(), 8);
+  ASSERT_EQ(all_properties.size(), 9);
 }
 
 class StreamCountParameterTests : public testing::TestWithParam<std::tuple<std::string, int32_t>>
