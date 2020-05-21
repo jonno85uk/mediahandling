@@ -621,14 +621,13 @@ void FFMpegStream::extractMetadata(const AVDictionary& metadata)
       TimeCode tc(timescale, frame_rate);
       if (AVDictionaryEntry* entry = av_dict_get(&metadata, TAG_TIMECODE, nullptr, 0))
       {
-        assert(parent_);
         std::string tc_str(entry->value);
         if (!tc.setTimeCode(tc_str))
         {
           logMessage(LogType::WARNING, "Failed to configure start timecode");
         }
       }
-      parent_->setProperty(MediaProperty::START_TIMECODE, tc);
+      this->setProperty(MediaProperty::START_TIMECODE, tc);
     }
   }
 }
