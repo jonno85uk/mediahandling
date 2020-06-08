@@ -174,7 +174,8 @@ namespace
     {mh::PixelFormat::YUV444, AV_PIX_FMT_YUV444P},
     {mh::PixelFormat::YUV420_P_10_LE, AV_PIX_FMT_YUV420P10LE},
     {mh::PixelFormat::YUV422_P_10_LE, AV_PIX_FMT_YUV422P10LE},
-    {mh::PixelFormat::YUV444_P_12_LE, AV_PIX_FMT_YUV444P12LE}
+    {mh::PixelFormat::YUV444_P_12_LE, AV_PIX_FMT_YUV444P12LE},
+    {mh::PixelFormat::YUV444_P_16_LE, AV_PIX_FMT_YUV444P16LE}
   };
 
   const std::map<mh::PictureType, AVPictureType> PICTURE_TYPE_MAP
