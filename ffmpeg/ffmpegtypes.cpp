@@ -37,6 +37,32 @@ constexpr auto EMPTY_STR = "";
 
 namespace
 {
+  const std::map<mh::SampleFormat, AVSampleFormat> SAMPLE_FORMAT_MAP
+  {
+    {mh::SampleFormat::NONE, AV_SAMPLE_FMT_NONE},
+    {mh::SampleFormat::UNSIGNED_8, AV_SAMPLE_FMT_U8},
+    {mh::SampleFormat::SIGNED_16, AV_SAMPLE_FMT_S16},
+    {mh::SampleFormat::SIGNED_32, AV_SAMPLE_FMT_S32},
+    {mh::SampleFormat::SIGNED_64, AV_SAMPLE_FMT_S64},
+    {mh::SampleFormat::FLOAT, AV_SAMPLE_FMT_FLT},
+    {mh::SampleFormat::DOUBLE, AV_SAMPLE_FMT_DBL},
+    {mh::SampleFormat::UNSIGNED_8P, AV_SAMPLE_FMT_U8P},
+    {mh::SampleFormat::SIGNED_16P, AV_SAMPLE_FMT_S16P},
+    {mh::SampleFormat::SIGNED_32P, AV_SAMPLE_FMT_S32P},
+    {mh::SampleFormat::SIGNED_64P, AV_SAMPLE_FMT_S64P},
+    {mh::SampleFormat::FLOAT_P, AV_SAMPLE_FMT_FLTP},
+    {mh::SampleFormat::DOUBLE_P, AV_SAMPLE_FMT_DBLP}
+  };
+
+  const std::map<mh::InterpolationMethod, int> INTERPOLATION_MAP
+  {
+    {mh::InterpolationMethod::BILINEAR, 0},
+    {InterpolationMethod::BILINEAR, SWS_BILINEAR},
+    {InterpolationMethod::BICUBLIN, SWS_BICUBLIN},
+    {InterpolationMethod::BICUBIC, SWS_BICUBIC},
+    {InterpolationMethod::LANCZOS, SWS_LANCZOS}
+  };
+
   const std::map<mh::Codec, AVCodecID> CODEC_MAP
   {
     {mh::Codec::DNXHD, AV_CODEC_ID_DNXHD},
@@ -252,12 +278,12 @@ void media_handling::types::swrContextDeleter(SwrContext* context)
   swr_free(&context);
 }
 
-
 void media_handling::types::avCodecContextDeleter(AVCodecContext* context)
 {
   avcodec_close(context);
   avcodec_free_context(&context);
 }
+
 void media_handling::types::avCodecDeleter(AVCodec* codec)
 {
   // None
@@ -292,27 +318,7 @@ mh::ColourRange mh::types::convertColourRange(const AVColorRange range) noexcept
 
 int media_handling::types::convertInterpolationMethod(const InterpolationMethod interpolation) noexcept
 {
-  int av_method;
-  switch (interpolation) {
-    case InterpolationMethod::NEAREST:
-      [[fallthrough]];
-    default:
-      av_method = 0;
-      break;
-    case InterpolationMethod::BILINEAR:
-      av_method = SWS_BILINEAR;
-      break;
-    case InterpolationMethod::BICUBLIN:
-      av_method = SWS_BICUBLIN;
-      break;
-    case InterpolationMethod::BICUBIC:
-      av_method = SWS_BICUBIC;
-      break;
-    case InterpolationMethod::LANCZOS:
-      av_method = SWS_LANCZOS;
-      break;
-  }
-  return av_method;
+  return convertToFFMpegType(interpolation, INTERPOLATION_MAP, 0);
 }
 
 AVPixelFormat media_handling::types::convertPixelFormat(const media_handling::PixelFormat format) noexcept
@@ -328,89 +334,13 @@ media_handling::PixelFormat media_handling::types::convertPixelFormat(const AVPi
 
 media_handling::SampleFormat media_handling::types::convertSampleFormat(const AVSampleFormat format) noexcept
 {
-  SampleFormat converted {SampleFormat::NONE};
-
-  switch (format) {
-    case AV_SAMPLE_FMT_NONE:
-      [[fallthrough]];
-    case AV_SAMPLE_FMT_NB:
-      converted = SampleFormat::NONE;
-      break;
-    case AV_SAMPLE_FMT_U8:
-      converted = SampleFormat::UNSIGNED_8;
-      break;
-    case AV_SAMPLE_FMT_S16:
-      converted = SampleFormat::SIGNED_16;
-      break;
-    case AV_SAMPLE_FMT_S32:
-      converted = SampleFormat::SIGNED_32;
-      break;
-    case AV_SAMPLE_FMT_S64:
-      converted = SampleFormat::SIGNED_64;
-      break;
-    case AV_SAMPLE_FMT_FLT:
-      converted = SampleFormat::FLOAT;
-      break;
-    case AV_SAMPLE_FMT_DBL:
-      converted = SampleFormat::DOUBLE;
-      break;
-    case AV_SAMPLE_FMT_U8P:
-      converted = SampleFormat::UNSIGNED_8P;
-      break;
-    case AV_SAMPLE_FMT_S16P:
-      converted = SampleFormat::SIGNED_16P;
-      break;
-    case AV_SAMPLE_FMT_S32P:
-      converted = SampleFormat::SIGNED_32P;
-      break;
-    case AV_SAMPLE_FMT_S64P:
-      converted = SampleFormat::SIGNED_64P;
-      break;
-    case AV_SAMPLE_FMT_FLTP:
-      converted = SampleFormat::FLOAT_P;
-      break;
-    case AV_SAMPLE_FMT_DBLP:
-      converted = SampleFormat::DOUBLE_P;
-      break;
-  }
-
-  return converted;
+  return convertFromFFMpegType(format, SAMPLE_FORMAT_MAP, SampleFormat::NONE);
 }
 
 
 AVSampleFormat media_handling::types::convertSampleFormat(const media_handling::SampleFormat format) noexcept
 {
-  switch (format)
-  {
-    case SampleFormat::UNSIGNED_8:
-      return AV_SAMPLE_FMT_U8;
-    case SampleFormat::SIGNED_16:
-      return AV_SAMPLE_FMT_S16;
-    case SampleFormat::SIGNED_32:
-      return AV_SAMPLE_FMT_S32;
-    case SampleFormat::SIGNED_64:
-      return AV_SAMPLE_FMT_S64;
-    case SampleFormat::FLOAT:
-      return AV_SAMPLE_FMT_FLT;
-    case SampleFormat::DOUBLE:
-      return AV_SAMPLE_FMT_DBL;
-    case SampleFormat::UNSIGNED_8P:
-      return AV_SAMPLE_FMT_U8P;
-    case SampleFormat::SIGNED_16P:
-      return AV_SAMPLE_FMT_S16P;
-    case SampleFormat::SIGNED_32P:
-      return AV_SAMPLE_FMT_S32P;
-    case SampleFormat::FLOAT_P:
-      return AV_SAMPLE_FMT_FLTP;
-    case SampleFormat::DOUBLE_P:
-      return AV_SAMPLE_FMT_DBLP;
-    case SampleFormat::SIGNED_64P:
-      return AV_SAMPLE_FMT_S64P;
-    case SampleFormat::NONE:
-      [[fallthrough]];
-    default:
-      return AV_SAMPLE_FMT_NONE;
-  }
+  return convertToFFMpegType(format, SAMPLE_FORMAT_MAP, AV_SAMPLE_FMT_NONE);
 }
 
 
@@ -463,56 +393,5 @@ AVPictureType mh::types::convertPictureType(const PictureType ptype) noexcept
 mh::PictureType mh::types::convertPictureType(const AVPictureType ptype) noexcept
 {
   return convertFromFFMpegType(ptype, PICTURE_TYPE_MAP, PictureType::UNDEFINED);
-}
-
-media_handling::SampleFormat media_handling::types::convert(enum AVSampleFormat av_format) noexcept
-{
-  SampleFormat format = SampleFormat::NONE;
-  switch (av_format) {
-    case AV_SAMPLE_FMT_NONE:
-      [[fallthrough]];
-    case AV_SAMPLE_FMT_NB:
-      [[fallthrough]];
-    default:
-      format = SampleFormat::NONE;
-      break;
-    case AV_SAMPLE_FMT_U8:
-      format = SampleFormat::UNSIGNED_8;
-      break;
-    case AV_SAMPLE_FMT_S16:
-      format = SampleFormat::SIGNED_16;
-      break;
-    case AV_SAMPLE_FMT_S32:
-      format = SampleFormat::SIGNED_32;
-      break;
-    case AV_SAMPLE_FMT_FLT:
-      format = SampleFormat::FLOAT;
-      break;
-    case AV_SAMPLE_FMT_DBL:
-      format = SampleFormat::DOUBLE;
-      break;
-    case AV_SAMPLE_FMT_U8P:
-      format = SampleFormat::UNSIGNED_8P;
-      break;
-    case AV_SAMPLE_FMT_S16P:
-      format = SampleFormat::SIGNED_16P;
-      break;
-    case AV_SAMPLE_FMT_S32P:
-      format = SampleFormat::SIGNED_32P;
-      break;
-    case AV_SAMPLE_FMT_FLTP:
-      format = SampleFormat::FLOAT_P;
-      break;
-    case AV_SAMPLE_FMT_DBLP:
-      format = SampleFormat::DOUBLE_P;
-      break;
-    case AV_SAMPLE_FMT_S64:
-      format = SampleFormat::SIGNED_64;
-      break;
-    case AV_SAMPLE_FMT_S64P:
-      format = SampleFormat::SIGNED_64P;
-      break;
-  }
-  return format;
 }
 

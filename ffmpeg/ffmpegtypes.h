@@ -81,12 +81,6 @@ namespace media_handling::types
   std::string_view convertPreset(const Preset pre) noexcept;
   AVPictureType convertPictureType(const PictureType ptype) noexcept;
   PictureType convertPictureType(const AVPictureType ptype) noexcept;
-  /**
-   * @brief Convert from FFMpeg type to media_handling type
-   * @param format FFMpeg sample format
-   * @return SampleFormat
-   */
-  SampleFormat convert(enum AVSampleFormat format) noexcept;
 }
 
 #endif // FFMPEGTYPES_H

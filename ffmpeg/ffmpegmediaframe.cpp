@@ -246,7 +246,7 @@ void FFMpegMediaFrame::extractAudioProperties()
 {
   assert(ff_frame_);
   this->setProperty(MediaProperty::AUDIO_SAMPLES, static_cast<int32_t>(ff_frame_->nb_samples));
-  const SampleFormat format = types::convert(static_cast<AVSampleFormat>(ff_frame_->format));
+  const SampleFormat format = types::convertSampleFormat(static_cast<AVSampleFormat>(ff_frame_->format));
   this->setProperty(MediaProperty::AUDIO_FORMAT, format);
 }
 
