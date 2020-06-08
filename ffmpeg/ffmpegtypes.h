@@ -41,6 +41,7 @@ extern "C" {
 
 namespace media_handling::ffmpeg::types
 {
+  // DELETERS
   void avFormatContextDeleter(AVFormatContext* context);
   void avPacketDeleter(AVPacket* packet);
   void avframeDeleter(AVFrame* frame);
@@ -50,6 +51,7 @@ namespace media_handling::ffmpeg::types
   void avCodecDeleter(AVCodec* codec);
   void avStreamDeleter(AVStream* stream);
 
+  // TYPEDEFS
   template <auto fn>
   using deleter_from_fn = std::integral_constant<decltype(fn), fn>;
   using AVFrameUPtr = std::unique_ptr<AVFrame, deleter_from_fn<avframeDeleter>>;
@@ -61,8 +63,13 @@ namespace media_handling::ffmpeg::types
   using AVFormatContextUPtr = std::unique_ptr<AVFormatContext, deleter_from_fn<avFormatContextDeleter>>;
   using AVCodecContextUPtr = std::unique_ptr<AVCodecContext, deleter_from_fn<avCodecContextDeleter>>;
   using AVStreamUPtr = std::unique_ptr<AVStream, deleter_from_fn<avStreamDeleter>>;
+  
+  /**
+   * @brief Logging callback for libav messages
+   */
+  void logCallback(void*, int, const char*, va_list);
 
-
+  // CONVERSIONS
   ColourPrimaries convertColourPrimary(const AVColorPrimaries primary) noexcept;
   TransferCharacteristics convertTransferCharacteristics(const AVColorTransferCharacteristic transfer) noexcept;
   MatrixCoefficients convertMatrixCoefficients(const AVColorSpace matrix) noexcept;

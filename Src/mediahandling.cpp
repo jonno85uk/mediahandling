@@ -33,10 +33,16 @@
 #include "ffmpegsource.h"
 #include "ffmpegsink.h"
 #include "ffmpegmediaframe.h"
+#include "ffmpegtypes.h"
 
+constexpr auto DEFAULT_BACKEND_LOGS = true;
 static std::atomic<media_handling::BackendType> media_backend = media_handling::BackendType::FFMPEG;
-
 std::atomic<bool> media_handling::global::auto_detect_img_sequence = true;
+
+namespace
+{
+  media_handling::LogType log_level = media_handling::LogType::WARNING;
+}
 
 
 void defaultLog(const media_handling::LogType log_type, const std::string& msg)
@@ -145,6 +151,7 @@ int media_handling::utils::getSequenceStartNumber(const std::string& path)
 
 bool media_handling::initialise(const BackendType backend)
 {
+  enableBackendLogs(DEFAULT_BACKEND_LOGS);
   media_backend = backend;
   if (backend == BackendType::FFMPEG) {
     return true;
@@ -161,6 +168,7 @@ void media_handling::enableBackendLogs(const bool enabled)
     {
       const int level = enabled ? AV_LOG_VERBOSE : AV_LOG_PANIC;
       av_log_set_level(level);
+      av_log_set_callback(media_handling::ffmpeg::types::logCallback);
       break;
     }
     case BackendType::GSTREAMER:
@@ -172,6 +180,11 @@ void media_handling::enableBackendLogs(const bool enabled)
   }
 }
 
+void media_handling::setLogLevel(const LogType level)
+{
+  log_level = level;
+}
+
 void media_handling::assignLoggerCallback(media_handling::LOGGINGFN func)
 {
   logging_func = func;
@@ -180,6 +193,11 @@ void media_handling::assignLoggerCallback(media_handling::LOGGINGFN func)
 void media_handling::logMessage(const LogType log_type, const std::string& msg) noexcept
 {
   if (logging_func == nullptr) {
+    // Logging has been explicitly disabled.
+    return;
+  }
+  if (static_cast<int>(log_type) > static_cast<int>(log_level)) {
+    // Ignore. Filtered out.
     return;
   }
   try {

@@ -27,6 +27,10 @@
 
 #include "ffmpegtypes.h"
 #include <map>
+#include <mutex>
+#include <fmt/format.h>
+#include <cstdio>
+
 #include "mediahandling.h"
 
 namespace mh = media_handling;
@@ -38,6 +42,9 @@ constexpr auto EMPTY_STR = "";
 
 namespace
 {
+  // The ffmpeg log callback must be thread-safe
+  std::mutex log_mutex;
+
   const std::map<mh::SampleFormat, AVSampleFormat> SAMPLE_FORMAT_MAP
   {
     {mh::SampleFormat::NONE, AV_SAMPLE_FMT_NONE},
@@ -293,6 +300,37 @@ void mft::avCodecDeleter(AVCodec* codec)
 void mft::avStreamDeleter(AVStream* stream)
 {
   // None. Should be freed by avformat
+}
+
+void mft::logCallback(void* ptr, const int level, const char* msg_fmt, va_list vl)
+{
+  if (level >= AV_LOG_DEBUG) {
+    // Ignore libav developer aimed messages
+    return;
+  }
+  const std::lock_guard<std::mutex> lock(log_mutex);
+  constexpr auto buf_size = 256;
+  char buffer[buf_size];
+  vsnprintf(buffer, buf_size, msg_fmt, vl);
+  const auto av_log_type = [&] () -> mh::LogType {
+    switch (level) {
+      case AV_LOG_PANIC:
+        [[fallthrough]];
+      case AV_LOG_FATAL:
+        return mh::LogType::FATAL;
+      case AV_LOG_ERROR:
+        return mh::LogType::CRITICAL;
+      case AV_LOG_WARNING:
+        return mh::LogType::WARNING;
+      case AV_LOG_INFO:
+        return mh::LogType::INFO;
+      case AV_LOG_VERBOSE:
+        [[fallthrough]];
+      default:
+        return mh::LogType::DEBUG;
+    }
+  };
+  logMessage(av_log_type(), fmt::format("[ffmpeg {}] -- {}", ptr, buffer));
 }
 
 mh::ColourPrimaries mft::convertColourPrimary(const AVColorPrimaries primary) noexcept

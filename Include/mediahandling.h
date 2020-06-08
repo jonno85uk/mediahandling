@@ -86,7 +86,11 @@ namespace media_handling
 
   typedef void (*LOGGINGFN)(const LogType, const std::string&);
 
-
+  /**
+   * @brief           Set the minimum log type shown in logging
+   * @param   level   Logs including and greater in importance will be shown
+   */
+  void setLogLevel(const LogType level);
   /**
    * @brief       Assign a callback for library messages
    * @note        Library defaults to stderr
