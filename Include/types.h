@@ -234,6 +234,7 @@ namespace media_handling
     YUV420_P_10_LE,
     YUV422_P_10_LE,
     YUV444_P_12_LE,
+    YUV444_P_16_LE,
     UNKNOWN
   };
 
