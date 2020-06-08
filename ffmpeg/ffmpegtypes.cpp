@@ -30,6 +30,7 @@
 #include "mediahandling.h"
 
 namespace mh = media_handling;
+namespace mft = media_handling::ffmpeg::types;
 
 using media_handling::InterpolationMethod;
 
@@ -253,145 +254,145 @@ T_V convertToFFMpegType(const T_K mh_key, const std::map<T_K, T_V>& mapping, con
   return default_value;
 }
 
-void media_handling::types::avFormatContextDeleter(AVFormatContext* context)
+void mft::avFormatContextDeleter(AVFormatContext* context)
 {
   avformat_free_context(context);
 }
 
-void media_handling::types::avPacketDeleter(AVPacket* packet)
+void mft::avPacketDeleter(AVPacket* packet)
 {
   av_packet_free(&packet);
 }
 
-void media_handling::types::avframeDeleter(AVFrame* frame)
+void mft::avframeDeleter(AVFrame* frame)
 {
   av_frame_free(&frame);
 }
 
-void media_handling::types::swsContextDeleter(SwsContext* context)
+void mft::swsContextDeleter(SwsContext* context)
 {
   sws_freeContext(context);
 }
 
-void media_handling::types::swrContextDeleter(SwrContext* context)
+void mft::swrContextDeleter(SwrContext* context)
 {
   swr_free(&context);
 }
 
-void media_handling::types::avCodecContextDeleter(AVCodecContext* context)
+void mft::avCodecContextDeleter(AVCodecContext* context)
 {
   avcodec_close(context);
   avcodec_free_context(&context);
 }
 
-void media_handling::types::avCodecDeleter(AVCodec* codec)
+void mft::avCodecDeleter(AVCodec* codec)
 {
   // None
 }
 
-void media_handling::types::avStreamDeleter(AVStream* stream)
+void mft::avStreamDeleter(AVStream* stream)
 {
   // None. Should be freed by avformat
 }
 
-media_handling::ColourPrimaries media_handling::types::convertColourPrimary(const AVColorPrimaries primary) noexcept
+mh::ColourPrimaries mft::convertColourPrimary(const AVColorPrimaries primary) noexcept
 {
   return convertFromFFMpegType(primary, PRIMARIES_MAP, mh::ColourPrimaries::UNKNOWN);
 }
 
-mh::TransferCharacteristics mh::types::convertTransferCharacteristics(const AVColorTransferCharacteristic transfer) noexcept
+mh::TransferCharacteristics mft::convertTransferCharacteristics(const AVColorTransferCharacteristic transfer) noexcept
 {
   return convertFromFFMpegType(transfer, TRANSFERS_MAP, TransferCharacteristics::UNKNOWN);
 }
 
 
-mh::MatrixCoefficients mh::types::convertMatrixCoefficients(const AVColorSpace matrix) noexcept
+mh::MatrixCoefficients mft::convertMatrixCoefficients(const AVColorSpace matrix) noexcept
 {
   return convertFromFFMpegType(matrix, MATRIX_MAP, MatrixCoefficients::UNKNOWN);
 }
 
 
-mh::ColourRange mh::types::convertColourRange(const AVColorRange range) noexcept
+mh::ColourRange mft::convertColourRange(const AVColorRange range) noexcept
 {
   return convertFromFFMpegType(range, COLOUR_RANGE_MAP, ColourRange::UNKNOWN);
 }
 
-int media_handling::types::convertInterpolationMethod(const InterpolationMethod interpolation) noexcept
+int mft::convertInterpolationMethod(const InterpolationMethod interpolation) noexcept
 {
   return convertToFFMpegType(interpolation, INTERPOLATION_MAP, 0);
 }
 
-AVPixelFormat media_handling::types::convertPixelFormat(const media_handling::PixelFormat format) noexcept
+AVPixelFormat mft::convertPixelFormat(const media_handling::PixelFormat format) noexcept
 {
   return convertToFFMpegType(format, PIX_FMT_MAP, AV_PIX_FMT_NONE);
 }
 
 
-media_handling::PixelFormat media_handling::types::convertPixelFormat(const AVPixelFormat format) noexcept
+mh::PixelFormat mft::convertPixelFormat(const AVPixelFormat format) noexcept
 {
   return convertFromFFMpegType(format, PIX_FMT_MAP, PixelFormat::UNKNOWN);
 }
 
-media_handling::SampleFormat media_handling::types::convertSampleFormat(const AVSampleFormat format) noexcept
+mh::SampleFormat mft::convertSampleFormat(const AVSampleFormat format) noexcept
 {
   return convertFromFFMpegType(format, SAMPLE_FORMAT_MAP, SampleFormat::NONE);
 }
 
 
-AVSampleFormat media_handling::types::convertSampleFormat(const media_handling::SampleFormat format) noexcept
+AVSampleFormat mft::convertSampleFormat(const media_handling::SampleFormat format) noexcept
 {
   return convertToFFMpegType(format, SAMPLE_FORMAT_MAP, AV_SAMPLE_FMT_NONE);
 }
 
 
-media_handling::ChannelLayout media_handling::types::convertChannelLayout(const uint64_t layout) noexcept
+mh::ChannelLayout mft::convertChannelLayout(const uint64_t layout) noexcept
 {
   return convertFromFFMpegType(layout, AUDIO_CHANNEL_MAP, ChannelLayout::MONO);
 }
 
 
-uint64_t media_handling::types::convertChannelLayout(const ChannelLayout layout) noexcept
+uint64_t mft::convertChannelLayout(const ChannelLayout layout) noexcept
 {
   return convertToFFMpegType(layout, AUDIO_CHANNEL_MAP, static_cast<uint64_t>(0));
 }
 
 
-media_handling::Codec media_handling::types::convertCodecID(const AVCodecID id) noexcept
+mh::Codec mft::convertCodecID(const AVCodecID id) noexcept
 {
   return convertFromFFMpegType(id, CODEC_MAP, Codec::UNKNOWN);
 }
 
 
-AVCodecID mh::types::convertCodecID(const Codec id) noexcept
+AVCodecID mft::convertCodecID(const Codec id) noexcept
 {
   return convertToFFMpegType(id, CODEC_MAP, AV_CODEC_ID_NONE);
 }
 
 
-int mh::types::convertProfile(const Profile prof) noexcept
+int mft::convertProfile(const Profile prof) noexcept
 {
   return convertToFFMpegType(prof, PROFILE_MAP, FF_PROFILE_UNKNOWN);
 }
 
 
-mh::Profile mh::types::convertProfile(const int prof) noexcept
+mh::Profile mft::convertProfile(const int prof) noexcept
 {
   return convertFromFFMpegType(prof, PROFILE_MAP, Profile::UNKNOWN);
 }
 
-std::string_view mh::types::convertPreset(const Preset pre) noexcept
+std::string_view mft::convertPreset(const Preset pre) noexcept
 {
   return convertToFFMpegType(pre, PRESET_MAP, std::string_view(EMPTY_STR));
 }
 
 
-AVPictureType mh::types::convertPictureType(const PictureType ptype) noexcept
+AVPictureType mft::convertPictureType(const PictureType ptype) noexcept
 {
   return convertToFFMpegType(ptype, PICTURE_TYPE_MAP, AV_PICTURE_TYPE_NONE);
 }
 
-mh::PictureType mh::types::convertPictureType(const AVPictureType ptype) noexcept
+mh::PictureType mft::convertPictureType(const AVPictureType ptype) noexcept
 {
-  return convertFromFFMpegType(ptype, PICTURE_TYPE_MAP, PictureType::UNDEFINED);
+  return convertFromFFMpegType(ptype, PICTURE_TYPE_MAP, mh::PictureType::UNDEFINED);
 }
 

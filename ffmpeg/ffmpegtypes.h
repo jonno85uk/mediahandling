@@ -39,7 +39,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 }
 
-namespace media_handling::types
+namespace media_handling::ffmpeg::types
 {
   void avFormatContextDeleter(AVFormatContext* context);
   void avPacketDeleter(AVPacket* packet);

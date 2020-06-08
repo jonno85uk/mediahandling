@@ -265,10 +265,10 @@ void FFMpegSource::unqueueStream(const int stream_index)
   }
 }
 
-media_handling::types::AVPacketPtr FFMpegSource::nextPacket(const int stream_index)
+media_handling::ffmpeg::types::AVPacketPtr FFMpegSource::nextPacket(const int stream_index)
 {
   // prevent unnecessary read of demuxed packets
-  auto read_packet = [&] () -> media_handling::types::AVPacketPtr
+  auto read_packet = [&] () -> media_handling::ffmpeg::types::AVPacketPtr
   {
     while (true) {
       auto pkt = std::shared_ptr<AVPacket>(av_packet_alloc(), types::avPacketDeleter);

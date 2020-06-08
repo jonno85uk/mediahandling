@@ -233,9 +233,12 @@ MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
   constexpr auto RETRY_LIMIT = 100000;
   MediaFramePtr result;
   auto cnt = 0;
+  auto diff = INT_MAX;
   do {
-    result = frame(*codec_ctx_, stream_->index);
-  } while (result && (result->timestamp() != time_stamp) && (cnt++ < RETRY_LIMIT));
+    if (result = frame(*codec_ctx_, stream_->index); result) {
+      diff = result->timestamp() - time_stamp;
+    }
+  } while (result && (diff > pts_intvl_) && (cnt++ < RETRY_LIMIT));
   if (!result && cnt >= RETRY_LIMIT) {
     logMessage(LogType::WARNING, fmt::format("Failed to retrieve frame. ts={}", time_stamp));
   }
@@ -404,7 +407,7 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
       logMessage(LogType::INFO, "FFMpegStream::setOutputFormat() -- Output dimensions invalid");
       return std::make_tuple(src_dims, 0);
     }
-    return std::make_tuple(dims, media_handling::types::convertInterpolationMethod(interp));
+    return std::make_tuple(dims, media_handling::ffmpeg::types::convertInterpolationMethod(interp));
   }();
 
   SwsContext* ctx = sws_getContext(src_dims.width, src_dims.height, src_av_fmt,

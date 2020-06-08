@@ -40,6 +40,7 @@ using media_handling::ffmpeg::FFMpegMediaFrame;
 using media_handling::MediaProperty;
 
 namespace mh = media_handling;
+namespace mft = mh::ffmpeg::types;
 
 constexpr auto ERR_LEN = 1024;
 
@@ -103,7 +104,7 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
     if (conv_frame_ == nullptr) {
       // FIXME: this doesn't allow for changes to putput format after the first set
       conv_frame_.reset(av_frame_alloc());
-      conv_frame_->format = media_handling::types::convertPixelFormat(output_fmt_.pix_fmt_);
+      conv_frame_->format = mft::convertPixelFormat(output_fmt_.pix_fmt_);
       conv_frame_->width = output_fmt_.dims_.width;
       conv_frame_->height = output_fmt_.dims_.height;
       av_frame_get_buffer(conv_frame_.get(), 0);
@@ -220,7 +221,7 @@ void FFMpegMediaFrame::extractVisualProperties()
     this->setProperty(MediaProperty::FIELD_ORDER, FieldOrder::PROGRESSIVE);
   }
 
-  auto ptype = mh::types::convertPictureType(ff_frame_->pict_type);
+  auto ptype = mft::convertPictureType(ff_frame_->pict_type);
   if (ff_frame_->key_frame) {
     ptype = PictureType::INSTANTANEOUS_DECODER_REFRESH;
   }
@@ -232,10 +233,10 @@ void FFMpegMediaFrame::extractVisualProperties()
   }
 
   // Colour info
-  const mh::ColourPrimaries primary = mh::types::convertColourPrimary(ff_frame_->color_primaries);
-  const mh::TransferCharacteristics transfer = mh::types::convertTransferCharacteristics(ff_frame_->color_trc);
-  const mh::MatrixCoefficients matrix = mh::types::convertMatrixCoefficients(ff_frame_->colorspace);
-  const mh::ColourRange range = mh::types::convertColourRange(ff_frame_->color_range);
+  const mh::ColourPrimaries primary = mft::convertColourPrimary(ff_frame_->color_primaries);
+  const mh::TransferCharacteristics transfer = mft::convertTransferCharacteristics(ff_frame_->color_trc);
+  const mh::MatrixCoefficients matrix = mft::convertMatrixCoefficients(ff_frame_->colorspace);
+  const mh::ColourRange range = mft::convertColourRange(ff_frame_->color_range);
 
   const ColourSpace space {primary, transfer, matrix, range};
   this->setProperty(MediaProperty::COLOUR_SPACE, space);
