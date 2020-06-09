@@ -26,8 +26,9 @@
 */
 
 #include <gtest/gtest.h>
+#ifdef PLAY_AUDIO
 #include <ao/ao.h>
-
+#endif
 #include "ffmpegstream.h"
 #include "ffmpegsource.h"
 #include "mediahandling.h"
@@ -560,6 +561,7 @@ TEST(FFMpegStreamTest, SetOutputFormatAudioFrequency)
   ASSERT_TRUE(data.data_);
 }
 
+#ifdef PLAY_AUDIO
 TEST (FFMpegStreamTest, PlayAudio)
 {
   auto fname = "./ReferenceMedia/Audio/ac3/5_1.ac3";
@@ -620,7 +622,7 @@ TEST (FFMpegStreamTest, PlayAudio)
 #endif
 
 }
-
+#endif
 
 class ImageReadingTests : public testing::TestWithParam<std::tuple<std::string, int, int, PixelFormat, Codec, int, bool>>
 {
