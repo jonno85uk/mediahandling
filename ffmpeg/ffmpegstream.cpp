@@ -643,12 +643,12 @@ void FFMpegStream::extractVisualProperties(const AVStream& stream, const AVCodec
   Dimensions dims {context.width, context.height};
   this->setProperty(MediaProperty::DIMENSIONS, dims);
 
-  if (stream.sample_aspect_ratio.den > 0) {
+  if ((stream.sample_aspect_ratio.den > 0) && (stream.sample_aspect_ratio.num > 0)) { // 0 == unknown
     Rational par(stream.sample_aspect_ratio.num, stream.sample_aspect_ratio.den);
     this->setProperty(MediaProperty::PIXEL_ASPECT_RATIO, par);
   }
 
-  if (stream.display_aspect_ratio.den > 0) {
+  if ((stream.display_aspect_ratio.den > 0) && (stream.display_aspect_ratio.num > 0)) { // 0 == unknown
     Rational dar(stream.display_aspect_ratio.num, stream.display_aspect_ratio.den);
     this->setProperty(MediaProperty::DISPLAY_ASPECT_RATIO, dar);
   } else {
