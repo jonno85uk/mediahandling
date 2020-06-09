@@ -49,6 +49,12 @@ class MediaPropertyObject
      */
     virtual std::string repr();
     /**
+     * @brief         Identify if object has a single stored property
+     * @param   prop  the property to check
+     * @return  true==object has property
+     */
+    virtual bool hasProperty(const MediaProperty prop) const;
+    /**
      * @brief         Set the properties of this object. This will overwrite previous properties.
      * @param props   New map of properties
      */

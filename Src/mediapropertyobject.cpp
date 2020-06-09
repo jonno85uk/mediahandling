@@ -35,6 +35,12 @@ std::string MediaPropertyObject::repr()
   return "TODO";
 }
 
+
+ bool MediaPropertyObject::hasProperty(const MediaProperty prop) const
+ {
+   return properties_.count(prop) > 0;
+ }
+
 void MediaPropertyObject::setProperties(std::map<media_handling::MediaProperty, std::any> props)
 {
   properties_ = std::move(props);

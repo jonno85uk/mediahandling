@@ -156,7 +156,15 @@ TEST (FFMpegSourceTest, Properties)
   FFMpegSource src(fname);
   auto all_properties = src.properties();
   ASSERT_TRUE(!all_properties.empty());
-  ASSERT_EQ(all_properties.size(), 9);
+  ASSERT_EQ(all_properties.size(), 8);
+  ASSERT_TRUE(src.hasProperty(MediaProperty::AUDIO_STREAMS));
+  ASSERT_TRUE(src.hasProperty(MediaProperty::VIDEO_STREAMS));
+  ASSERT_TRUE(src.hasProperty(MediaProperty::BITRATE));
+  ASSERT_TRUE(src.hasProperty(MediaProperty::DURATION));
+  ASSERT_TRUE(src.hasProperty(MediaProperty::FILENAME));
+  ASSERT_TRUE(src.hasProperty(MediaProperty::FILE_FORMAT));
+  ASSERT_TRUE(src.hasProperty(MediaProperty::STREAMS));
+  ASSERT_TRUE(src.hasProperty(MediaProperty::FRAME_RATE));
 }
 
 class StreamCountParameterTests : public testing::TestWithParam<std::tuple<std::string, int32_t>>
