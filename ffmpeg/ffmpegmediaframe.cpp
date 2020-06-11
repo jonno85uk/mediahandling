@@ -57,6 +57,7 @@ FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual)
 {
   assert(ff_frame_);
   timestamp_ = ff_frame_->pts;
+  MediaPropertyObject::setProperty(MediaProperty::DURATION, Rational(ff_frame_->pkt_duration));
 }
 
 
@@ -68,6 +69,7 @@ FFMpegMediaFrame::FFMpegMediaFrame(types::AVFrameUPtr frame, const bool visual, 
 {
   assert(ff_frame_);
   timestamp_ = ff_frame_->pts;
+  MediaPropertyObject::setProperty(MediaProperty::DURATION, Rational(ff_frame_->pkt_duration));
 }
 
 std::optional<bool> FFMpegMediaFrame::isAudio() const
@@ -190,7 +192,6 @@ void FFMpegMediaFrame::extractProperties()
 {
   assert(ff_frame_);
   this->setProperty(MediaProperty::FRAME_PACKET_SIZE, static_cast<int32_t>(ff_frame_->pkt_size));
-  this->setProperty(MediaProperty::FRAME_DURATION, ff_frame_->pkt_duration);
   if (is_visual_ && (is_visual_ == true) ) {
     extractVisualProperties();
   } else if (is_audio_ && (is_audio_ == true) ) {

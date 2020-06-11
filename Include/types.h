@@ -79,8 +79,7 @@ namespace media_handling
     SEQUENCE_PATTERN,     // std::string
     COLOUR_SPACE,         // ColourSpace
     GOP,                  // GOP
-    FRAME_PACKET_SIZE,    // int32_t
-    FRAME_DURATION,       // int64_t
+    FRAME_PACKET_SIZE,    // int32_t  // TODO: generalise this
     START_TIMECODE,       // Timecode
     PICTURE_TYPE          // PictureType
   };
