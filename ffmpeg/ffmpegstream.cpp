@@ -45,6 +45,7 @@ extern "C" {
 }
 
 
+constexpr auto RETRY_LIMIT = 100000;
 constexpr auto ERR_LEN = 256;
 constexpr auto SEEK_DIRECTION = AVSEEK_FLAG_BACKWARD;
 constexpr auto TAG_TIMECODE = "timecode";
@@ -230,7 +231,6 @@ MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
     return frame(*codec_ctx_, stream_->index);
   }
 
-  constexpr auto RETRY_LIMIT = 100000;
   MediaFramePtr result;
   auto cnt = 0;
   auto diff = INT_MAX;
@@ -589,18 +589,19 @@ void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContex
   }
   this->setProperty(MediaProperty::BITRATE, static_cast<BitRate>(context.bit_rate));
 
+  if (stream.r_frame_rate.den > 0) {
+    // TODO: perhaps scrap this and use frame duration
+    const Rational tb(stream.time_base.num, stream.time_base.den);
+    const Rational fr(stream.r_frame_rate.num, stream.r_frame_rate.den);
+    pts_intvl_ = fr.invert() / tb;
+  }
+
   if ( (type_ == StreamType::VIDEO) || (type_ == StreamType::IMAGE) ) {
     extractVisualProperties(stream, context);
   } else if (type_ == StreamType::AUDIO) {
     extractAudioProperties(stream, context);
   } else {
     assert("Cannot get properties of unknown stream");
-  }
-
-  if (stream.r_frame_rate.den > 0) {
-    const Rational tb(stream.time_base.num, stream.time_base.den);
-    const Rational fr(stream.r_frame_rate.num, stream.r_frame_rate.den);
-    pts_intvl_ = fr.invert() / tb;
   }
 
   if (stream.metadata)
@@ -1110,7 +1111,7 @@ void FFMpegStream::extractFrameProperties()
     logMessage(LogType::CRITICAL, "Failed to read a frame from stream");
   }
   // Ensure playhead is reset
-  this->seek(0);
+  seek(0);
 }
 
 

@@ -124,8 +124,12 @@ TEST_P (PARParameterTests, CheckEqual)
   auto stream = source_->visualStream(0);
   bool is_valid;
   auto prop_par = stream->property<Rational>(MediaProperty::PIXEL_ASPECT_RATIO, is_valid);
-  ASSERT_TRUE(is_valid);
-  ASSERT_EQ(prop_par, par);
+  if (par > 0) {
+    ASSERT_TRUE(is_valid);
+    ASSERT_EQ(prop_par, par);
+  } else {
+    ASSERT_FALSE(is_valid);
+  }
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -801,8 +805,7 @@ TEST (FFMpegStreamTest, IndexedStreamProperties)
   ASSERT_TRUE(bitrate > 0); // value changes with ffmpeg update
   frame_count = stream->property<int64_t>(MediaProperty::FRAME_COUNT, okay);
   ASSERT_TRUE(okay);
-  ASSERT_EQ(frame_count, 50);
-
+  ASSERT_EQ(frame_count, 52);
 }
 
 TEST (FFMpegStreamTest, StreamPropertiesLocked)
