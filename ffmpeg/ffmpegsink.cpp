@@ -61,7 +61,7 @@ FFMpegSink::~FFMpegSink()
 void FFMpegSink::setProperty(const MediaProperty prop, const std::any& value)
 {
   if (ready_) {
-    logMessage(LogType::WARNING, "Cannot change properties once Sink has been initialised");
+    LWARNING("Cannot change properties once Sink has been initialised");
     return;
   }
   MediaPropertyObject::setProperty(prop, value);
@@ -77,7 +77,7 @@ bool FFMpegSink::initialise()
   auto ret = avformat_alloc_output_context2(&ctx, nullptr, nullptr, file_path_.c_str());
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, "Could not create output context, code=" + err);
+    LCRITICAL("Could not create output context, code=" + err);
     return false;
   }
   assert(ctx);
@@ -86,7 +86,7 @@ bool FFMpegSink::initialise()
   ret = avio_open(&fmt_ctx_.get()->pb,  file_path_.c_str(), AVIO_FLAG_WRITE);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, "Could not open output file, code=" + err);
+    LCRITICAL("Could not open output file, code=" + err);
     return false;
   }
 
@@ -95,17 +95,17 @@ bool FFMpegSink::initialise()
     const auto ffv = types::convertCodecID(codec);
     if (AVCodec* av_codec = avcodec_find_encoder(ffv)) {
       if (av_codec->type != AVMEDIA_TYPE_VIDEO) {
-        logMessage(LogType::CRITICAL, "An audio codec chosen for video encoding");
+        LCRITICAL("An audio codec chosen for video encoding");
         return false;
       } else {
         try {
           streams_.video_.emplace_back(std::make_shared<FFMpegStream>(this, ffv));
         } catch (const std::runtime_error& ex) {
-          logMessage(LogType::CRITICAL, ex.what());
+          LCRITICAL(ex.what());
         }
       }
     } else {
-      logMessage(LogType::WARNING, "Unsupported encoder codec");
+      LWARNING("Unsupported encoder codec");
     }
   }
 
@@ -113,22 +113,22 @@ bool FFMpegSink::initialise()
     const auto ffa = types::convertCodecID(codec);
     if (AVCodec* av_codec = avcodec_find_encoder(ffa)) {
       if (av_codec->type != AVMEDIA_TYPE_AUDIO) {
-        logMessage(LogType::CRITICAL, "An audio codec chosen for video encoding");
+        LCRITICAL("An audio codec chosen for video encoding");
         return false;
       } else {
         try {
           streams_.audio_.emplace_back(std::make_shared<FFMpegStream>(this, ffa));
         } catch (const std::runtime_error& ex) {
-          logMessage(LogType::CRITICAL, ex.what());
+          LCRITICAL(ex.what());
         }
       }
     } else {
-      logMessage(LogType::WARNING, "Unsupported encoder codec");
+      LWARNING("Unsupported encoder codec");
     }
   }
 
   if (streams_.audio_.empty() && streams_.video_.empty()) {
-    logMessage(LogType::CRITICAL, "Failed to setup any streams");
+    LCRITICAL("Failed to setup any streams");
     return false;
   }
   ready_ = true;
@@ -208,6 +208,7 @@ bool FFMpegSink::writeHeader()
       if (ret < 0) {
         av_strerror(ret, err.data(), ERR_LEN);
         const auto msg = fmt::format("Could not write output file header, msg=", err.data());
+        LWARNING(msg);
         okay = false;
       } else {
         header_written_ = true;
@@ -227,11 +228,11 @@ bool FFMpegSink::writeTrailer()
       if (ret < 0) {
         av_strerror(ret, err.data(), ERR_LEN);
         const auto msg = fmt::format("Could not write output file trailer, msg={}, filePath={}", err.data(), file_path_);
-        logMessage(LogType::CRITICAL, msg);
+        LCRITICAL(msg);
         okay = false;
       } else {
         const auto msg = fmt::format("Wrote trailer, filePath={}", file_path_);
-        logMessage(LogType::DEBUG, msg);
+        LDEBUG(msg);
       }
       avio_closep(&fmt_ctx_->pb);
   };

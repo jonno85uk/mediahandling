@@ -86,7 +86,7 @@ std::optional<int64_t> FFMpegMediaFrame::lineSize(const int index) const
 {
   assert(ff_frame_);
   if (index > AV_NUM_DATA_POINTERS) {
-    logMessage(LogType::WARNING, "FFMpegMediaFrame::lineSize() -- index out of range");
+    LWARNING("FFMpegMediaFrame::lineSize() -- index out of range");
     return {};
   }
   return ff_frame_->linesize[index];
@@ -139,20 +139,20 @@ media_handling::IMediaFrame::FrameData FFMpegMediaFrame::data() noexcept
       ret = av_frame_get_buffer(conv_frame_.get(), 0);
       if (ret < 0) {
           av_strerror(ret, err.data(), ERR_LEN);
-          logMessage(LogType::CRITICAL, fmt::format("Could not allocate frame buffer: {}", err.data()));
+          LCRITICAL(fmt::format("Could not allocate frame buffer: {}", err.data()));
           return {};
       }
       ret = av_frame_make_writable(conv_frame_.get());
       if (ret < 0) {
           av_strerror(ret, err.data(), ERR_LEN);
-          logMessage(LogType::CRITICAL, fmt::format("Could not ensure frame data is writable: {}", err.data()));
+          LCRITICAL(fmt::format("Could not ensure frame data is writable: {}", err.data()));
           return {};
       }
     }
     ret = swr_convert_frame(output_fmt_.swr_context_.get(), conv_frame_.get(), ff_frame_.get());
     if (ret < 0) {
         av_strerror(ret, err.data(), ERR_LEN);
-        logMessage(LogType::CRITICAL, fmt::format("Could not resample audio frame: {}", err.data()));
+        LCRITICAL(fmt::format("Could not resample audio frame: {}", err.data()));
         return {};
     }
     f_d.data_ = conv_frame_->data;

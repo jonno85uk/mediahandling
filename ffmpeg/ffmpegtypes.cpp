@@ -235,11 +235,9 @@ T_K convertFromFFMpegType(const T_V ff_key, const std::map<T_K, T_V>& mapping, c
       }
     }
   } catch (const std::exception& ex) {
-    media_handling::logMessage(media_handling::LogType::WARNING,
-                               fmt::format("convertFromFFMpegType() -- Caught an exception, ex={}", ex.what()));
+    LWARNING(fmt::format("convertFromFFMpegType() -- Caught an exception, ex={}", ex.what()));
   } catch (...) {
-    media_handling::logMessage(media_handling::LogType::WARNING,
-                               fmt::format("convertFromFFMpegType() -- Caught an unknown exception, ex={}"));
+    LWARNING(fmt::format("convertFromFFMpegType() -- Caught an unknown exception, ex={}"));
   }
   return default_value;
 }
@@ -252,11 +250,9 @@ T_V convertToFFMpegType(const T_K mh_key, const std::map<T_K, T_V>& mapping, con
       return mapping.at(mh_key);
     }
   } catch (const std::exception& ex) {
-    media_handling::logMessage(media_handling::LogType::WARNING,
-                               fmt::format("convertToFFMpegType() -- Caught an exception, ex={}", ex.what()));
+    LWARNING(fmt::format("convertToFFMpegType() -- Caught an exception, ex={}", ex.what()));
   } catch (...) {
-    media_handling::logMessage(media_handling::LogType::WARNING,
-                               fmt::format("convertToFFMpegType() -- Caught an unknown exception, ex={}"));
+    LWARNING(fmt::format("convertToFFMpegType() -- Caught an unknown exception, ex={}"));
   }
   return default_value;
 }
@@ -312,25 +308,25 @@ void mft::logCallback(void* ptr, const int level, const char* msg_fmt, va_list v
   constexpr auto buf_size = 256;
   char buffer[buf_size];
   vsnprintf(buffer, buf_size, msg_fmt, vl);
-  const auto av_log_type = [&] () -> mh::LogType {
+  const auto av_log_type = [&] () -> mh::logging::LogType {
     switch (level) {
       case AV_LOG_PANIC:
         [[fallthrough]];
       case AV_LOG_FATAL:
-        return mh::LogType::FATAL;
+        return mh::logging::LogType::FATAL;
       case AV_LOG_ERROR:
-        return mh::LogType::CRITICAL;
+        return mh::logging::LogType::CRITICAL;
       case AV_LOG_WARNING:
-        return mh::LogType::WARNING;
+        return mh::logging::LogType::WARNING;
       case AV_LOG_INFO:
-        return mh::LogType::INFO;
+        return mh::logging::LogType::INFO;
       case AV_LOG_VERBOSE:
         [[fallthrough]];
       default:
-        return mh::LogType::DEBUG;
+        return mh::logging::LogType::DEBUG;
     }
   };
-  logMessage(av_log_type(), fmt::format("[ffmpeg {}] -- {}", ptr, buffer));
+  media_handling::logging::logMessage(av_log_type(), fmt::format("[ffmpeg {}] -- {}", ptr, buffer));
 }
 
 mh::ColourPrimaries mft::convertColourPrimary(const AVColorPrimaries primary) noexcept

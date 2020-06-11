@@ -124,7 +124,7 @@ bool FFMpegSource::initialise()
   int err_code = avformat_open_input(&ctx, p, nullptr, &dict);
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, "Failed to open file, code=" + err + "fileName=" + p);
+    LCRITICAL("Failed to open file, code=" + err + "fileName=" + p);
     avformat_free_context(ctx);
     return false;
   }
@@ -134,7 +134,7 @@ bool FFMpegSource::initialise()
   err_code = avformat_find_stream_info(format_ctx_.get(), nullptr);
   if (err_code != 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, "Failed to read file info, code=" + err);
+    LCRITICAL("Failed to read file info, code=" + err);
     return false;
   }
 
@@ -261,7 +261,7 @@ void FFMpegSource::unqueueStream(const int stream_index)
   if (packeting_.indexes_.count(stream_index) == 1) {
     packeting_.indexes_[stream_index]--;
   } else {
-    logMessage(LogType::INFO, "Stream was already unqueued");
+    LINFO("Stream was already unqueued");
   }
 }
 
@@ -276,7 +276,7 @@ media_handling::ffmpeg::types::AVPacketPtr FFMpegSource::nextPacket(const int st
       const auto ret = av_read_frame(format_ctx_.get(), pkt.get());
       if (ret < 0) {
         av_strerror(ret, err.data(), ERR_LEN);
-        logMessage(LogType::INFO, fmt::format("Failed to read frame: {}", err.data()));
+        LINFO(fmt::format("Failed to read frame: {}", err.data()));
         break;
       }
       if (pkt->stream_index == stream_index) {
@@ -346,7 +346,7 @@ void FFMpegSource::extractMetadata(const AVDictionary& metadata)
     }
     else
     {
-      logMessage(LogType::WARNING, "Failed to configure start timecode");
+      LWARNING("Failed to configure start timecode");
     }
   }
   else if (auto strm = this->visualStream(0))

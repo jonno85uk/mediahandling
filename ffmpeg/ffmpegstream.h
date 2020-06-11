@@ -109,6 +109,11 @@ namespace media_handling::ffmpeg
        * @brief The interval between frames in multiples of timescale (frame duration)
        */
       int pts_intvl_ {0};
+      /**
+       * @brief First frame pts may not start at 0 which makes seeking difficult
+       *        AVStream.start_time or any other stream property reports the pts offset/delay
+       */
+      int64_t delay_{0};
 
     private:
       void extractProperties(const AVStream& stream, const AVCodecContext& context);

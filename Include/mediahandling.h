@@ -29,10 +29,12 @@
 #define MEDIAHANDLING_H
 
 #include <atomic>
+
 #include "imediasource.h"
 #include "imediasink.h"
 #include "rational.h"
 #include "timecode.h"
+#include "logging.h"
 
 
 namespace media_handling
@@ -74,29 +76,6 @@ namespace media_handling
     GSTREAMER,
     INTEL
   };
-
-  enum class LogType
-  {
-    FATAL,
-    CRITICAL,
-    WARNING,
-    INFO,
-    DEBUG
-  };
-
-  typedef void (*LOGGINGFN)(const LogType, const std::string&);
-
-  /**
-   * @brief           Set the minimum log type shown in logging
-   * @param   level   Logs including and greater in importance will be shown
-   */
-  void setLogLevel(const LogType level);
-  /**
-   * @brief       Assign a callback for library messages
-   * @note        Library defaults to stderr
-   * @param func  The callback function
-   */
-  void assignLoggerCallback(LOGGINGFN func);
 
   /**
    * @brief Initialise the library with a selected backend
@@ -146,11 +125,6 @@ namespace media_handling
    * @return true==auto-detecting
    */
   bool autoDetectImageSequences() noexcept;
-
-  /**
-   * @note intended for internal purposes only
-   */
-  void logMessage(const LogType log_type, const std::string& msg) noexcept;
 }
 
 #endif // MEDIAHANDLING_H

@@ -458,7 +458,7 @@ TEST (FFMpegStreamTest, Openh264FHDAudioStreamReadFrame)
   std::string fname = "./ReferenceMedia/Video/h264/h264_yuv420p_avc1_fhd.mp4";
   media_handling::MediaSourcePtr src = std::make_shared<FFMpegSource>(fname);
   auto stream = src->audioStream(0);
-  auto frame = stream->frameByTimestamp(0);
+  auto frame = stream->frameByTimestamp();
   ASSERT_TRUE(frame != nullptr);
   auto data = frame->data();
   ASSERT_EQ(data.timestamp_, 1024);

@@ -78,7 +78,7 @@ FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
   if (err_code < 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
     const auto msg = fmt::format("Failed to populate codec context: {}", err.data());
-    logMessage(LogType::CRITICAL, msg);
+    LCRITICAL(msg);
     throw std::runtime_error(msg);
   }
 
@@ -89,7 +89,7 @@ FFMpegStream::FFMpegStream(FFMpegSource* parent, AVStream* const stream)
   if (err_code < 0) {
     av_strerror(err_code, err.data(), ERR_LEN);
     const auto msg = fmt::format("Could not open codec:  {}", err.data());
-    logMessage(LogType::CRITICAL, msg);
+    LCRITICAL(msg);
     throw std::runtime_error(msg);
   }
 
@@ -143,7 +143,7 @@ FFMpegStream::~FFMpegStream()
 void FFMpegStream::setProperties(std::map<media_handling::MediaProperty, std::any> props)
 {
   if (setup_) {
-    logMessage(LogType::WARNING, "Setting/changing properties of a writing stream that is in use is prohibited");
+    LWARNING("Setting/changing properties of a writing stream that is in use is prohibited");
   } else {
     media_handling::MediaPropertyObject::setProperties(std::move(props));
   }
@@ -152,7 +152,7 @@ void FFMpegStream::setProperties(std::map<media_handling::MediaProperty, std::an
 void FFMpegStream::setProperty(const MediaProperty prop, const std::any& value)
 {
   if (setup_) {
-    logMessage(LogType::WARNING, "Setting/changing a property of a writing stream that is in use is prohibited");
+    LWARNING("Setting/changing a property of a writing stream that is in use is prohibited");
   } else {
     media_handling::MediaPropertyObject::setProperty(prop, value);
   }
@@ -175,7 +175,7 @@ bool FFMpegStream::index()
     fframe->extractProperties();
     frame_count++;
     frames_size += fframe->property<int32_t>(MediaProperty::FRAME_PACKET_SIZE, okay);
-    duration += fframe->property<int64_t>(MediaProperty::FRAME_DURATION, okay);
+    duration += static_cast<int64_t>(fframe->property<Rational>(MediaProperty::DURATION, okay).toDouble() + 0.5);
     fframe = this->frame();
   }
 
@@ -220,7 +220,7 @@ MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
     if ( (diff > pts_intvl_) || (time_stamp < last_timestamp_)) {
       // Only seek if change or required time_stamp is not next frame or reversed
       if (!seek(time_stamp)) {
-        logMessage(LogType::WARNING, fmt::format("Failed to seek:  {}", time_stamp));
+        LWARNING(fmt::format("Failed to seek:  {}", time_stamp));
         return nullptr;
       }
     }
@@ -234,13 +234,22 @@ MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
   MediaFramePtr result;
   auto cnt = 0;
   auto diff = INT_MAX;
+  bool okay;
   do {
     if (result = frame(*codec_ctx_, stream_->index); result) {
+      const auto start = result->timestamp();
       diff = result->timestamp() - time_stamp;
+      const auto duration = result->property<Rational>(MediaProperty::DURATION, okay);
+      assert(okay);
+      const auto end = static_cast<int64_t>((start + duration).toDouble() + 0.5);
+      if ((time_stamp >= start) && (time_stamp < end)) {
+        // FIXME: this is not working where streams do not start pts=0
+        break;
+      }
     }
   } while (result && (diff > pts_intvl_) && (cnt++ < RETRY_LIMIT));
   if (!result && cnt >= RETRY_LIMIT) {
-    logMessage(LogType::WARNING, fmt::format("Failed to retrieve frame. ts={}", time_stamp));
+    LWARNING(fmt::format("Failed to retrieve frame. ts={}", time_stamp));
   }
   return result;
 }
@@ -272,11 +281,11 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
   bool okay = true;
   std::call_once(setup_encoder_, [&] { okay = setupEncoder(); });
   if (!okay) {
-    logMessage(LogType::CRITICAL, "Failed to setup encoder");
+    LCRITICAL("Failed to setup encoder");
     return false;
   }
   if ( (sink_codec_ctx_ == nullptr) || (sink_frame_ == nullptr) ) {
-    logMessage(LogType::CRITICAL, "Stream has not been configured correctly for writing");
+    LCRITICAL("Stream has not been configured correctly for writing");
     return false;
   }
 
@@ -293,7 +302,7 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
       if (ret < 0) {
         av_strerror(ret, err.data(), ERR_LEN);
         const auto msg = fmt::format("Failed to convert audio sample, msg={}", err.data());
-        logMessage(LogType::CRITICAL, msg);
+        LCRITICAL(msg);
         return false;
       }
     } else if (input_format_.sws_context_ != nullptr) {
@@ -315,7 +324,7 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
     if (ret < 0) {
       av_strerror(ret, err.data(), ERR_LEN);
       const auto msg = fmt::format("Failed to send frame to encoder: {}", err.data());
-      logMessage(LogType::CRITICAL, msg);
+      LCRITICAL(msg);
       return false;
     }
   } else {
@@ -323,7 +332,7 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
     if (ret < 0) {
       av_strerror(ret, err.data(), ERR_LEN);
       const auto msg = fmt::format("Failed to send frame to encoder: {}", err.data());
-      logMessage(LogType::CRITICAL, msg);
+      LCRITICAL(msg);
       return false;
     }
   }
@@ -337,7 +346,7 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
       if (ret != AVERROR_EOF) {
         av_strerror(ret, err.data(), ERR_LEN);
         const auto msg = fmt::format("Failed to receive packet from encoder, msg={}", err.data());
-        logMessage(LogType::CRITICAL, msg);
+        LCRITICAL(msg);
         return false;
       }
       return true;
@@ -351,7 +360,7 @@ bool FFMpegStream::writeFrame(MediaFramePtr sample)
     if (ret < 0 ){
       av_strerror(ret, err.data(), ERR_LEN);
       const auto msg = fmt::format("Failed to write frame to container, msg={}", err.data());
-      logMessage(LogType::CRITICAL, msg);
+      LCRITICAL(msg);
       return false;
     }
   } //while
@@ -374,12 +383,12 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
 {
   assert(codec_);
   if ((parent_ == nullptr) && (sink_ != nullptr) ) {
-    logMessage(LogType::WARNING, "Stream is setup for encoding");
+    LWARNING("Stream is setup for encoding");
     return false;
   }
   const AVPixelFormat output_av_fmt = types::convertPixelFormat(format);
   if (output_av_fmt == AV_PIX_FMT_NONE) {
-    logMessage(LogType::CRITICAL, "FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
+    LCRITICAL("FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
     return false;
   }
 
@@ -391,20 +400,20 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
 
   const AVPixelFormat src_av_fmt = types::convertPixelFormat(src_fmt);
   if (src_av_fmt == AV_PIX_FMT_NONE) {
-    logMessage(LogType::CRITICAL, "FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
+    LCRITICAL("FFMpegStream::setOutputFormat() -- Unknown AV pixel format");
     return false;
   }
 
 
   auto src_dims = this->property<media_handling::Dimensions>(MediaProperty::DIMENSIONS, is_valid);
   if (!is_valid) {
-    logMessage(LogType::CRITICAL, "FFMpegStream::setOutputFormat() -- Unknown dimensions of the stream");
+    LCRITICAL("FFMpegStream::setOutputFormat() -- Unknown dimensions of the stream");
     return false;
   }
 
   const auto [out_dims, out_interp] = [&] {
     if ( (dims.width) <= 0 || (dims.height <= 0)) {
-      logMessage(LogType::INFO, "FFMpegStream::setOutputFormat() -- Output dimensions invalid");
+      LINFO("FFMpegStream::setOutputFormat() -- Output dimensions invalid");
       return std::make_tuple(src_dims, 0);
     }
     return std::make_tuple(dims, media_handling::ffmpeg::types::convertInterpolationMethod(interp));
@@ -425,7 +434,7 @@ bool FFMpegStream::setOutputFormat(const PixelFormat format,
 bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<SampleRate> rate)
 {
   if ((parent_ == nullptr) && (sink_ != nullptr) ) {
-    logMessage(LogType::WARNING, "Stream is setup for encoding");
+    LWARNING("Stream is setup for encoding");
     return false;
   }
   bool okay = false;
@@ -451,7 +460,7 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<Samp
   const auto ret = swr_init(ctx);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, fmt::format("Could not init resample context: {}", err.data()));
+    LCRITICAL(fmt::format("Could not init resample context: {}", err.data()));
     return false;
   }
 
@@ -467,7 +476,7 @@ bool FFMpegStream::setOutputFormat(const SampleFormat format, std::optional<Samp
 bool FFMpegStream::setInputFormat(const PixelFormat format)
 {
   if (codec_->pix_fmts == nullptr) {
-    logMessage(LogType::CRITICAL, "Encoder has no known supported pixel formats");
+    LCRITICAL("Encoder has no known supported pixel formats");
     return false;
   }
   const auto ff_format = types::convertPixelFormat(format);
@@ -496,7 +505,7 @@ bool FFMpegStream::setInputFormat(const PixelFormat format)
       output_format_.pix_fmt_ = format;
       output_format_.dims_ = dims;
       sink_codec_ctx_->pix_fmt = codec_->pix_fmts[0];
-      logMessage(LogType::WARNING, fmt::format("Auto converting input format to {}", codec_->pix_fmts[0]));
+      LWARNING(fmt::format("Auto converting input format to {}", codec_->pix_fmts[0]));
       return true;
     }
     std::string msg = "Invalid pixel format set as input. Valid types are:\n";
@@ -506,7 +515,7 @@ bool FFMpegStream::setInputFormat(const PixelFormat format)
       }
       msg.append(fmt::format("\t {}\n", static_cast<int>(types::convertPixelFormat(f)))); //TODO: maybe show as string repr
     }
-    logMessage(LogType::WARNING, msg);
+    LWARNING(msg);
   }
   return okay;
 }
@@ -535,13 +544,13 @@ bool FFMpegStream::setInputFormat(const SampleFormat format, std::optional<Sampl
     const auto dst_rate = this->property<SampleRate>(MediaProperty::AUDIO_SAMPLING_RATE, okay);
     if (!okay)
     {
-      logMessage(LogType::CRITICAL, "Stream sampling rate has not been set");
+      LCRITICAL("Stream sampling rate has not been set");
       return okay;
     }
     const auto layout = this->property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
     if (!okay)
     {
-      logMessage(LogType::CRITICAL, "Stream channel layout has not been set");
+      LCRITICAL("Stream channel layout has not been set");
       return okay;
     }
     auto src_rate = rate.has_value() ? rate.value() : dst_rate;
@@ -550,11 +559,11 @@ bool FFMpegStream::setInputFormat(const SampleFormat format, std::optional<Sampl
     if (okay)
     {
       sink_codec_ctx_->sample_fmt = codec_->sample_fmts[0];
-      logMessage(LogType::INFO, "Setup an auto audio-converter");
+      LINFO("Setup an auto audio-converter");
     }
     else
     {
-      logMessage(LogType::CRITICAL, "Failed to setup auto audio-converter");
+      LCRITICAL("Failed to setup auto audio-converter");
     }
 
   }
@@ -566,6 +575,7 @@ void FFMpegStream::initialise() noexcept
 {
   setup_ = true;
 }
+
 
 void FFMpegStream::extractProperties(const AVStream& stream, const AVCodecContext& context)
 {
@@ -628,7 +638,7 @@ void FFMpegStream::extractMetadata(const AVDictionary& metadata)
         std::string tc_str(entry->value);
         if (!tc.setTimeCode(tc_str))
         {
-          logMessage(LogType::WARNING, "Failed to configure start timecode");
+          LWARNING("Failed to configure start timecode");
         }
       }
       this->setProperty(MediaProperty::START_TIMECODE, tc);
@@ -685,10 +695,10 @@ bool FFMpegStream::seek(const int64_t time_stamp)
   parent_->resetPacketQueue();
   avcodec_flush_buffers(codec_ctx_);
   const int ret = av_seek_frame(parent_->context(), stream_->index, time_stamp, SEEK_DIRECTION);
-  logMessage(LogType::DEBUG, fmt::format("Seeking. ts={}, idx={}", time_stamp, stream_->index));
+  LDEBUG(fmt::format("Seeking. ts={}, idx={}", time_stamp, stream_->index));
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    logMessage(LogType::WARNING, fmt::format("Could not seek frame: {}", err.data()));
+    LWARNING(fmt::format("Could not seek frame: {}", err.data()));
     return false;
   }
   return true;
@@ -719,7 +729,7 @@ bool FFMpegStream::setupEncoder()
     {
       bool okay = setupAudioEncoder(*stream_, *sink_codec_ctx_, *codec_);
       if (!okay) {
-        logMessage(LogType::CRITICAL, "Failed to setup audio encoder");
+        LCRITICAL("Failed to setup audio encoder");
       }
       setup_ = okay;
       return sink_->writeHeader();
@@ -728,7 +738,7 @@ bool FFMpegStream::setupEncoder()
     {
       bool okay = setupVideoEncoder(*stream_, *sink_codec_ctx_, *codec_);
       if (!okay) {
-        logMessage(LogType::CRITICAL, "Failed to setup video encoder");
+        LCRITICAL("Failed to setup video encoder");
       }
       setup_ = okay;
       return sink_->writeHeader();
@@ -737,7 +747,7 @@ bool FFMpegStream::setupEncoder()
       break;
   }
 
-  logMessage(LogType::CRITICAL, "Unable to setup encoder for this codec type");
+  LCRITICAL("Unable to setup encoder for this codec type");
   return false;
 }
 
@@ -745,7 +755,7 @@ bool checkSupportedSampleRates(const int* rates, const int32_t sample_rate)
 {
   // check supported sample rates
   if (rates == nullptr) {
-    logMessage(media_handling::LogType::WARNING, "Unable to validify set sample-rate with codec supported rates");
+    LWARNING("Unable to validify set sample-rate with codec supported rates");
     return true;
   }
   int rate = -1;
@@ -757,7 +767,7 @@ bool checkSupportedSampleRates(const int* rates, const int32_t sample_rate)
   } while ((rate != 0) && (!match));
 
   if (!match) {
-    logMessage(media_handling::LogType::CRITICAL, "Invalid sample rate set for audio encoder");
+    LCRITICAL("Invalid sample rate set for audio encoder");
     return false;
   }
   return true;
@@ -769,9 +779,9 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
   assert(fmt.oformat);
   auto ret = avformat_query_codec(fmt.oformat, codec.id, FF_COMPLIANCE_NORMAL);
   if (ret != 1) {
-    logMessage(LogType::CRITICAL, fmt::format("The audio codec '{}' is not supported in the container '{}'",
-                                              codec.name,
-                                              fmt.oformat->name));
+    LCRITICAL(fmt::format("The audio codec '{}' is not supported in the container '{}'",
+              codec.name,
+              fmt.oformat->name));
     return false;
   }
   bool okay;
@@ -781,12 +791,12 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
       return false;
     }
   } else {
-    logMessage(LogType::CRITICAL, "Audio sample rate property not set");
+    LCRITICAL("Audio sample rate property not set");
     return false;
   }
   auto layout = this->property<ChannelLayout>(MediaProperty::AUDIO_LAYOUT, okay);
   if (!okay) {
-    logMessage(LogType::CRITICAL, "Audio Layout property not set");
+    LCRITICAL("Audio Layout property not set");
     return false;
   }
   int64_t bitrate = 0;
@@ -794,7 +804,7 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
     // A bitrate is required for lossless codecs
     bitrate = this->property<BitRate>(MediaProperty::BITRATE, okay);
     if (!okay) {
-      logMessage(LogType::CRITICAL, "Audio Bitrate property not set");
+      LCRITICAL("Audio Bitrate property not set");
       return false;
     }
     context.bit_rate = bitrate;
@@ -806,7 +816,7 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
   context.time_base.den = sample_rate;
   stream.time_base = context.time_base;
   if (context.sample_fmt == AV_SAMPLE_FMT_NONE) {
-    logMessage(LogType::CRITICAL, "Input sample format has not been specified");
+    LCRITICAL("Input sample format has not been specified");
     return false;
   }
 
@@ -817,7 +827,7 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
   ret = avcodec_open2(&context, &codec, nullptr);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, fmt::format("Could not open output audio encoder. {}", err.data()));
+    LCRITICAL(fmt::format("Could not open output audio encoder. {}", err.data()));
     return false;
   }
 
@@ -830,15 +840,13 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
   ret = av_frame_get_buffer(sink_frame_.get(), 0);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    const auto msg = fmt::format("Failed to allocate frame buffers, msg={}", err.data());
-    logMessage(LogType::CRITICAL, msg);
+    LCRITICAL(fmt::format("Failed to allocate frame buffers, msg={}", err.data()));
     return false;
   }
   ret = av_frame_make_writable(sink_frame_.get());
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    const auto msg = fmt::format("Failed to make frame writable, msg={}", err.data());
-    logMessage(LogType::CRITICAL, msg);
+    LCRITICAL(fmt::format("Failed to make frame writable, msg={}", err.data()));
     return false;
   }
   assert(pkt_);
@@ -849,7 +857,7 @@ bool FFMpegStream::setupAudioEncoder(AVStream& stream, AVCodecContext& context, 
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     const auto msg = fmt::format("Could not copy audio encoder parameters to output stream, msg={}", err.data());
-    logMessage(LogType::CRITICAL, msg);
+    LCRITICAL(msg);
     return false;
   }
   return true;
@@ -861,32 +869,32 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
   assert(fmt.oformat);
   auto ret = avformat_query_codec(fmt.oformat, codec.id, FF_COMPLIANCE_NORMAL);
   if (ret != 1) {
-    logMessage(LogType::CRITICAL, fmt::format("The video codec '{}' is not supported in the container '{}'",
-                                              codec.name,
-                                              fmt.oformat->name));
+    LCRITICAL(fmt::format("The video codec '{}' is not supported in the container '{}'",
+              codec.name,
+              fmt.oformat->name));
     return false;
   }
   auto okay = false;
   const auto dimensions = this->property<Dimensions>(MediaProperty::DIMENSIONS, okay);
   if (!okay) {
-    logMessage(LogType::CRITICAL, "Video dimensions property not set");
+    LCRITICAL("Video dimensions property not set");
     return false;
   }
   const auto frame_rate = this->property<Rational>(MediaProperty::FRAME_RATE, okay);
   if (!okay) {
-    logMessage(LogType::CRITICAL, "Video frame-rate property not set");
+    LCRITICAL("Video frame-rate property not set");
     return false;
   }
   const auto compression = this->property<CompressionStrategy>(MediaProperty::COMPRESSION, okay);
   if (!okay) {
-    logMessage(LogType::CRITICAL, "Video compression method property not set");
+    LCRITICAL("Video compression method property not set");
     return false;
   }
   if (compression == CompressionStrategy::CBR) {
 
     const auto bitrate = this->property<BitRate>(MediaProperty::BITRATE, okay);
     if (!okay) {
-      logMessage(LogType::CRITICAL, "Video bitrate property not set");
+      LCRITICAL("Video bitrate property not set");
       return false;
     }
     context.bit_rate    = bitrate;
@@ -905,7 +913,7 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
   } else if (compression == CompressionStrategy::TARGETBITRATE) {
     const auto bit_rate = this->property<BitRate>(MediaProperty::BITRATE, okay);
     if (!okay) {
-      logMessage(LogType::CRITICAL, "Video bitrate property not set");
+      LCRITICAL("Video bitrate property not set");
       return false;
     }
     context.bit_rate = bit_rate;
@@ -939,12 +947,12 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
     context.thread_count = threads;
   } else {
     context.thread_count = static_cast<int>(std::thread::hardware_concurrency());
-    logMessage(LogType::INFO, fmt::format("Automatically setting thread count to {} threads", context.thread_count));
+    LINFO(fmt::format("Automatically setting thread count to {} threads", context.thread_count));
   }
   context.thread_type = FF_THREAD_SLICE;
 
   if (context.pix_fmt == AV_PIX_FMT_NONE) {
-    logMessage(LogType::CRITICAL, "Input pixel format has not been specified");
+    LCRITICAL("Input pixel format has not been specified");
     return false;
   }
 
@@ -968,7 +976,7 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
   }
 
   if (!okay) {
-    logMessage(LogType::CRITICAL, "Failed to setup encoder");
+    LCRITICAL("Failed to setup encoder");
   }
 
   if (fmt.oformat->flags & AVFMT_GLOBALHEADER) {
@@ -978,7 +986,7 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
   ret = avcodec_open2(&context, &codec, nullptr);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, fmt::format("Could not open output video encoder. {}", err.data()));
+    LCRITICAL(fmt::format("Could not open output video encoder. {}", err.data()));
     return false;
   }
 
@@ -990,7 +998,7 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     const auto msg = fmt::format("Failed to initialise buffers for video frame, msg={}", err.data());
-    logMessage(LogType::CRITICAL, msg);
+    LCRITICAL(msg);
     return false;
   }
 
@@ -1002,7 +1010,7 @@ bool FFMpegStream::setupVideoEncoder(AVStream& stream, AVCodecContext& context, 
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
     const auto msg = fmt::format("Could not copy video encoder parameters to output stream, msg={}", err.data());
-    logMessage(LogType::CRITICAL, msg);
+    LCRITICAL(msg);
     return false;
   }
   return okay;
@@ -1018,7 +1026,7 @@ bool FFMpegStream::setupH264Encoder(AVCodecContext& ctx) const
     if (valid.count(profile) == 1) {
       ctx.profile = types::convertProfile(profile);
     } else {
-      logMessage(LogType::WARNING, "Incompatibile profile chosen for X264 encoder");
+      LWARNING("Incompatibile profile chosen for X264 encoder");
     }
   }
   const auto preset = this->property<Preset>(MediaProperty::PRESET, okay);
@@ -1030,11 +1038,11 @@ bool FFMpegStream::setupH264Encoder(AVCodecContext& ctx) const
       auto ret = av_opt_set(ctx.priv_data, "preset", types::convertPreset(preset).data(), 0);
       if (ret < 0) {
         av_strerror(ret, err.data(), ERR_LEN);
-        logMessage(LogType::CRITICAL, fmt::format("Failed to set preset, msg={}", err.data()));
+        LCRITICAL(fmt::format("Failed to set preset, msg={}", err.data()));
         return false;
       }
     } else {
-      logMessage(LogType::WARNING, "Incompatibile preset chosen for X264 encoder");
+      LWARNING("Incompatibile preset chosen for X264 encoder");
     }
   }
   return true;
@@ -1048,7 +1056,7 @@ bool FFMpegStream::setupMPEG2Encoder(AVCodecContext& ctx) const
     if (valid.count(profile) == 1) {
       ctx.profile = types::convertProfile(profile);
     } else {
-      logMessage(LogType::WARNING, "Incompatibile profile chosen for MPEG2 encoder");
+      LWARNING("Incompatibile profile chosen for MPEG2 encoder");
     }
   }
   return true;
@@ -1069,7 +1077,7 @@ bool FFMpegStream::setupDNXHDEncoder(AVCodecContext& ctx) const
     if (valid.count(profile) == 1) {
       ctx.profile = types::convertProfile(profile);
     } else {
-      logMessage(LogType::WARNING, "Incompatibile profile chosen for MPEG2 encoder");
+      LWARNING("Incompatibile profile chosen for MPEG2 encoder");
     }
   }
   return true;
@@ -1078,7 +1086,9 @@ bool FFMpegStream::setupDNXHDEncoder(AVCodecContext& ctx) const
 
 void FFMpegStream::extractFrameProperties()
 {
-  if (auto tmp_frame = this->frame(0)) {
+  seek(0);
+  if (auto tmp_frame = this->frameByTimestamp()) {
+    delay_ = tmp_frame->timestamp();
     tmp_frame->extractProperties();
     bool is_valid;
     if (type_ == StreamType::VIDEO) {
@@ -1087,7 +1097,7 @@ void FFMpegStream::extractFrameProperties()
         MediaPropertyObject::setProperty(MediaProperty::FIELD_ORDER, val);
       }
     } else if (type_ == StreamType::IMAGE) {
-      logMessage(LogType::DEBUG, "Setting image progressive");
+      LDEBUG("Setting image progressive");
       MediaPropertyObject::setProperty(MediaProperty::FIELD_ORDER, FieldOrder::PROGRESSIVE);
     }
     auto par = MediaPropertyObject::property<Rational>(MediaProperty::PIXEL_ASPECT_RATIO, is_valid);
@@ -1108,7 +1118,7 @@ void FFMpegStream::extractFrameProperties()
       MediaPropertyObject::setProperty(MediaProperty::DISPLAY_ASPECT_RATIO, dar);
     }
   } else {
-    logMessage(LogType::CRITICAL, "Failed to read a frame from stream");
+    LCRITICAL("Failed to read a frame from stream");
   }
   // Ensure playhead is reset
   seek(0);
@@ -1128,7 +1138,7 @@ MediaFramePtr FFMpegStream::frame(AVCodecContext& codec_ctx, const int stream_id
     err_code = avcodec_send_packet(&codec_ctx, pkt.get());
     if (err_code < 0) {
       av_strerror(err_code, err.data(), ERR_LEN);
-      logMessage(LogType::WARNING, fmt::format("Failed sending a packet for decoding: {}", err.data()));
+      LWARNING(fmt::format("Failed sending a packet for decoding: {}", err.data()));
       break;
     }
 
@@ -1136,6 +1146,7 @@ MediaFramePtr FFMpegStream::frame(AVCodecContext& codec_ctx, const int stream_id
     while (dec_err_code >= 0) {
       dec_err_code = avcodec_receive_frame(&codec_ctx, frame.get());
       if (dec_err_code == 0) {
+        LDEBUG(fmt::format("Frame received from decoder, pts={}", frame->pts));
         last_timestamp_ = frame->best_effort_timestamp;
         // successful read
         assert(type_ != media_handling::StreamType::UNKNOWN);
@@ -1156,7 +1167,7 @@ MediaFramePtr FFMpegStream::frame(AVCodecContext& codec_ctx, const int stream_id
         break;
       } else {
         av_strerror(dec_err_code, err.data(), ERR_LEN);
-        logMessage(LogType::CRITICAL, fmt::format("Failed to decode: {}", err.data()));
+        LCRITICAL(fmt::format("Failed to decode: {}", err.data()));
         break;
       }
     }//while
@@ -1188,7 +1199,7 @@ bool FFMpegStream::setupSWR(FFMpegMediaFrame::InOutFormat& fmt,
   const auto ret = swr_init(ctx);
   if (ret < 0) {
     av_strerror(ret, err.data(), ERR_LEN);
-    logMessage(LogType::CRITICAL, fmt::format("Could not init resample context: {}", err.data()));
+    LCRITICAL(fmt::format("Could not init resample context: {}", err.data()));
     return false;
   }
 

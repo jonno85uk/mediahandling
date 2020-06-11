@@ -100,44 +100,44 @@ void TimeCode::setTimestamp(const int64_t time_stamp) noexcept
 bool TimeCode::setTimeCode(const std::string& timecode)
 {
   if (timecode.empty() || (timecode.length() != 11) ) {
-    logMessage(LogType::CRITICAL, "Timecode empty or of incorrect length");
+    LCRITICAL("Timecode empty or of incorrect length");
     return false;
   }
   const auto hours = std::stoi(timecode.substr(0, 2));
   if (hours >= 24) {
-    logMessage(LogType::CRITICAL, "Timecode has greater than 23hours");
+    LCRITICAL("Timecode has greater than 23hours");
     return false;
   }
   if (timecode.at(2) != ':') {
-    logMessage(LogType::CRITICAL, "Timecode has incorrect hour/minute separator");
+    LCRITICAL("Timecode has incorrect hour/minute separator");
     return false;
   }
   const auto minutes = std::stoi(timecode.substr(3, 2));
   if (minutes >= 60) {
-    logMessage(LogType::CRITICAL, "Timecode has greater than 59 minutes");
+    LCRITICAL("Timecode has greater than 59 minutes");
     return false;
   }
   if (timecode.at(2) != ':') {
-    logMessage(LogType::CRITICAL, "Timecode has incorrect minute/second separator");
+    LCRITICAL("Timecode has incorrect minute/second separator");
     return false;
   }
   const auto tc_seconds = std::stoi(timecode.substr(6, 2));
   if (tc_seconds >= 60) {
-    logMessage(LogType::CRITICAL, "Timecode has greater than 59 seconds");
+    LCRITICAL("Timecode has greater than 59 seconds");
     return false;
   }
   if ((timecode.at(8) != ':') && (timecode.at(8) != ';') ) {
-    logMessage(LogType::CRITICAL, "Timecode has incorrect second/frame separator");
+    LCRITICAL("Timecode has incorrect second/frame separator");
     return false;
   }
 
   if ( ( (frame_rate_ != NTSC_30) && (frame_rate_ != NTSC_60)) && (timecode.at(8) == ';') ) {
-    logMessage(LogType::CRITICAL, "Timecode has incorrect second/frame separator for NTSC frame-rate");
+    LCRITICAL("Timecode has incorrect second/frame separator for NTSC frame-rate");
     return false;
   }
   const auto tc_frames = std::stoi(timecode.substr(9, 2));
   if (tc_frames >= std::round(frame_rate_.toDouble())) {
-    logMessage(LogType::CRITICAL, fmt::format("Timecode has greater than {} frames",
+    LCRITICAL(fmt::format("Timecode has greater than {} frames",
                                               static_cast<int>(std::round(frame_rate_.toDouble())) - 1));
     return false;
   }
