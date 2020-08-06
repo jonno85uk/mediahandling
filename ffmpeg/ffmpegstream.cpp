@@ -233,7 +233,7 @@ MediaFramePtr FFMpegStream::frameByTimestamp(const int64_t time_stamp)
 
   MediaFramePtr result;
   auto cnt = 0;
-  auto diff = INT_MAX;
+  int64_t diff = INT_MAX;
   bool okay;
   do {
     if (result = frame(*codec_ctx_, stream_->index); result) {

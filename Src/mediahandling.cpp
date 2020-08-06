@@ -29,6 +29,7 @@
 #include <iostream>
 #include <filesystem>
 #include <regex>
+#include <sstream>
 
 
 #include "ffmpegsource.h"

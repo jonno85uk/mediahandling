@@ -61,7 +61,7 @@ TimeCode::TimeCode(media_handling::Rational time_scale, media_handling::Rational
 
   if (frames_.drop_) {
     frames_.drop_count_ = lround(frame_rate.toDouble() * DROP_FACTOR);
-    frames_.drop_minute_ = floor((frame_rate * SECONDS_IN_MIN).toDouble());
+    frames_.drop_minute_ = static_cast<int32_t>(floor((frame_rate * SECONDS_IN_MIN).toDouble()));
     frames_.drop_ten_minute_ = lround((frame_rate * SECONDS_IN_MIN).toDouble() * 10);
   }
 }
@@ -78,7 +78,7 @@ std::string TimeCode::toString(const bool drop) const
 
 int64_t TimeCode::toFrames() const
 {
-  return floor(((time_stamp_ * time_scale_) * frame_rate_).toDouble());
+  return static_cast<int64_t>(floor(((time_stamp_ * time_scale_) * frame_rate_).toDouble()));
 }
 
 
@@ -188,9 +188,9 @@ std::string TimeCode::framesToSMPTE(int64_t frames, const bool drop) const
     const auto d = frames / frames_.drop_ten_minute_;
     const auto m = frames % frames_.drop_ten_minute_;
     if (m > frames_.drop_count_) {
-      frames += (frames_.drop_count_ * 9 * d) + frames_.drop_count_ * ((m - frames_.drop_count_) / frames_.drop_minute_);
+      frames += (static_cast<int64_t>(frames_.drop_count_) * 9 * d) + frames_.drop_count_ * ((m - frames_.drop_count_) / frames_.drop_minute_);
     } else {
-      frames += frames_.drop_count_ * 9 * d;
+      frames += static_cast<int64_t>(frames_.drop_count_) * 9 * d;
     }
     token = ';';
   }
