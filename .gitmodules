@@ -7,3 +7,6 @@
 [submodule "dependencies/fmt"]
 	path = dependencies/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "dependencies/gsl-lite"]
+	path = dependencies/gsl-lite
+	url = https://github.com/gsl-lite/gsl-lite.git
