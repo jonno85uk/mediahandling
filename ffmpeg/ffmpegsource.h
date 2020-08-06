@@ -30,12 +30,12 @@
 
 #include <queue>
 #include <map>
+#include <gsl-lite.hpp>
 
 #include "imediasource.h"
 #include "ffmpegstream.h"
 #include "ffmpegtypes.h"
 #include "types.h"
-#include "gsl-lite.hpp"
 
 
 extern "C" {
