@@ -34,6 +34,12 @@
 #include <ostream>
 #include <cassert>
 
+#ifdef WIN32
+    #define EXPORT __declspec(dllexport)
+#else
+    #define EXPORT
+#endif
+
 
 /**
  * Place for all bespoke or aliased types used within the library
@@ -360,7 +366,7 @@ namespace media_handling
     int height {-1};
   };
 
-  struct ColourSpace
+  struct EXPORT ColourSpace
   {
     ColourSpace() = default;
     ColourSpace(const ColourPrimaries primaries,

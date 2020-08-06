@@ -35,7 +35,7 @@
 
 namespace media_handling
 {
-  class TimeCode
+  class EXPORT TimeCode
   {
     public:
       TimeCode() = default;

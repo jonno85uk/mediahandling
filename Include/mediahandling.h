@@ -55,19 +55,19 @@ namespace media_handling
      * @param path  File path to existing file
      * @return      true==path is in sequence
      */
-    bool pathIsInSequence(const std::string& path);
+     EXPORT bool pathIsInSequence(const std::string& path);
     /**
      * @brief       Generate a sequence pattern ffmpeg understands
      * @param path  File path to generate agains
      * @return      Valid sequence pattern if value exists
      */
-    std::optional<std::string> generateSequencePattern(const std::string& path);
+     EXPORT std::optional<std::string> generateSequencePattern(const std::string& path);
     /**
      * @brief       Extract the start number of an image sequence file path
      * @param path  File path to existing file
      * @return      >= 0 indicates a valid value
      */
-    int getSequenceStartNumber(const std::string& path);
+     EXPORT int getSequenceStartNumber(const std::string& path);
   }
 
   enum class BackendType
@@ -82,20 +82,20 @@ namespace media_handling
    * @note  This does nothing as only FFMpeg is available
    * @return true==initialised ok
    */
-  bool initialise(const BackendType backend);
+  EXPORT bool initialise(const BackendType backend);
 
   /**
    * @brief           Enable/disable printing of the backend library messages to console
    * @param enabled
    */
-  void enableBackendLogs(const bool enabled);
+  EXPORT void enableBackendLogs(const bool enabled);
 
   /**
    * @brief             Create a new media source from a file using pre-selected backend
    * @param file_path   Path (absolute or relative) to the file 
    * @return  valid MediaSourcePtr or null
    */
-  MediaSourcePtr createSource(std::string file_path);
+  EXPORT MediaSourcePtr createSource(std::string file_path);
 
   /**
    * @brief               Create a new media sink with the selected filepath and codecs for writing
@@ -106,25 +106,25 @@ namespace media_handling
    *                      The amount of codecs indicate the amount of video streams in this file
    * @return              valid MediaSinkPtr or null
    */
-  MediaSinkPtr createSink(std::string file_path, std::vector<Codec> video_codecs, std::vector<Codec> audio_codecs);
+  EXPORT MediaSinkPtr createSink(std::string file_path, std::vector<Codec> video_codecs, std::vector<Codec> audio_codecs);
 
   /**
    * @brief     Create a mew media frame for populating data to be encoded
    * @return    valid MediaFramePtr or null
    */
-  MediaFramePtr createFrame();
+  EXPORT MediaFramePtr createFrame();
 
   /**
    * @brief Globally set the ability to auto-detect image sequences
    * @param value true==auto-detecting
    */
-  void autoDetectImageSequences(const bool value) noexcept;
+  EXPORT void autoDetectImageSequences(const bool value) noexcept;
 
   /**
    * @brief Obtain the global setting for auto-detect of image sequences
    * @return true==auto-detecting
    */
-  bool autoDetectImageSequences() noexcept;
+  EXPORT bool autoDetectImageSequences() noexcept;
 }
 
 #endif // MEDIAHANDLING_H

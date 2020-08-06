@@ -42,7 +42,7 @@ constexpr auto DOUBLE_FUDGER = 1'000'000;
 namespace media_handling
 {
   //TODO: perhaps template the types of numerator + denominator
-  class Rational
+  class EXPORT Rational
   {
     public:
       Rational() = default;

@@ -39,7 +39,7 @@ namespace media_handling
   class IMediaFrame : public MediaPropertyObject
   {
     public:
-      struct FrameData
+      struct EXPORT FrameData
       {
         Dimensions dims_ {-1, -1};
         int64_t timestamp_ {-1};
