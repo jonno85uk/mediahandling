@@ -31,8 +31,8 @@
 #include <mutex>
 #include <fmt/format.h>
 #include <chrono>
+#include <date/date.h>
 
-#include "date.h"
 
 namespace mhl = media_handling::logging;
 
