@@ -15,29 +15,32 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	# None
 endif()
 
-# TODO: figure out how to properly find packages
-#find_package(date CONFIG REQUIRED)
-#find_package(gsl-lite CONFIG REQUIRED)
-#find_package(fmt CONFIG REQUIRED)
-#find_package(ffmpeg CONFIG REQUIRED)
+set(SEARCH_PATHS
+    vcpkg/
+    build/)
 
+# if this is found, so are the others 
+find_path(VCPKG_INCLUDE_DIR date/date.h
+    PATH_SUFFIXES include
+    PATHS ${SEARCH_PATHS}
+)
+
+find_path(VCPKG_LIB_DIR libavcodec.a
+  PATH_SUFFIXES lib
+  PATHS ${SEARCH_PATHS}
+)
 
 file(GLOB SOURCES "ffmpeg/*.cpp" "Src/*.cpp" "*.cpp")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 add_library(mediaHandling SHARED ${SOURCES})
 target_compile_features(mediaHandling PRIVATE cxx_std_17)
 
-if (WIN32)
-	# FIXME: hardcoded directories that depend on building in a subdir 'build'
-    target_include_directories(mediaHandling
-        PRIVATE
-            build/vcpkg_installed/x64-windows/include)
+target_link_directories(mediaHandling 
+  PRIVATE
+    ${VCPKG_LIB_DIR}
+)
 
-    target_link_directories(mediaHandling 
-		PRIVATE
-			build/vcpkg_installed/x64-windows/lib)	
-    target_link_libraries(mediaHandling avformat avcodec avutil swscale swresample fmt)
-endif()
+target_link_libraries(mediaHandling avformat avcodec avutil swscale swresample)
 
 target_include_directories(mediaHandling
   PUBLIC
@@ -45,6 +48,7 @@ target_include_directories(mediaHandling
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg
+    ${VCPKG_INCLUDE_DIR}
 )
 
 

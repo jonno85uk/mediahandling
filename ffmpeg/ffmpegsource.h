@@ -30,7 +30,7 @@
 
 #include <queue>
 #include <map>
-#include <gsl-lite.hpp>
+#include <gsl/gsl-lite.hpp>
 
 #include "imediasource.h"
 #include "ffmpegstream.h"
