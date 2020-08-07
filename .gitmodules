@@ -1,15 +1,6 @@
 [submodule "ffmpeg-src"]
 	path = ffmpeg-src
 	url = git://source.ffmpeg.org/ffmpeg.git
-[submodule "dependencies/FFmpeg"]
-	path = dependencies/FFmpeg
-	url = https://github.com/FFmpeg/FFmpeg.git
-[submodule "dependencies/fmt"]
-	path = dependencies/fmt
-	url = https://github.com/fmtlib/fmt.git
-[submodule "dependencies/gsl-lite"]
-	path = dependencies/gsl-lite
-	url = https://github.com/gsl-lite/gsl-lite.git
-[submodule "dependencies/date"]
-	path = dependencies/date
-	url = https://github.com/HowardHinnant/date.git
+[submodule "vcpkg"]
+	path = vcpkg
+	url = https://github.com/microsoft/vcpkg.git
