@@ -1,0 +1,10 @@
+{
+	"name" : "mediahandling",
+	"version-string": "0.0.9-alpha",
+	"dependencies" :[
+		"gsl-lite",
+		"fmt",
+		"date",
+		"ffmpeg"
+	]
+}
