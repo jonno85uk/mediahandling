@@ -34,7 +34,7 @@ endif()
 
 
 
-file(GLOB SOURCES "ffmpeg/*.cpp" "Src/*.cpp" "*.cpp")
+file(GLOB SOURCES "fbackend/ffmpeg/*.cpp" "Src/*.cpp" "*.cpp")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 add_library(mediaHandling SHARED ${SOURCES})
 target_compile_features(mediaHandling PRIVATE cxx_std_17)
@@ -51,7 +51,7 @@ if (WIN32)
       $<INSTALL_INTERFACE:include>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
     PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg
+      ${CMAKE_CURRENT_SOURCE_DIR}/backend/ffmpeg
       ${VCPKG_INCLUDE_DIR}
   )
 else()
@@ -63,7 +63,7 @@ else()
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/External/date/include/>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/External/gsl-lite/include/>
     PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg
+      ${CMAKE_CURRENT_SOURCE_DIR}/backend/ffmpeg
   )
 endif (WIN32)
 
