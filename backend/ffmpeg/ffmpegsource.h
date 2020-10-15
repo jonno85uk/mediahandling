@@ -115,6 +115,7 @@ namespace media_handling::ffmpeg
       void extractMetadata(const AVDictionary& metadata);
       void extractStreamProperties(AVStream** streams, const uint32_t stream_count);
       void findFrameRate();
+      media_handling::OperationalPattern findOperationalPattern(const AVDictionary& metadata);
       /**
        * @brief Reset the instance to before it was initialised (minus properties)
        * @note  Allows re-initialise with different starting values

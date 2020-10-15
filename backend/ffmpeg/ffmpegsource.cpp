@@ -42,8 +42,11 @@ using media_handling::MediaFramePtr;
 using media_handling::MediaStreamPtr;
 using media_handling::MediaStreamMap;
 
+namespace mh = media_handling;
+
 constexpr auto ERR_LEN = 1024;
 constexpr auto TAG_TIMECODE = "timecode";
+constexpr auto TAG_OPERATIONAL_PATTERN = "operational_pattern_ul";
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -410,6 +413,49 @@ void FFMpegSource::findFrameRate()
 }
 
 
+
+media_handling::OperationalPattern FFMpegSource::findOperationalPattern(const AVDictionary& metadata)
+{
+  bool okay;
+  if (AVDictionaryEntry* entry = av_dict_get(&metadata, TAG_OPERATIONAL_PATTERN, nullptr, 0)) {
+    char* ptr = entry->value;
+    PatternRegister reg;
+    auto ix = 0;
+    auto nib_be = 0xFF;
+    auto nib_le = 0xFF;
+    // ffmpeg has converted the bytes of the register into chars to be readable.
+    // parse each char as nibbles and account for any non-alphanums in the string
+    while ( (ptr != nullptr) && (*ptr != '\0') && (ix < 14)) {
+      const char now = *ptr++;
+      if ( (now >= '0') && (now <= '9') ) {
+        const char tmp = now - '0';
+        if (nib_be == 0xFF) {
+          nib_be = tmp; 
+        } else {
+          nib_le = tmp;
+        }
+      }
+      else if ( (now >= 'a') && (now <= 'f') ) {
+        const char tmp = now - 'a' + 10;
+        if (nib_be == 0xFF) {
+          nib_be = tmp;
+        } else {
+          nib_le = tmp;
+        }
+      } else {
+        // non-alphanum. not interested
+      }
+
+      if ( (nib_be != 0xFF) && (nib_le != 0xFF) ) {
+        const uint8_t byte = (nib_be << 4) | nib_le;
+        reg[ix++] = byte;
+        nib_be = nib_le = 0xFF;
+      }
+    }
+    return toOperationalPattern(reg);
+  }
+  return OperationalPattern::UNKNOWN;
+}
 void FFMpegSource::reset()
 {
   format_ctx_.reset();

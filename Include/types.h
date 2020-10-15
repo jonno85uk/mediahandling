@@ -48,6 +48,7 @@ namespace media_handling
 {
   using SampleRate = int32_t;
   using BitRate = int32_t;
+  using PatternRegister = std::array<uint8_t, 14>; // Do not care about last 2 bytes
   // TODO: maybe turn into a mapping
   enum class MediaProperty
   {
@@ -87,7 +88,23 @@ namespace media_handling
     GOP,                  // GOP
     FRAME_PACKET_SIZE,    // int32_t  // TODO: generalise this
     START_TIMECODE,       // Timecode
-    PICTURE_TYPE          // PictureType
+    PICTURE_TYPE,          // PictureType
+    OPERATIONAL_PATTERN,  // OperationalPattern
+  };
+
+  enum class OperationalPattern 
+  {
+    UNKNOWN,
+    OP1A,  // 060e2b34.04010101.0d010201.0101****
+    OP1B,  // 060e2b34.04010101.0d010201.0102****
+    OP1C,  // 060e2b34.04010101.0d010201.0103****
+    OP2A,  // 060e2b34.04010101.0d010201.0201****
+    OP2B,  // 060e2b34.04010101.0d010201.0202****
+    OP2C,  // 060e2b34.04010101.0d010201.0203****
+    OP3A,  // 060e2b34.04010101.0d010201.0301****
+    OP3B,  // 060e2b34.04010101.0d010201.0302****
+    OP3C,  // 060e2b34.04010101.0d010201.0303****
+    OPATOM // 060e2b34.04010101.0d010201.10******
   };
 
   enum class Profile
@@ -405,6 +422,7 @@ namespace media_handling
     int32_t n_;
   };
 
+  OperationalPattern toOperationalPattern(const PatternRegister& value);
 }
 
 
