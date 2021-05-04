@@ -34,7 +34,7 @@ endif()
 
 
 
-file(GLOB SOURCES "fbackend/ffmpeg/*.cpp" "Src/*.cpp" "*.cpp")
+file(GLOB SOURCES "backend/ffmpeg/*.cpp" "Src/*.cpp" "*.cpp")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 add_library(mediaHandling SHARED ${SOURCES})
 target_compile_features(mediaHandling PRIVATE cxx_std_17)
