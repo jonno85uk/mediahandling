@@ -322,6 +322,7 @@ void FFMpegSource::extractProperties(const AVFormatContext& ctx)
 {
   assert(ctx.iformat);
   MediaPropertyObject::setProperty(MediaProperty::FILENAME, file_path_);
+  MediaPropertyObject::setProperty(MediaProperty::FILE_FORMATS, std::string(ctx.iformat->name));
   MediaPropertyObject::setProperty(MediaProperty::FILE_FORMAT, std::string(ctx.iformat->long_name));
   MediaPropertyObject::setProperty(MediaProperty::DURATION, Rational(ctx.duration, AV_TIME_BASE));
   MediaPropertyObject::setProperty(MediaProperty::STREAMS, static_cast<int32_t>(ctx.nb_streams));

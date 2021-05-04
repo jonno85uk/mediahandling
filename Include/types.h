@@ -73,6 +73,7 @@ namespace media_handling
     DURATION,             // Rational
     TIMESCALE,            // Rational
     FILENAME,             // std::string
+    FILE_FORMATS,         // std::string
     FILE_FORMAT,          // std::string
     STREAMS,              // int32_t
     PIXEL_FORMAT,         // enum PixelFormat
